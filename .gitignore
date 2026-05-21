@@ -45,3 +45,7 @@ replay_pid*
 .vscode/
 .gitnexus/
 .env
+
+# HuggingFace model cache
+.cache/
+**/*.onnx
