@@ -1,0 +1,11 @@
+{
+  "analysis": {
+    "analyzer": {
+      "vn_analyzer": {
+        "type": "custom",
+        "tokenizer": "standard",
+        "filter": ["lowercase", "asciifolding"]
+      }
+    }
+  }
+}

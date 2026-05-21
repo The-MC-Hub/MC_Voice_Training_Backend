@@ -1,0 +1,514 @@
+// ============================================================
+// THE MC HUB — Database Schema (DBML)
+// Chuẩn: 3NF | Engine: MongoDB Atlas (mapped sang relational notation)
+// Cập nhật: 2026-04-16
+// ============================================================
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: users
+// ────────────────────────────────────────────────────────────
+Table users {
+  id              varchar [primary key, note: 'MongoDB ObjectId']
+  full_name       varchar(100)
+  email           varchar(100) [unique, not null]
+  password        varchar(255) [note: 'BCrypt hash']
+  phone_number    varchar(20)
+  role            varchar      [not null, note: 'enum UserRole: CLIENT | MC | ADMIN']
+  avatar          varchar(500)
+  bio             text
+  is_verified     boolean      [default: false]
+  is_active       boolean      [default: true]
+  mc_profile      varchar      [ref: - mcprofiles.id, note: 'Chỉ set khi role = MC']
+  created_at      datetime
+  updated_at      datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: mcprofiles
+// Hồ sơ năng lực chi tiết của MC (1:1 với users khi role=MC)
+// ────────────────────────────────────────────────────────────
+Table mcprofiles {
+  id              varchar [primary key]
+  user            varchar [ref: > users.id, not null, note: '1:1 với users khi role=MC']
+  regions         varchar [note: 'Array<String>: Khu vực hoạt động']
+  experience      int     [default: 0, note: 'Số năm kinh nghiệm']
+  styles          varchar [note: 'Array<String>: Phong cách dẫn (Vui vẻ, Chuyên nghiệp...)']
+  biography       text
+  personality     varchar(500)
+  hosting_style   varchar(300)
+  notable_events  varchar [note: 'Array<String>: Sự kiện nổi bật đã dẫn']
+  languages       varchar [note: 'Array<String>: Ngôn ngữ (vi, en, ko...)']
+  rate_min        int     [default: 0, note: 'Giá thấp nhất (VND/giờ)']
+  rate_max        int     [default: 0, note: 'Giá cao nhất (VND/giờ)']
+  event_types     varchar [note: 'Array<EventType enum>: Loại sự kiện có thể dẫn']
+  status          varchar [default: 'AVAILABLE', note: 'enum MCStatus: AVAILABLE | BUSY | ON_LEAVE | INACTIVE']
+  showreels       varchar [note: 'Array<Media{url, type(IMAGE|VIDEO|AUDIO)}>']
+  audio_samples   varchar [note: 'Array<String URL>']
+  event_photos    varchar [note: 'Array<String URL>']
+  custom_packages varchar [note: 'Array<Package{name, description, price, includes[]}>']
+  rating          float   [default: 0.0, note: 'Tính tự động từ reviews (Async)']
+  reviews_count   int     [default: 0]
+  created_at      datetime
+  updated_at      datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: certificates
+// Chứng chỉ / Bằng cấp MC (3NF: tách khỏi mcprofiles)
+// ────────────────────────────────────────────────────────────
+Table certificates {
+  id              varchar [primary key]
+  mc_profile_id   varchar [ref: > mcprofiles.id, not null]
+  name            varchar(200) [not null, note: 'Tên chứng chỉ']
+  issuer          varchar(200) [note: 'Đơn vị cấp']
+  issued_date     date
+  expired_date    date    [note: 'null = không hết hạn']
+  image_url       varchar(500)
+  is_verified     boolean [default: false]
+  verified_by     varchar [ref: > users.id, note: 'Admin xác minh']
+  verified_at     datetime
+  created_at      datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: schedules
+// Quản lý lịch bận/rảnh của MC
+// ────────────────────────────────────────────────────────────
+Table schedules {
+  id          varchar [primary key]
+  mc          varchar [ref: > users.id, not null, note: 'MC (role=MC)']
+  date        date
+  start_time  varchar(10) [note: 'HH:mm']
+  end_time    varchar(10) [note: 'HH:mm']
+  status      varchar     [default: 'UNAVAILABLE', note: 'enum ScheduleStatus: AVAILABLE | BOOKED | UNAVAILABLE | TENTATIVE']
+  booking_id  varchar     [ref: > bookings.id, note: 'null nếu tự chặn lịch']
+  note        text        [note: 'Lý do nghỉ, du lịch...']
+  created_at  datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: bookings
+// Đặt lịch MC — entity trung tâm của hệ thống
+// ────────────────────────────────────────────────────────────
+Table bookings {
+  id               varchar [primary key]
+  client           varchar [ref: > users.id, not null, note: 'Người đặt (role=CLIENT)']
+  mc               varchar [ref: > users.id, not null, note: 'MC được đặt (role=MC)']
+  event_date       date    [not null]
+  event_name       varchar(200)
+  start_time       varchar(10)
+  end_time         varchar(10)
+  location         varchar(500)
+  event_type       varchar [not null, note: 'enum EventType: WEDDING | CORPORATE_CONFERENCE | BIRTHDAY | ...']
+  description      text
+  audience_size    int
+  budget           decimal(12,2)
+  special_requests text
+  price            decimal(12,2) [note: 'Giá MC xác nhận']
+  coupon_code      varchar(50)   [ref: > coupons.code]
+  discount_amount  decimal(12,2) [default: 0]
+  status           varchar [default: 'PENDING', note: 'enum BookingStatus: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED | PAID']
+  payment_status   varchar [default: 'PENDING', note: 'enum PaymentStatus: PENDING | DEPOSIT_PAID | FULLY_PAID']
+  decided_at       datetime [note: 'Khi MC accept/reject']
+  created_at       datetime
+  updated_at       datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: bookingdetails
+// Chi tiết kỹ thuật sự kiện (3NF: tách khỏi bookings — 1:1)
+// ────────────────────────────────────────────────────────────
+Table bookingdetails {
+  id                  varchar [primary key]
+  booking_id          varchar [unique, ref: - bookings.id, not null, note: '1:1 với bookings']
+  dress_code          varchar [default: 'FORMAL', note: 'enum DressCode: FORMAL | SEMI_FORMAL | CASUAL | TRADITIONAL | SPORTY | THEMED | CUSTOM']
+  venue_type          varchar [default: 'INDOOR', note: 'enum VenueType: INDOOR | OUTDOOR | HYBRID | VIRTUAL']
+  has_stage           boolean [default: false]
+  has_microphone      boolean [default: true]
+  has_background_music boolean [default: false]
+  has_projector       boolean [default: false]
+  timeline            varchar [note: 'Array<TimelineItem{time, activity, durationMinutes}>']
+  special_guest_names varchar [note: 'Array<String>: Tên khách VIP']
+  client_notes        text    [note: 'Ghi chú từ client gửi MC']
+  mc_notes            text    [note: 'Ghi chú riêng của MC']
+  venue_address       varchar(500)
+  dress_code_detail   text    [note: 'Mô tả chi tiết nếu dressCode=CUSTOM']
+  created_at          datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: transactions
+// Giao dịch tài chính liên quan đến booking
+// ────────────────────────────────────────────────────────────
+Table transactions {
+  id                   varchar [primary key]
+  booking              varchar [ref: > bookings.id]
+  client               varchar [ref: > users.id, note: 'Người thanh toán']
+  mc                   varchar [ref: > users.id, note: 'Người nhận thanh toán']
+  amount               decimal(12,2) [not null]
+  type                 varchar [not null, note: 'enum TransactionType: DEPOSIT | FINAL_PAYMENT | REFUND | PLATFORM_FEE']
+  status               varchar [default: 'PENDING', note: 'enum TransactionStatus: PENDING | COMPLETED | FAILED | REFUNDED | PROCESSING']
+  platform_fee         decimal(10,2) [default: 0, note: 'Phí hoa hồng nền tảng']
+  transaction_id       varchar [note: 'Mã từ cổng thanh toán (PayOS/VNPAY)']
+  payos_order_code     bigint  [note: 'Mã đơn hàng PayOS']
+  payos_payment_link_id varchar [note: 'ID link thanh toán PayOS']
+  paid_at              datetime
+  note                 text    [note: 'Lý do refund, lỗi cổng TT...']
+  created_at           datetime
+  updated_at           datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: reviews
+// Đánh giá sau khi sự kiện hoàn thành (1:1 với booking)
+// ────────────────────────────────────────────────────────────
+Table reviews {
+  id          varchar [primary key]
+  booking     varchar [ref: - bookings.id, note: '1 booking → 1 review']
+  mc          varchar [ref: > users.id]
+  client      varchar [ref: > users.id]
+  rating      int     [not null, note: '1-5 sao']
+  comment     text
+  created_at  datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: favorites
+// Junction table: Client yêu thích MC (3NF, thay array trong User)
+// ────────────────────────────────────────────────────────────
+Table favorites {
+  id          varchar [primary key]
+  client_id   varchar [ref: > users.id, not null, note: 'CLIENT']
+  mc_user_id  varchar [ref: > users.id, not null, note: 'MC']
+  created_at  datetime
+
+  indexes {
+    (client_id, mc_user_id) [unique, name: 'client_mc_unique']
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: reports
+// Báo cáo vi phạm / khiếu nại (3NF)
+// ────────────────────────────────────────────────────────────
+Table reports {
+  id           varchar [primary key]
+  reporter_id  varchar [ref: > users.id, not null, note: 'Người báo cáo']
+  reported_id  varchar [ref: > users.id, not null, note: 'Người bị báo cáo']
+  booking_id   varchar [ref: > bookings.id, note: 'nullable — booking liên quan']
+  reason       varchar [not null, note: 'enum ReportReason: SPAM | FRAUD | NO_SHOW | INAPPROPRIATE_CONTENT | FAKE_PROFILE | PAYMENT_ISSUE | HARASSMENT | OTHER']
+  description  text
+  evidence_urls varchar [note: 'Array<String URL>: Ảnh/video bằng chứng']
+  status       varchar [default: 'PENDING', note: 'enum ReportStatus: PENDING | UNDER_REVIEW | RESOLVED | DISMISSED']
+  admin_note   text
+  resolved_by  varchar [ref: > users.id, note: 'Admin xử lý']
+  resolved_at  datetime
+  created_at   datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: coupons
+// Mã giảm giá cho booking (3NF)
+// ────────────────────────────────────────────────────────────
+Table coupons {
+  id                     varchar [primary key]
+  code                   varchar(50) [unique, not null]
+  description            text
+  discount_type          varchar [not null, note: 'enum DiscountType: PERCENT | FIXED_AMOUNT']
+  discount_value         decimal(10,4) [not null, note: 'PERCENT: 0.0-1.0 | FIXED: VND']
+  min_booking_value      decimal(12,2) [default: 0]
+  max_discount_amount    decimal(12,2) [default: 0, note: 'Giới hạn giảm tối đa (khi PERCENT)']
+  max_uses               int     [default: 100, note: '0 = không giới hạn']
+  used_count             int     [default: 0]
+  applicable_event_types varchar [note: 'Array<EventType enum>: rỗng = áp dụng tất cả']
+  expired_at             datetime
+  is_active              boolean [default: true]
+  created_by             varchar [ref: > users.id, note: 'Admin tạo coupon']
+  created_at             datetime
+  updated_at             datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: notifications
+// Thông báo realtime đến người dùng
+// ────────────────────────────────────────────────────────────
+Table notifications {
+  id            varchar [primary key]
+  user          varchar [ref: > users.id, not null, note: 'Người nhận']
+  sender_id     varchar [ref: > users.id, note: 'null = thông báo hệ thống']
+  title         varchar(255)
+  body          text
+  type          varchar [note: 'enum NotificationType: BOOKING_REQUEST | BOOKING_ACCEPTED | BOOKING_REJECTED | BOOKING_COMPLETED | PAYMENT_RECEIVED | NEW_MESSAGE | NEW_REVIEW | REPORT_FILED | COUPON_RECEIVED | SYSTEM_ALERT | CERTIFICATE_VERIFIED']
+  related_id    varchar [note: 'ID của object liên quan (Booking._id, Transaction._id...)']
+  related_model varchar [note: '"Booking" | "Transaction" | "Message" | ...']
+  link_action   varchar [note: 'URL điều hướng khi click vào thông báo']
+  is_read       boolean [default: false]
+  created_at    datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: conversations
+// Cuộc hội thoại chat giữa Client và MC
+// ────────────────────────────────────────────────────────────
+Table conversations {
+  id           varchar [primary key]
+  participants varchar [not null, note: 'Array<User._id>: [clientId, mcId]']
+  booking_id   varchar [ref: > bookings.id, note: 'Booking khởi tạo conversation']
+  last_message varchar [ref: > messages.id, note: 'ID tin nhắn cuối cùng']
+  is_active    boolean [default: true]
+  created_at   datetime
+  updated_at   datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: messages
+// Tin nhắn trong cuộc hội thoại
+// ────────────────────────────────────────────────────────────
+Table messages {
+  id              varchar [primary key]
+  conversation_id varchar [ref: > conversations.id, not null]
+  sender_id       varchar [ref: > users.id, not null]
+  content         text
+  type            varchar [default: 'TEXT', note: 'enum MessageType: TEXT | IMAGE | FILE | AUDIO | SYSTEM | BOOKING_LINK']
+  booking_id      varchar [ref: > bookings.id, note: 'nullable — nếu là tin nhắn booking']
+  attachment_url  varchar(500) [note: 'URL file/ảnh đính kèm']
+  read_by         varchar [note: 'Array<User._id>: Danh sách đã đọc']
+  created_at      datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: scripts
+// Kịch bản dẫn chương trình mẫu
+// ────────────────────────────────────────────────────────────
+Table scripts {
+  id          varchar [primary key]
+  created_by  varchar [ref: > users.id, note: 'MC hoặc Admin tạo']
+  title       varchar(300) [not null]
+  category    varchar [not null, note: 'enum ScriptCategory: WEDDING | CORPORATE | GALA_DINNER | BIRTHDAY | CONFERENCE | AWARD_CEREMONY | SPORT | MUSIC_CONCERT | PRODUCT_LAUNCH | OTHER']
+  content     text [not null]
+  tags        varchar [note: 'Array<String>: Tag tìm kiếm']
+  is_public   boolean [default: true]
+  favorites   int     [default: 0]
+  view_count  int     [default: 0]
+  language    varchar(10) [default: 'vi']
+  created_at  datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: refreshtokens
+// JWT Refresh Token — multi-device session (3NF)
+// ────────────────────────────────────────────────────────────
+Table refreshtokens {
+  id          varchar [primary key]
+  user_id     varchar [ref: > users.id, not null]
+  token       varchar [unique, not null, note: 'SHA-256 hashed, không lưu plaintext']
+  expires_at  datetime [not null]
+  is_revoked  boolean  [default: false, note: 'true khi logout / đổi mật khẩu']
+  device_info varchar(500) [note: 'Browser, OS info']
+  ip_address  varchar(50)
+  user_agent  text
+  created_at  datetime
+}
+
+// ────────────────────────────────────────────────────────────
+// COLLECTION: auditlogs
+// Nhật ký hành động hệ thống — append-only (3NF)
+// ────────────────────────────────────────────────────────────
+Table auditlogs {
+  id           varchar [primary key]
+  user_id      varchar [ref: > users.id, note: 'null = hệ thống tự động']
+  action       varchar [not null, note: 'enum AuditAction: AUTH_LOGIN | AUTH_LOGOUT | AUTH_REGISTER | AUTH_CHANGE_PASSWORD | BOOKING_CREATE | BOOKING_ACCEPT | BOOKING_REJECT | BOOKING_CANCEL | BOOKING_COMPLETE | PAYMENT_INITIATE | PAYMENT_SUCCESS | PAYMENT_FAILED | REPORT_SUBMIT | REPORT_RESOLVE | COUPON_CREATE | COUPON_APPLY | CERTIFICATE_VERIFY | PROFILE_UPDATE | ADMIN_USER_BAN | ADMIN_DASHBOARD_VIEW | SYSTEM_ERROR']
+  resource     varchar [note: '"User" | "Booking" | "Transaction" | "Report" | ...']
+  resource_id  varchar [note: 'ID của record bị tác động']
+  details      text    [note: 'JSON string: thông tin bổ sung']
+  ip_address   varchar(50)
+  user_agent   text
+  status       varchar [default: 'SUCCESS', note: '"SUCCESS" | "FAILED"']
+  error_message text   [note: 'Thông báo lỗi nếu status=FAILED']
+  created_at   datetime [not null]
+}
+
+// ============================================================
+// ENUMS (18 Enum định nghĩa cấu trúc Type-Safe)
+// ============================================================
+
+Enum AuditAction {
+  AUTH_LOGIN
+  AUTH_LOGOUT
+  AUTH_REGISTER
+  AUTH_CHANGE_PASSWORD
+  BOOKING_CREATE
+  BOOKING_ACCEPT
+  BOOKING_REJECT
+  BOOKING_CANCEL
+  BOOKING_COMPLETE
+  PAYMENT_INITIATE
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  REPORT_SUBMIT
+  REPORT_RESOLVE
+  COUPON_CREATE
+  COUPON_APPLY
+  CERTIFICATE_VERIFY
+  PROFILE_UPDATE
+  ADMIN_USER_BAN
+  ADMIN_DASHBOARD_VIEW
+  SYSTEM_ERROR
+}
+
+Enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+  PAID
+}
+
+Enum DiscountType {
+  PERCENT
+  FIXED_AMOUNT
+}
+
+Enum DressCode {
+  FORMAL
+  SEMI_FORMAL
+  CASUAL
+  TRADITIONAL
+  SPORTY
+  THEMED
+  CUSTOM
+}
+
+Enum EventType {
+  WEDDING
+  ENGAGEMENT
+  GALA_DINNER
+  CORPORATE_CONFERENCE
+  SEMINAR_WORKSHOP
+  PRODUCT_LAUNCH
+  TEAM_BUILDING
+  YEAR_END_PARTY
+  GRAND_OPENING
+  INAUGURATION
+  CONCERT
+  FESTIVAL
+  EXHIBITION
+  BIRTHDAY_PARTY
+  GRADUATION
+  FASHION_SHOW
+  COMPETITION
+  CHARITY_EVENT
+  DIPLOMATIC_EVENT
+  OTHER
+}
+
+Enum MCStatus {
+  AVAILABLE
+  BUSY
+  INACTIVE
+}
+
+Enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+Enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  SYSTEM
+  BOOKING_LINK
+}
+
+Enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REJECTED
+  PAYMENT_RECEIVED
+  PAYMENT_ESCROWED
+  PAYMENT_REFUNDED
+  NEW_REVIEW
+  NEW_MESSAGE
+  GENERAL
+  ACCOUNT_WARNING
+  EVENT_REMINDER
+}
+
+Enum PaymentStatus {
+  PENDING
+  DEPOSIT_PAID
+  FULLY_PAID
+  REFUNDED
+  ESCROWED
+}
+
+Enum ReportReason {
+  SPAM
+  INAPPROPRIATE_CONTENT
+  FRAUD
+  NO_SHOW
+  UNPROFESSIONAL
+  MISLEADING_PROFILE
+  PAYMENT_BYPASS
+  OTHER
+}
+
+Enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+Enum ScheduleStatus {
+  AVAILABLE
+  BOOKED
+  UNAVAILABLE
+  PENDING
+}
+
+Enum ScriptCategory {
+  WEDDING
+  CORPORATE
+  BIRTHDAY
+  CONFERENCE
+  GRAND_OPENING
+  CONCERT
+  GRADUATION
+  TEAM_BUILDING
+  YEAR_END_PARTY
+  GENERAL
+}
+
+Enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PROCESSING
+}
+
+Enum TransactionType {
+  DEPOSIT
+  FINAL_PAYMENT
+  REFUND
+  PLATFORM_FEE
+}
+
+Enum UserRole {
+  CLIENT
+  MC
+  ADMIN
+}
+
+Enum VenueType {
+  INDOOR
+  OUTDOOR
+  HYBRID
+  ONLINE
+}
