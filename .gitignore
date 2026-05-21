@@ -48,4 +48,5 @@ replay_pid*
 
 # HuggingFace model cache
 .cache/
+undefined/
 **/*.onnx
