@@ -30,6 +30,7 @@ public class VoiceLesson {
     private String difficulty;
     private String description;
     private String thumbnailUrl;
+    private String videoUrl;
 
     // ── Evaluation configuration ──────────────────────────────────
 

@@ -12,6 +12,9 @@ public class TheMCHubApplication {
     public static void main(String[] args) {
         
         
+        System.setProperty("https.protocols", "TLSv1.2,TLSv1.3");
+        System.setProperty("jdk.tls.client.protocols", "TLSv1.2,TLSv1.3");
+
         try {
             Dotenv dotenv = Dotenv.configure()
                     .directory("./")

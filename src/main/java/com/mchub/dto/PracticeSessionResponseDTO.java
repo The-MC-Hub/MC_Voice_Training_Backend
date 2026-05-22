@@ -49,6 +49,18 @@ public class PracticeSessionResponseDTO {
     @com.fasterxml.jackson.annotation.JsonProperty("overall_score")
     private double overallScore;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("lesson_content")
+    private String lessonContent;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("lesson_category")
+    private String lessonCategory;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("lesson_difficulty")
+    private String lessonDifficulty;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("lesson_description")
+    private String lessonDescription;
+
     @com.fasterxml.jackson.annotation.JsonProperty("created_at")
     private java.time.Instant createdAt;
 

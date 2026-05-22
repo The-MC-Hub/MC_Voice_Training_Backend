@@ -14,6 +14,7 @@ import com.mchub.repositories.VoiceLessonRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.models.User;
 import com.mchub.services.MediaService;
+import com.mchub.services.VoiceLessonSearchService;
 import com.mchub.services.VoiceService;
 import com.mchub.services.GamificationService;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class VoiceServiceImpl implements VoiceService {
     private final VoiceLessonMapper lessonMapper;
     private final PracticeSessionMapper sessionMapper;
     private final MediaService mediaService;
+    private final VoiceLessonSearchService lessonSearchService;
     private final RestTemplate restTemplate;
     private final GamificationService gamificationService;
     private final ObjectMapper objectMapper;
@@ -54,7 +56,7 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
-            String difficulty, String description, MultipartFile thumbnail,
+            String difficulty, String description, MultipartFile thumbnail, String videoUrl,
             List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
             int targetWpmMin, int targetWpmMax, int passingScore) {
         String thumbnailUrl = "";
@@ -73,6 +75,7 @@ public class VoiceServiceImpl implements VoiceService {
                 .difficulty(difficulty)
                 .description(description)
                 .thumbnailUrl(thumbnailUrl)
+                .videoUrl(videoUrl)
                 .evaluationCriteria(evaluationCriteria != null ? evaluationCriteria : new java.util.ArrayList<>())
                 .evaluationHint(evaluationHint)
                 .targetWpmMin(targetWpmMin)
@@ -80,12 +83,14 @@ public class VoiceServiceImpl implements VoiceService {
                 .passingScore(passingScore)
                 .build();
 
-        return lessonMapper.toResponseDTO(lessonRepository.save(lesson));
+        VoiceLesson savedLesson = lessonRepository.save(lesson);
+        lessonSearchService.indexLesson(savedLesson);
+        return lessonMapper.toResponseDTO(savedLesson);
     }
 
     @Override
     public VoiceLessonResponseDTO updateLesson(String id, String title, String content, VoiceLessonCategory category,
-            String difficulty, String description, MultipartFile thumbnail,
+            String difficulty, String description, MultipartFile thumbnail, String videoUrl,
             List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
             int targetWpmMin, int targetWpmMax, int passingScore) {
         VoiceLesson lesson = lessonRepository.findById(id)
@@ -101,6 +106,7 @@ public class VoiceServiceImpl implements VoiceService {
         lesson.setTargetWpmMin(targetWpmMin);
         lesson.setTargetWpmMax(targetWpmMax);
         lesson.setPassingScore(passingScore);
+        lesson.setVideoUrl(videoUrl);
 
         if (thumbnail != null && !thumbnail.isEmpty()) {
             try {
@@ -122,8 +128,16 @@ public class VoiceServiceImpl implements VoiceService {
     }
 
     @Override
+    public List<VoiceLessonResponseDTO> searchLessons(String searchTerm, VoiceLessonCategory category) {
+        return lessonSearchService.searchLessons(searchTerm, category).stream()
+                .map(lessonMapper::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteLesson(String id) {
         lessonRepository.deleteById(id);
+        lessonSearchService.deleteLesson(id);
     }
 
     @Override
@@ -149,7 +163,8 @@ public class VoiceServiceImpl implements VoiceService {
         if (!user.isPremium()) {
             long count = sessionRepository.countByUserId(userId);
             if (count >= 5) {
-                throw new AppException(ErrorCode.LIMIT_EXCEEDED, "You have reached the free limit of 5 practice sessions. Please upgrade to Premium to continue practicing.");
+                throw new AppException(ErrorCode.LIMIT_EXCEEDED,
+                        "You have reached the free limit of 5 practice sessions. Please upgrade to Premium to continue practicing.");
             }
         }
 
@@ -244,9 +259,10 @@ public class VoiceServiceImpl implements VoiceService {
                     .build();
 
             PracticeSession savedSession = sessionRepository.save(session);
-            
+
             try {
-                gamificationService.processPracticeSession(userId, lessonId, session.getAccuracyScore(), session.getRhythmScore());
+                gamificationService.processPracticeSession(userId, lessonId, session.getAccuracyScore(),
+                        session.getRhythmScore());
             } catch (Exception e) {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }
@@ -264,27 +280,34 @@ public class VoiceServiceImpl implements VoiceService {
     @Override
     public List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId) {
         List<PracticeSession> sessions = sessionRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        
+
         // Fetch all lesson titles in one go to optimize performance
         List<String> lessonIds = sessions.stream()
                 .map(PracticeSession::getLessonId)
                 .filter(id -> id != null && !id.isEmpty())
                 .distinct()
                 .collect(Collectors.toList());
-        
+
         log.info(">>> SEARCHING TITLES FOR IDs: {}", lessonIds);
-        
-        Map<String, String> lessonMap = lessonRepository.findAllById(lessonIds).stream()
-                .collect(Collectors.toMap(VoiceLesson::getId, VoiceLesson::getTitle, (a, b) -> a));
-        
-        log.info(">>> MAP CREATED: {}", lessonMap);
+
+        Map<String, VoiceLesson> lessonMap = lessonRepository.findAllById(lessonIds).stream()
+                .collect(Collectors.toMap(VoiceLesson::getId, l -> l, (a, b) -> a));
+
+        log.info(">>> MAP CREATED: {}", lessonMap.keySet());
 
         return sessions.stream()
                 .map(s -> {
                     PracticeSessionResponseDTO dto = sessionMapper.toResponseDTO(s);
-                    String title = lessonMap.get(s.getLessonId());
-                    log.info(">>> Mapping Session {} -> Lesson {} -> Title: {}", s.getId(), s.getLessonId(), title);
-                    dto.setLessonTitle(title);
+                    VoiceLesson lesson = lessonMap.get(s.getLessonId());
+                    if (lesson != null) {
+                        dto.setLessonTitle(lesson.getTitle());
+                        dto.setLessonContent(lesson.getContent());
+                        dto.setLessonCategory(lesson.getCategory() != null ? lesson.getCategory().name() : null);
+                        dto.setLessonDifficulty(lesson.getDifficulty());
+                        dto.setLessonDescription(lesson.getDescription());
+                    }
+                    log.info(">>> Mapping Session {} -> Lesson {} -> Title: {}", s.getId(), s.getLessonId(),
+                            dto.getLessonTitle());
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -294,11 +317,11 @@ public class VoiceServiceImpl implements VoiceService {
     public PracticeSessionResponseDTO getPracticeSessionById(String id) {
         PracticeSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Practice session not found"));
-        
+
         PracticeSessionResponseDTO dto = sessionMapper.toResponseDTO(session);
         lessonRepository.findById(session.getLessonId())
                 .ifPresent(lesson -> dto.setLessonTitle(lesson.getTitle()));
-                
+
         return dto;
     }
 }
