@@ -5,8 +5,8 @@ import com.mchub.models.VoiceLesson;
 import com.mchub.models.VoiceLessonSearchDocument;
 import com.mchub.repositories.VoiceLessonRepository;
 import com.mchub.repositories.VoiceLessonSearchRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,12 +19,17 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class VoiceLessonSearchService {
 
     private final VoiceLessonRepository lessonRepository;
-    private final VoiceLessonSearchRepository searchRepository;
+
+    @Autowired(required = false)
+    private VoiceLessonSearchRepository searchRepository;
+
+    public VoiceLessonSearchService(VoiceLessonRepository lessonRepository) {
+        this.lessonRepository = lessonRepository;
+    }
 
     // Lưu từng lesson vào Elasticsearch để BM25 có dữ liệu xếp hạng.
     public void indexLesson(VoiceLesson lesson) {
@@ -32,6 +37,7 @@ public class VoiceLessonSearchService {
             return;
         }
 
+        if (searchRepository == null) return;
         try {
             searchRepository.save(toDocument(lesson));
         } catch (Exception e) {
@@ -45,6 +51,7 @@ public class VoiceLessonSearchService {
             return;
         }
 
+        if (searchRepository == null) return;
         try {
             searchRepository.deleteById(id);
         } catch (Exception e) {
@@ -54,6 +61,7 @@ public class VoiceLessonSearchService {
 
     // Dùng cho reindex/backfill khi cần tạo lại toàn bộ search index.
     public void clearIndex() {
+        if (searchRepository == null) return;
         try {
             searchRepository.deleteAll();
         } catch (Exception e) {

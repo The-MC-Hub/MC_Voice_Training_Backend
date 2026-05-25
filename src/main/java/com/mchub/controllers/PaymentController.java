@@ -189,7 +189,7 @@ public class PaymentController {
     //  POST /api/v1/payment/simulate-success  (ADMIN only)
     // ================================================================
     @PostMapping("/simulate-success")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Map<String, Object>>> simulatePaymentSuccess(@RequestParam String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));

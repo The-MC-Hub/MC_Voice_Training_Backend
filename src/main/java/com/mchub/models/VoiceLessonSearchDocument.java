@@ -13,7 +13,7 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.time.LocalDateTime;
 
-@Document(indexName = "voice_lessons")
+@Document(indexName = "voice_lessons", createIndex = false)
 @Setting(settingPath = "/elasticsearch/settings.json")
 @Data
 @Builder
