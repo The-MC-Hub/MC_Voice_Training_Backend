@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: mc-voice-training-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: starter
+
+    # Render inject PORT tự động — không cần set ở đây
+    envVars:
+      # ── MongoDB ──────────────────────────────────────────────
+      - key: MONGODB_URI
+        sync: false   # điền thủ công trong Render dashboard
+
+      - key: MONGODB_DATABASE
+        value: mchub
+
+      # ── JWT ──────────────────────────────────────────────────
+      - key: JWT_SECRET
+        sync: false
+
+      # ── Cloudinary ───────────────────────────────────────────
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # ── PayOS ────────────────────────────────────────────────
+      - key: PAYOS_CLIENT_ID
+        sync: false
+      - key: PAYOS_API_KEY
+        sync: false
+      - key: PAYOS_CHECKSUM_KEY
+        sync: false
+
+      # ── MBBank / VietQR ──────────────────────────────────────
+      - key: MBBANK_ACCOUNT_NO
+        sync: false
+      - key: MBBANK_ACCOUNT_NAME
+        value: THE MC HUB ACADEMY
+      - key: PAYMENT_AMOUNT
+        value: "20000"
+      - key: PAYMENT_MEMO_PREFIX
+        value: MCHUBPREMIUM
+
+      # ── CORS (cập nhật sau khi có domain frontend) ────────────
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:5173
+      - key: FE_URL
+        value: http://localhost:5173
+
+      # ── Elasticsearch (disable nếu chưa dùng) ────────────────
+      - key: ELASTICSEARCH_URIS
+        value: http://localhost:9200
+
+      # ── Email / 2FA ──────────────────────────────────────────
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+      # ── Profile ──────────────────────────────────────────────
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod

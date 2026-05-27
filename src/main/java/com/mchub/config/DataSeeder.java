@@ -38,6 +38,8 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // DataSeeder disabled — data imported via import_data.py from MCHub_DataEntry_CLEAN.xlsx
+        if (true) return;
         log.info("🧹 Cleaning existing lesson and competition data for fresh seed...");
         lessonRepository.deleteAll();
         lessonSearchService.clearIndex();
