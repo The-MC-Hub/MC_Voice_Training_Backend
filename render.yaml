@@ -45,11 +45,11 @@ services:
       - key: PAYMENT_MEMO_PREFIX
         value: MCHUBPREMIUM
 
-      # ── CORS (cập nhật sau khi có domain frontend) ────────────
+      # ── CORS ─────────────────────────────────────────────────
       - key: ALLOWED_ORIGINS
-        value: http://localhost:5173
+        value: https://mc-voice-training.vercel.app,http://localhost:5173
       - key: FE_URL
-        value: http://localhost:5173
+        value: https://mc-voice-training.vercel.app
 
       # ── Elasticsearch (disable nếu chưa dùng) ────────────────
       - key: ELASTICSEARCH_URIS
