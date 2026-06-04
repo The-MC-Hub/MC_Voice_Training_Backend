@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.TransactionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,8 @@ public class PaymentTransaction {
     private String userId;
 
     private int amount;
+
+    private SubscriptionPlan plan;
 
     @Builder.Default
     private TransactionStatus status = TransactionStatus.PENDING;

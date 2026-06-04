@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -58,6 +59,15 @@ public class User {
 
     @Builder.Default
     private boolean isPremium = false;
+
+    @Builder.Default
+    private SubscriptionPlan plan = SubscriptionPlan.FREE;
+
+    private LocalDateTime planExpiresAt;
+
+    // AI coaching session count for current billing period (resets on renewal)
+    @Builder.Default
+    private int aiSessionsUsed = 0;
 
     @CreatedDate
     private LocalDateTime createdAt;

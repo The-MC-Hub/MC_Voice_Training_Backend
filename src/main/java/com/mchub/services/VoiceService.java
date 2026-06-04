@@ -3,6 +3,7 @@ package com.mchub.services;
 import com.mchub.dto.PracticeSessionResponseDTO;
 import com.mchub.dto.VoiceLessonResponseDTO;
 import com.mchub.enums.VoiceLessonCategory;
+import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,4 +37,10 @@ public interface VoiceService {
         List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId);
 
         PracticeSessionResponseDTO getPracticeSessionById(String id);
+
+        /** Calls Python AI /generate-mc-voice and returns raw WAV bytes */
+        byte[] generateTTSAudio(String text, String voice);
+
+        /** Returns adaptive calibration stats for a lesson, or null if < 10 sessions */
+        LessonAdaptiveStats getAdaptiveStats(String lessonId);
 }

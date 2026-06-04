@@ -4,12 +4,15 @@ import com.mchub.dto.ApiResponse;
 import com.mchub.dto.PracticeSessionResponseDTO;
 import com.mchub.dto.VoiceLessonResponseDTO;
 import com.mchub.enums.VoiceLessonCategory;
+import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
 import com.mchub.services.VoiceService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -133,5 +136,32 @@ public class VoiceController {
     @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
     public ResponseEntity<ApiResponse<PracticeSessionResponseDTO>> getPracticeById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(voiceService.getPracticeSessionById(id)));
+    }
+
+    // --- Adaptive Stats Endpoint ---
+    @GetMapping("/lessons/{id}/adaptive-stats")
+    public ResponseEntity<ApiResponse<LessonAdaptiveStats>> getAdaptiveStats(@PathVariable String id) {
+        LessonAdaptiveStats stats = voiceService.getAdaptiveStats(id);
+        if (stats == null) {
+            return ResponseEntity.ok(ApiResponse.success("No adaptive data yet (need 10+ sessions)", null));
+        }
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    // --- TTS Endpoint ---
+    @PostMapping("/tts/generate")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT') or hasAuthority('ADMIN')")
+    public ResponseEntity<byte[]> generateTTS(
+            @RequestParam String text,
+            @RequestParam(required = false, defaultValue = "F1") String voice) {
+
+        byte[] wavBytes = voiceService.generateTTSAudio(text, voice);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("audio/wav"));
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"mc_voice.wav\"");
+        headers.setContentLength(wavBytes.length);
+
+        return ResponseEntity.ok().headers(headers).body(wavBytes);
     }
 }

@@ -61,6 +61,27 @@ public class PracticeSessionResponseDTO {
     @com.fasterxml.jackson.annotation.JsonProperty("lesson_description")
     private String lessonDescription;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("cer_rate")
+    private double cerRate;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("wer_rate")
+    private double werRate;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("spectral_features")
+    private java.util.Map<String, Object> spectralFeatures;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("pitch_contour")
+    private java.util.Map<String, Object> pitchContour;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("filler_words")
+    private java.util.Map<String, Object> fillerWords;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("voice_quality")
+    private java.util.Map<String, Object> voiceQuality;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("emotion_breakdown")
+    private java.util.Map<String, Object> emotionBreakdown;
+
     @com.fasterxml.jackson.annotation.JsonProperty("created_at")
     private java.time.Instant createdAt;
 

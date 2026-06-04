@@ -9,14 +9,19 @@ import com.mchub.mapper.PracticeSessionMapper;
 import com.mchub.mapper.VoiceLessonMapper;
 import com.mchub.models.PracticeSession;
 import com.mchub.models.VoiceLesson;
+import com.mchub.config.PlanConfig;
+import com.mchub.enums.SubscriptionPlan;
+import com.mchub.repositories.LessonAdaptiveStatsRepository;
 import com.mchub.repositories.PracticeSessionRepository;
 import com.mchub.repositories.VoiceLessonRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.models.User;
+import com.mchub.services.AdaptiveCalibrationService;
 import com.mchub.services.MediaService;
 import com.mchub.services.VoiceLessonSearchService;
 import com.mchub.services.VoiceService;
 import com.mchub.services.GamificationService;
+import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -51,8 +56,11 @@ public class VoiceServiceImpl implements VoiceService {
     private final RestTemplate restTemplate;
     private final GamificationService gamificationService;
     private final ObjectMapper objectMapper;
+    private final AdaptiveCalibrationService adaptiveCalibrationService;
+    private final LessonAdaptiveStatsRepository adaptiveStatsRepository;
 
-    private static final String AI_SERVICE_URL = "http://127.0.0.1:8001/analyze-voice";
+    private static final String AI_SERVICE_URL     = "http://127.0.0.1:8001/analyze-voice";
+    private static final String AI_TTS_SERVICE_URL  = "http://127.0.0.1:8001/generate-mc-voice";
 
     @Override
     public VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
@@ -160,16 +168,39 @@ public class VoiceServiceImpl implements VoiceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
-        if (!user.isPremium()) {
-            long count = sessionRepository.countByUserId(userId);
-            if (count >= 5) {
-                throw new AppException(ErrorCode.LIMIT_EXCEEDED,
-                        "You have reached the free limit of 5 practice sessions. Please upgrade to Premium to continue practicing.");
-            }
+        SubscriptionPlan plan = user.getPlan() != null ? user.getPlan() : SubscriptionPlan.FREE;
+
+        // Check plan expiry — downgrade to FREE if expired
+        if (plan != SubscriptionPlan.FREE && user.getPlanExpiresAt() != null
+                && user.getPlanExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+            plan = SubscriptionPlan.FREE;
+            user.setPlan(SubscriptionPlan.FREE);
+            user.setPremium(false);
+            userRepository.save(user);
         }
 
         VoiceLesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+
+        if (plan == SubscriptionPlan.FREE) {
+            long count = sessionRepository.countByUserId(userId);
+            if (count >= PlanConfig.FREE_SESSION_LIMIT) {
+                throw new AppException(ErrorCode.LIMIT_EXCEEDED,
+                        "Free plan limit: " + PlanConfig.FREE_SESSION_LIMIT + " sessions. Upgrade to continue.");
+            }
+        } else if (plan == SubscriptionPlan.BASIC) {
+            // BASIC: only WEDDING category
+            if (lesson.getCategory() != null && !PlanConfig.allowsCategory(plan, lesson.getCategory())) {
+                throw new AppException(ErrorCode.ACCESS_DENIED,
+                        "Your BASIC plan only allows MC Đám Cưới lessons. Upgrade to FULL for all categories.");
+            }
+            // BASIC: max 10 AI coaching sessions per billing period
+            if (user.getAiSessionsUsed() >= PlanConfig.BASIC_AI_SESSION_LIMIT) {
+                throw new AppException(ErrorCode.LIMIT_EXCEEDED,
+                        "BASIC plan limit: " + PlanConfig.BASIC_AI_SESSION_LIMIT + " AI coaching sessions/month. Upgrade to FULL for unlimited.");
+            }
+        }
+        // FULL and ANNUAL: no limits
 
         // 1. Upload audio to Cloudinary
         String audioUrl;
@@ -239,6 +270,20 @@ public class VoiceServiceImpl implements VoiceService {
                     ? ((Number) response.get("overall_score")).doubleValue()
                     : 0.0;
 
+            double cerRate = response.get("cer_rate") != null ? ((Number) response.get("cer_rate")).doubleValue() : 0.0;
+            double werRate = response.get("wer_rate") != null ? ((Number) response.get("wer_rate")).doubleValue() : 0.0;
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> spectralFeatures = (Map<String, Object>) response.get("spectral_features");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> pitchContour = (Map<String, Object>) response.get("pitch_contour");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fillerWords = (Map<String, Object>) response.get("filler_words");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> voiceQuality = (Map<String, Object>) response.get("voice_quality");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> emotionBreakdown = (Map<String, Object>) response.get("emotion_breakdown");
+
             PracticeSession session = PracticeSession.builder()
                     .lessonId(lessonId)
                     .userId(userId)
@@ -255,6 +300,13 @@ public class VoiceServiceImpl implements VoiceService {
                     .expertTipsEn(expertTipsEn)
                     .criteriaScores(criteriaScores)
                     .overallScore(overallScore)
+                    .cerRate(cerRate)
+                    .werRate(werRate)
+                    .spectralFeatures(spectralFeatures)
+                    .pitchContour(pitchContour)
+                    .fillerWords(fillerWords)
+                    .voiceQuality(voiceQuality)
+                    .emotionBreakdown(emotionBreakdown)
                     .createdAt(java.time.Instant.now())
                     .build();
 
@@ -266,6 +318,15 @@ public class VoiceServiceImpl implements VoiceService {
             } catch (Exception e) {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }
+
+            // Increment AI session counter for BASIC plan
+            if (plan == SubscriptionPlan.BASIC) {
+                user.setAiSessionsUsed(user.getAiSessionsUsed() + 1);
+                userRepository.save(user);
+            }
+
+            // Fire-and-forget adaptive calibration after every session
+            adaptiveCalibrationService.calibrateLesson(lessonId);
 
             PracticeSessionResponseDTO dto = sessionMapper.toResponseDTO(savedSession);
             dto.setLessonTitle(lesson.getTitle());
@@ -323,5 +384,36 @@ public class VoiceServiceImpl implements VoiceService {
                 .ifPresent(lesson -> dto.setLessonTitle(lesson.getTitle()));
 
         return dto;
+    }
+
+    @Override
+    public byte[] generateTTSAudio(String text, String voice) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("text", text);
+        body.add("voice", voice != null && !voice.isBlank() ? voice : "F1");
+
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
+
+        try {
+            org.springframework.http.ResponseEntity<byte[]> response = restTemplate.exchange(
+                    "http://127.0.0.1:8001/tts/stream",
+                    org.springframework.http.HttpMethod.POST,
+                    requestEntity,
+                    byte[].class
+            );
+            byte[] wav = response.getBody();
+            return wav != null ? wav : new byte[0];
+        } catch (Exception e) {
+            log.error("Error calling TTS stream service", e);
+            throw new AppException(ErrorCode.INTERNAL_ERROR, "TTS service error: " + SecurityUtils.safeMessage(e));
+        }
+    }
+
+    @Override
+    public com.mchub.models.LessonAdaptiveStats getAdaptiveStats(String lessonId) {
+        return adaptiveStatsRepository.findByLessonId(lessonId).orElse(null);
     }
 }

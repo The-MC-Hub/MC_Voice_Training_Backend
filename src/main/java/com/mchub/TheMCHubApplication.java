@@ -16,17 +16,33 @@ public class TheMCHubApplication {
         System.setProperty("jdk.tls.client.protocols", "TLSv1.2,TLSv1.3");
 
         try {
-            Dotenv dotenv = Dotenv.configure()
-                    .directory("./")
-                    .ignoreIfMalformed()
-                    .ignoreIfMissing()
-                    .load();
-
-            dotenv.entries().forEach(entry -> {
-                if (System.getProperty(entry.getKey()) == null) {
-                    System.setProperty(entry.getKey(), entry.getValue());
-                }
-            });
+            // Try multiple candidate directories so .env is found regardless of CWD
+            String[] candidates = {
+                "./",
+                System.getProperty("user.dir"),
+                System.getProperty("user.dir") + "/MC_Voice_Training_Backend",
+            };
+            Dotenv dotenv = null;
+            for (String dir : candidates) {
+                try {
+                    dotenv = Dotenv.configure()
+                            .directory(dir)
+                            .ignoreIfMalformed()
+                            .load();
+                    System.out.println("✅ .env loaded from: " + dir);
+                    break;
+                } catch (Exception ignored) {}
+            }
+            if (dotenv != null) {
+                final Dotenv d = dotenv;
+                d.entries().forEach(entry -> {
+                    if (System.getProperty(entry.getKey()) == null) {
+                        System.setProperty(entry.getKey(), entry.getValue());
+                    }
+                });
+            } else {
+                System.out.println("⚠️ .env not found in any candidate directory — using defaults");
+            }
         } catch (Exception e) {
             System.out.println("⚠️ .env file not found or corrupted: " + e.getMessage());
         }

@@ -1,6 +1,7 @@
 package com.mchub.dto;
 
 import com.mchub.enums.VoiceLessonCategory;
+import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,4 +31,7 @@ public class VoiceLessonResponseDTO {
     private int passingScore;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Populated on-demand — null if lesson has < 10 practice sessions
+    private LessonAdaptiveStats adaptiveStats;
 }

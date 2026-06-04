@@ -2,7 +2,9 @@ package com.mchub.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mchub.config.PlanConfig;
 import com.mchub.dto.ApiResponse;
+import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.TransactionStatus;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
@@ -56,27 +58,33 @@ public class PaymentController {
     // ================================================================
     //  POST /api/v1/payment/create-order
     //  Tạo VietQR checkout và ghi PENDING transaction vào DB
+    //  Params: userId, plan (BASIC | FULL | ANNUAL)
     // ================================================================
     @PostMapping("/create-order")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> createPremiumOrder(@RequestParam String userId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createPremiumOrder(
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "FULL") SubscriptionPlan plan) {
+
+        if (plan == SubscriptionPlan.FREE) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Cannot purchase FREE plan");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
-        if (user.isPremium()) {
-            throw new AppException(ErrorCode.PAYMENT_ALREADY_PAID, "User is already Premium");
-        }
-
-        String memo   = memoPrefix + " " + user.getId();
+        int amount = PlanConfig.priceFor(plan);
+        // Memo encodes plan: MCHUBPREMIUM_BASIC <userId>
+        String memo = memoPrefix + "_" + plan.name() + " " + user.getId();
         String encodedName = accountName.replace(" ", "%20");
-        String qrUrl  = String.format(
+        String qrUrl = String.format(
                 "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
-                bankId, accountNo, paymentAmount, memo, encodedName);
+                bankId, accountNo, amount, memo, encodedName);
 
-        // Ghi PENDING transaction (idempotent: không tạo trùng nếu memo đã tồn tại)
         if (!transactionRepository.existsByMemo(memo)) {
             transactionRepository.save(PaymentTransaction.builder()
                     .userId(userId)
-                    .amount(paymentAmount)
+                    .plan(plan)
+                    .amount(amount)
                     .status(TransactionStatus.PENDING)
                     .memo(memo)
                     .build());
@@ -84,9 +92,9 @@ public class PaymentController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("userId", user.getId());
-        data.put("amount", paymentAmount);
-        data.put("originalAmount", 100000);
-        data.put("discount", 100000 - paymentAmount);
+        data.put("plan", plan.name());
+        data.put("amount", amount);
+        data.put("durationDays", PlanConfig.daysFor(plan));
         data.put("memo", memo);
         data.put("qrUrl", qrUrl);
         data.put("bankName", "Military Commercial Joint Stock Bank (MBBank)");
@@ -131,16 +139,27 @@ public class PaymentController {
         log.info(">>> Webhook memo={}, bankRef={}", memo, bankRef);
 
         if (memo != null && memo.toUpperCase().contains(memoPrefix.toUpperCase())) {
+            // memo format: "MCHUBPREMIUM_BASIC <userId>" or legacy "MCHUBPREMIUM <userId>"
             String[] parts = memo.trim().split("\\s+");
             if (parts.length >= 2) {
                 String userId = parts[1].trim();
                 User user = userRepository.findById(userId).orElse(null);
 
-                if (user != null && !user.isPremium()) {
-                    // Cập nhật transaction PENDING → COMPLETED
+                // Parse plan from memo prefix (e.g. MCHUBPREMIUM_FULL → FULL)
+                SubscriptionPlan plan = SubscriptionPlan.FULL;
+                String prefix = parts[0].toUpperCase();
+                if (prefix.contains("_")) {
+                    try {
+                        plan = SubscriptionPlan.valueOf(prefix.substring(prefix.lastIndexOf('_') + 1));
+                    } catch (IllegalArgumentException ignored) {}
+                }
+
+                if (user != null) {
+                    final SubscriptionPlan finalPlan = plan;
                     transactionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)
                             .ifPresent(tx -> {
                                 tx.setStatus(TransactionStatus.COMPLETED);
+                                tx.setPlan(finalPlan);
                                 tx.setBankRef(bankRef);
                                 tx.setWebhookRaw(rawBody);
                                 tx.setCompletedAt(LocalDateTime.now());
@@ -148,8 +167,11 @@ public class PaymentController {
                             });
 
                     user.setPremium(true);
+                    user.setPlan(plan);
+                    user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(plan)));
+                    user.setAiSessionsUsed(0); // reset counter on new subscription
                     userRepository.save(user);
-                    log.info(">>> USER UPGRADED TO PREMIUM: {}", user.getEmail());
+                    log.info(">>> USER UPGRADED: {} → plan={}, expires={}", user.getEmail(), plan, user.getPlanExpiresAt());
                 }
             }
         }
@@ -190,15 +212,23 @@ public class PaymentController {
     // ================================================================
     @PostMapping("/simulate-success")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> simulatePaymentSuccess(@RequestParam String userId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> simulatePaymentSuccess(
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "FULL") SubscriptionPlan plan) {
+
+        if (plan == SubscriptionPlan.FREE) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Cannot simulate FREE plan");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
-        // Ghi transaction COMPLETED
-        String memo = memoPrefix + " " + userId + " (SIMULATED)";
+        int amount = PlanConfig.priceFor(plan);
+        String memo = memoPrefix + "_" + plan.name() + " " + userId + " (SIMULATED)";
         PaymentTransaction tx = PaymentTransaction.builder()
                 .userId(userId)
-                .amount(paymentAmount)
+                .plan(plan)
+                .amount(amount)
                 .status(TransactionStatus.COMPLETED)
                 .memo(memo)
                 .bankRef("SIM-" + System.currentTimeMillis())
@@ -207,16 +237,21 @@ public class PaymentController {
         transactionRepository.save(tx);
 
         user.setPremium(true);
+        user.setPlan(plan);
+        user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(plan)));
+        user.setAiSessionsUsed(0);
         userRepository.save(user);
 
-        log.info(">>> SIMULATED PAYMENT SUCCESS. USER UPGRADED: {}", user.getEmail());
+        log.info(">>> SIMULATED PAYMENT SUCCESS. USER={} plan={}", user.getEmail(), plan);
 
         Map<String, Object> data = new HashMap<>();
         data.put("userId", userId);
+        data.put("plan", plan.name());
         data.put("isPremium", true);
+        data.put("planExpiresAt", user.getPlanExpiresAt());
         data.put("transactionId", tx.getId());
 
-        return ResponseEntity.ok(ApiResponse.success("Payment simulated! Premium activated.", data));
+        return ResponseEntity.ok(ApiResponse.success("Payment simulated! Plan activated.", data));
     }
 
     // ================================================================
