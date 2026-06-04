@@ -1,5 +1,6 @@
 package com.mchub.dto;
 
+import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.UserRole;
 import lombok.Data;
 
@@ -20,6 +21,9 @@ public class UserResponseDTO {
     private boolean isActive;
     private String mcProfile;
     private boolean isPremium;
+    private SubscriptionPlan plan;
+    private int aiSessionsUsed;
+    private LocalDateTime planExpiresAt;
     private LocalDateTime createdAt;
 
 }
