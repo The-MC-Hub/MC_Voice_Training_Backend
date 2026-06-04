@@ -1,6 +1,7 @@
 package com.mchub.services;
 
 import com.mchub.dto.UserResponseDTO;
+import com.mchub.models.PaymentTransaction;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,10 +20,13 @@ public interface AdminService {
     @PreAuthorize("hasAuthority('ADMIN')")
     List<UserResponseDTO> getAllMCs();
 
+    @PreAuthorize("hasAuthority('ADMIN')")
+    List<Map<String, Object>> getAllTransactions();
 
+    @PreAuthorize("hasAuthority('ADMIN')")
+    Map<String, Object> getRevenueStats();
 
     @PreAuthorize("hasAuthority('ADMIN')")
     UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified);
-
 
 }

@@ -1,5 +1,6 @@
 package com.mchub.repositories;
 
+import com.mchub.enums.TransactionStatus;
 import com.mchub.models.PaymentTransaction;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -13,4 +14,7 @@ public interface PaymentTransactionRepository extends MongoRepository<PaymentTra
     Optional<PaymentTransaction> findTopByUserIdOrderByCreatedAtDesc(String userId);
     boolean existsByMemo(String memo);
     Optional<PaymentTransaction> findByOrderCode(Long orderCode);
+    List<PaymentTransaction> findAllByOrderByCreatedAtDesc();
+    long countByStatus(TransactionStatus status);
+    List<PaymentTransaction> findByStatus(TransactionStatus status);
 }
