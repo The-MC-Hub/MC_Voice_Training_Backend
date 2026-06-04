@@ -1,5 +1,6 @@
 package com.mchub.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.UserRole;
 import lombok.Data;
@@ -16,10 +17,15 @@ public class UserResponseDTO {
     private String phoneNumber;
     private String avatar;
     private String bio;
+
+    @JsonProperty("isVerified")
     private boolean isVerified;
 
+    @JsonProperty("isActive")
     private boolean isActive;
     private String mcProfile;
+
+    @JsonProperty("isPremium")
     private boolean isPremium;
     private SubscriptionPlan plan;
     private int aiSessionsUsed;
