@@ -24,6 +24,7 @@ import com.mchub.services.GamificationService;
 import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -59,8 +60,11 @@ public class VoiceServiceImpl implements VoiceService {
     private final AdaptiveCalibrationService adaptiveCalibrationService;
     private final LessonAdaptiveStatsRepository adaptiveStatsRepository;
 
-    private static final String AI_SERVICE_URL     = "http://127.0.0.1:8001/analyze-voice";
-    private static final String AI_TTS_SERVICE_URL  = "http://127.0.0.1:8001/generate-mc-voice";
+    @Value("${ai.service.analyze-url:http://127.0.0.1:8001/analyze-voice}")
+    private String AI_SERVICE_URL;
+
+    @Value("${ai.service.tts-url:http://127.0.0.1:8001/generate-mc-voice}")
+    private String AI_TTS_SERVICE_URL;
 
     @Override
     public VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
