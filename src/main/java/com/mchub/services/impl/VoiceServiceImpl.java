@@ -193,12 +193,7 @@ public class VoiceServiceImpl implements VoiceService {
                         "Free plan limit: " + PlanConfig.FREE_SESSION_LIMIT + " sessions. Upgrade to continue.");
             }
         } else if (plan == SubscriptionPlan.BASIC) {
-            // BASIC: only WEDDING category
-            if (lesson.getCategory() != null && !PlanConfig.allowsCategory(plan, lesson.getCategory())) {
-                throw new AppException(ErrorCode.ACCESS_DENIED,
-                        "Your BASIC plan only allows MC Đám Cưới lessons. Upgrade to FULL for all categories.");
-            }
-            // BASIC: max 10 AI coaching sessions per billing period
+            // BASIC: all categories allowed, max 20 AI sessions/month
             if (user.getAiSessionsUsed() >= PlanConfig.BASIC_AI_SESSION_LIMIT) {
                 throw new AppException(ErrorCode.LIMIT_EXCEEDED,
                         "BASIC plan limit: " + PlanConfig.BASIC_AI_SESSION_LIMIT + " AI coaching sessions/month. Upgrade to FULL for unlimited.");

@@ -3,8 +3,6 @@ package com.mchub.config;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.VoiceLessonCategory;
 
-import java.util.Set;
-
 /**
  * Central plan limits — single source of truth for all enforcement logic.
  */
@@ -23,9 +21,8 @@ public final class PlanConfig {
     // FREE tier: 5 total sessions, no AI coaching
     public static final int FREE_SESSION_LIMIT = 5;
 
-    // BASIC tier: 20 AI coaching sessions/month, only WEDDING category
+    // BASIC tier: 20 AI coaching sessions/month, all categories allowed
     public static final int BASIC_AI_SESSION_LIMIT = 20;
-    public static final Set<VoiceLessonCategory> BASIC_ALLOWED_CATEGORIES = Set.of(VoiceLessonCategory.WEDDING);
 
     public static int priceFor(SubscriptionPlan plan) {
         return switch (plan) {
@@ -53,9 +50,8 @@ public final class PlanConfig {
     /** Returns true if the plan can access lessons of the given category. */
     public static boolean allowsCategory(SubscriptionPlan plan, VoiceLessonCategory category) {
         return switch (plan) {
-            case BASIC  -> BASIC_ALLOWED_CATEGORIES.contains(category);
-            case FULL, ANNUAL -> true;
-            default -> false; // FREE: handled separately by session count
+            case BASIC, FULL, ANNUAL -> true;
+            default -> true; // FREE: all categories allowed, session count enforced separately
         };
     }
 }
