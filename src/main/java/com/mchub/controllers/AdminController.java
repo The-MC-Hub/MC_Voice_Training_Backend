@@ -39,6 +39,11 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getRevenueStats()));
     }
 
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAnalytics() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getAnalytics()));
+    }
+
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserResponseDTO>>> getAllUsers() {
         return ResponseEntity.ok(ApiResponse.success(adminService.getAllUsers()));

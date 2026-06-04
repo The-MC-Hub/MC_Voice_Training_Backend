@@ -27,6 +27,9 @@ public interface AdminService {
     Map<String, Object> getRevenueStats();
 
     @PreAuthorize("hasAuthority('ADMIN')")
+    Map<String, Object> getAnalytics();
+
+    @PreAuthorize("hasAuthority('ADMIN')")
     UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified);
 
 }

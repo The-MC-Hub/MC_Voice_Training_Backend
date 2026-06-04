@@ -28,6 +28,10 @@ public interface PracticeSessionRepository extends MongoRepository<PracticeSessi
     @Query(value = "{'lessonId': ?0}", count = true)
     long countByLessonId(String lessonId);
 
+    List<PracticeSession> findByCreatedAtAfter(java.time.Instant after);
+    List<PracticeSession> findByCreatedAtBetween(java.time.Instant from, java.time.Instant to);
+    long countByCreatedAtAfter(java.time.Instant after);
+
     // Aggregation: avg/min/max scores per lesson (requires >= minCount sessions)
     @Aggregation(pipeline = {
         "{ $match: { lessonId: ?0 } }",
