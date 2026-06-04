@@ -3,6 +3,8 @@ package com.mchub.controllers;
 import com.mchub.dto.*;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
+import com.mchub.models.User;
+import com.mchub.repositories.UserRepository;
 import com.mchub.services.AuthService;
 import com.mchub.services.AuditLogService;
 import com.mchub.services.JwtService;
@@ -28,6 +30,7 @@ public class AuthController {
     private final AuditLogService auditLogService;
     private final JwtService jwtService;
     private final UserMapper userMapper;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(
@@ -77,6 +80,14 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody Map<String, String> body) {
         authService.resetPassword(body.get("email"), body.get("code"), body.get("newPassword"));
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMe() {
+        String userId = SecurityUtils.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        return ResponseEntity.ok(ApiResponse.success("User retrieved", Map.of("user", userMapper.toResponseDTO(user))));
     }
 
     @GetMapping("/fix-passwords")
