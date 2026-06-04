@@ -35,6 +35,10 @@ public class PaymentTransaction {
 
     private String memo;
 
+    private Long orderCode;
+
+    private String checkoutUrl;
+
     private String bankRef;
 
     private String webhookRaw;

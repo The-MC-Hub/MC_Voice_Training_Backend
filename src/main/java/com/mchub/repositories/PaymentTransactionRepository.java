@@ -12,4 +12,5 @@ public interface PaymentTransactionRepository extends MongoRepository<PaymentTra
     List<PaymentTransaction> findByUserIdOrderByCreatedAtDesc(String userId);
     Optional<PaymentTransaction> findTopByUserIdOrderByCreatedAtDesc(String userId);
     boolean existsByMemo(String memo);
+    Optional<PaymentTransaction> findByOrderCode(Long orderCode);
 }

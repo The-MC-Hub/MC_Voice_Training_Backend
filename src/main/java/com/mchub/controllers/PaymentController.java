@@ -1,7 +1,5 @@
 package com.mchub.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mchub.config.PlanConfig;
 import com.mchub.dto.ApiResponse;
 import com.mchub.enums.SubscriptionPlan;
@@ -12,53 +10,32 @@ import com.mchub.models.PaymentTransaction;
 import com.mchub.models.User;
 import com.mchub.repositories.PaymentTransactionRepository;
 import com.mchub.repositories.UserRepository;
+import com.mchub.services.PayOSService;
+import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 @RestController
 @RequestMapping("/api/v1/payment")
 @RequiredArgsConstructor
-@Slf4j
 public class PaymentController {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentController.class);
 
     private final UserRepository userRepository;
     private final PaymentTransactionRepository transactionRepository;
-    private final ObjectMapper objectMapper;
-
-    @Value("${mchub.payos.checksum-key:}")
-    private String checksumKey;
-
-    @Value("${mchub.payment.bank-id:MBBank}")
-    private String bankId;
-
-    @Value("${mchub.payment.account-no:190356789999}")
-    private String accountNo;
-
-    @Value("${mchub.payment.account-name:THE MC HUB ACADEMY}")
-    private String accountName;
-
-    @Value("${mchub.payment.amount:20000}")
-    private int paymentAmount;
-
-    @Value("${mchub.payment.memo-prefix:MCHUBPREMIUM}")
-    private String memoPrefix;
+    private final PayOSService payOSService;
 
     // ================================================================
     //  POST /api/v1/payment/create-order
-    //  Tạo VietQR checkout và ghi PENDING transaction vào DB
-    //  Params: userId, plan (BASIC | FULL | ANNUAL)
+    //  Tạo PayOS payment link, trả về checkoutUrl
     // ================================================================
     @PostMapping("/create-order")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createPremiumOrder(
@@ -70,113 +47,86 @@ public class PaymentController {
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
-        int amount = PlanConfig.priceFor(plan);
-        // Memo encodes plan: MCHUBPREMIUM_BASIC <userId>
-        String memo = memoPrefix + "_" + plan.name() + " " + user.getId();
-        String encodedName = accountName.replace(" ", "%20");
-        String qrUrl = String.format(
-                "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
-                bankId, accountNo, amount, memo, encodedName);
+        // Generate unique orderCode (PayOS requires positive long ≤ 9007199254740991)
+        long orderCode = System.currentTimeMillis() % 1_000_000_000L * 100 + ThreadLocalRandom.current().nextInt(100);
 
-        if (!transactionRepository.existsByMemo(memo)) {
-            transactionRepository.save(PaymentTransaction.builder()
-                    .userId(userId)
-                    .plan(plan)
-                    .amount(amount)
-                    .status(TransactionStatus.PENDING)
-                    .memo(memo)
-                    .build());
+        Map<String, Object> checkout;
+        try {
+            checkout = payOSService.createPaymentLink(userId, plan, orderCode);
+        } catch (Exception e) {
+            log.error("PayOS createPaymentLink failed: {}", SecurityUtils.safeMessage(e));
+            throw new AppException(ErrorCode.INTERNAL_ERROR, "Payment service unavailable");
         }
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("userId", user.getId());
-        data.put("plan", plan.name());
-        data.put("amount", amount);
-        data.put("durationDays", PlanConfig.daysFor(plan));
-        data.put("memo", memo);
-        data.put("qrUrl", qrUrl);
-        data.put("bankName", "Military Commercial Joint Stock Bank (MBBank)");
-        data.put("accountNumber", accountNo);
-        data.put("accountName", accountName);
+        PaymentTransaction tx = PaymentTransaction.builder()
+                .userId(userId)
+                .plan(plan)
+                .amount(PlanConfig.priceFor(plan))
+                .status(TransactionStatus.PENDING)
+                .orderCode(orderCode)
+                .checkoutUrl(String.valueOf(checkout.getOrDefault("checkoutUrl", "")))
+                .memo("MCHUB " + plan.name() + " " + userId)
+                .build();
+        transactionRepository.save(tx);
 
-        return ResponseEntity.ok(ApiResponse.success("Checkout details generated", data));
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", userId);
+        data.put("plan", plan.name());
+        data.put("amount", PlanConfig.priceFor(plan));
+        data.put("orderCode", orderCode);
+        data.put("checkoutUrl", String.valueOf(checkout.getOrDefault("checkoutUrl", "")));
+        data.put("qrCode", String.valueOf(checkout.getOrDefault("qrCode", "")));
+
+        return ResponseEntity.ok(ApiResponse.success("Payment link created", data));
     }
 
     // ================================================================
     //  POST /api/v1/payment/webhook
-    //  Nhận webhook từ SePay/PayOS — verify HMAC-SHA256 nếu có key
+    //  Nhận webhook từ PayOS — verify HMAC-SHA256
     // ================================================================
     @PostMapping("/webhook")
-    public ResponseEntity<ApiResponse<Void>> handlePaymentWebhook(
-            @RequestHeader(value = "x-signature", required = false) String signature,
-            @RequestBody String rawBody) {
+    public ResponseEntity<Map<String, String>> handlePaymentWebhook(@RequestBody Map<String, Object> webhookBody) {
+        log.info(">>> PayOS webhook received");
 
-        log.info(">>> Received payment webhook. signature={}", signature);
+        if (!payOSService.verifyWebhookSignature(webhookBody)) {
+            log.warn(">>> Webhook signature invalid");
+            return ResponseEntity.ok(Map.of("code", "00", "desc", "success"));
+        }
 
-        // Signature verification (bỏ qua nếu checksumKey chưa cấu hình)
-        if (checksumKey != null && !checksumKey.isBlank()) {
-            if (signature == null || !verifyHmac(rawBody, signature)) {
-                log.warn(">>> Webhook signature mismatch. Rejected.");
-                throw new AppException(ErrorCode.WEBHOOK_INVALID_SIGNATURE, "Invalid webhook signature");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) webhookBody.get("data");
+        if (data == null) return ResponseEntity.ok(Map.of("code", "00", "desc", "success"));
+
+        String code = String.valueOf(webhookBody.getOrDefault("code", ""));
+        log.info(">>> Webhook code={}, orderCode={}", code, data.get("orderCode"));
+
+        if ("00".equals(code)) {
+            Object orderCodeObj = data.get("orderCode");
+            if (orderCodeObj != null) {
+                long orderCode = ((Number) orderCodeObj).longValue();
+                transactionRepository.findByOrderCode(orderCode).ifPresent(tx -> {
+                    if (tx.getStatus() == TransactionStatus.PENDING) {
+                        tx.setStatus(TransactionStatus.COMPLETED);
+                        tx.setBankRef(String.valueOf(data.getOrDefault("reference", "")));
+                        tx.setCompletedAt(LocalDateTime.now());
+                        transactionRepository.save(tx);
+
+                        userRepository.findById(tx.getUserId()).ifPresent(user -> {
+                            user.setPremium(true);
+                            user.setPlan(tx.getPlan());
+                            user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
+                            user.setAiSessionsUsed(0);
+                            userRepository.save(user);
+                            log.info(">>> USER UPGRADED: {} → plan={}", user.getEmail(), tx.getPlan());
+                        });
+                    }
+                });
             }
         }
 
-        // Parse body
-        Map<String, Object> webhookData;
-        try {
-            webhookData = objectMapper.readValue(rawBody, Map.class);
-        } catch (JsonProcessingException e) {
-            log.error(">>> Webhook body parse failed: {}", e.getMessage());
-            return ResponseEntity.ok(ApiResponse.success("Webhook ignored (parse error)", null));
-        }
-
-        // Trích xuất memo từ nhiều field khác nhau của các provider
-        String memo = extractMemo(webhookData);
-        String bankRef = extractString(webhookData, "transactionID", "referenceCode", "id");
-
-        log.info(">>> Webhook memo={}, bankRef={}", memo, bankRef);
-
-        if (memo != null && memo.toUpperCase().contains(memoPrefix.toUpperCase())) {
-            // memo format: "MCHUBPREMIUM_BASIC <userId>" or legacy "MCHUBPREMIUM <userId>"
-            String[] parts = memo.trim().split("\\s+");
-            if (parts.length >= 2) {
-                String userId = parts[1].trim();
-                User user = userRepository.findById(userId).orElse(null);
-
-                // Parse plan from memo prefix (e.g. MCHUBPREMIUM_FULL → FULL)
-                SubscriptionPlan plan = SubscriptionPlan.FULL;
-                String prefix = parts[0].toUpperCase();
-                if (prefix.contains("_")) {
-                    try {
-                        plan = SubscriptionPlan.valueOf(prefix.substring(prefix.lastIndexOf('_') + 1));
-                    } catch (IllegalArgumentException ignored) {}
-                }
-
-                if (user != null) {
-                    final SubscriptionPlan finalPlan = plan;
-                    transactionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)
-                            .ifPresent(tx -> {
-                                tx.setStatus(TransactionStatus.COMPLETED);
-                                tx.setPlan(finalPlan);
-                                tx.setBankRef(bankRef);
-                                tx.setWebhookRaw(rawBody);
-                                tx.setCompletedAt(LocalDateTime.now());
-                                transactionRepository.save(tx);
-                            });
-
-                    user.setPremium(true);
-                    user.setPlan(plan);
-                    user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(plan)));
-                    user.setAiSessionsUsed(0); // reset counter on new subscription
-                    userRepository.save(user);
-                    log.info(">>> USER UPGRADED: {} → plan={}, expires={}", user.getEmail(), plan, user.getPlanExpiresAt());
-                }
-            }
-        }
-
-        return ResponseEntity.ok(ApiResponse.success("Webhook processed", null));
+        return ResponseEntity.ok(Map.of("code", "00", "desc", "success"));
     }
 
     // ================================================================
@@ -186,18 +136,21 @@ public class PaymentController {
     @GetMapping("/status/{userId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPaymentStatus(@PathVariable String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
         List<PaymentTransaction> txList = transactionRepository.findByUserIdOrderByCreatedAtDesc(userId);
 
         Map<String, Object> data = new HashMap<>();
         data.put("isPremium", user.isPremium());
+        data.put("plan", user.getPlan());
+        data.put("planExpiresAt", user.getPlanExpiresAt());
         data.put("transactions", txList.stream().map(tx -> {
             Map<String, Object> t = new HashMap<>();
             t.put("id", tx.getId());
             t.put("amount", tx.getAmount());
             t.put("status", tx.getStatus());
-            t.put("memo", tx.getMemo());
+            t.put("plan", tx.getPlan());
+            t.put("orderCode", tx.getOrderCode());
             t.put("bankRef", tx.getBankRef());
             t.put("createdAt", tx.getCreatedAt());
             t.put("completedAt", tx.getCompletedAt());
@@ -208,7 +161,7 @@ public class PaymentController {
     }
 
     // ================================================================
-    //  POST /api/v1/payment/simulate-success  (ADMIN only)
+    //  POST /api/v1/payment/simulate-success  (dev only)
     // ================================================================
     @PostMapping("/simulate-success")
     @PreAuthorize("isAuthenticated()")
@@ -221,17 +174,17 @@ public class PaymentController {
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
-        int amount = PlanConfig.priceFor(plan);
-        String memo = memoPrefix + "_" + plan.name() + " " + userId + " (SIMULATED)";
+        long orderCode = System.currentTimeMillis();
         PaymentTransaction tx = PaymentTransaction.builder()
                 .userId(userId)
                 .plan(plan)
-                .amount(amount)
+                .amount(PlanConfig.priceFor(plan))
                 .status(TransactionStatus.COMPLETED)
-                .memo(memo)
-                .bankRef("SIM-" + System.currentTimeMillis())
+                .orderCode(orderCode)
+                .memo("SIMULATED " + plan.name() + " " + userId)
+                .bankRef("SIM-" + orderCode)
                 .completedAt(LocalDateTime.now())
                 .build();
         transactionRepository.save(tx);
@@ -249,47 +202,7 @@ public class PaymentController {
         data.put("plan", plan.name());
         data.put("isPremium", true);
         data.put("planExpiresAt", user.getPlanExpiresAt());
-        data.put("transactionId", tx.getId());
 
         return ResponseEntity.ok(ApiResponse.success("Payment simulated! Plan activated.", data));
-    }
-
-    // ================================================================
-    //  Helpers
-    // ================================================================
-    private boolean verifyHmac(String data, String expectedSignature) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(checksumKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString().equalsIgnoreCase(expectedSignature);
-        } catch (Exception e) {
-            log.error("HMAC verification error: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private String extractMemo(Map<String, Object> data) {
-        for (String key : List.of("description", "memo", "content", "addInfo")) {
-            if (data.get(key) instanceof String s && !s.isBlank()) return s;
-        }
-        // SePay nests data inside "data" object
-        if (data.get("data") instanceof Map<?, ?> inner) {
-            for (String key : List.of("description", "memo", "content")) {
-                if (inner.get(key) instanceof String s && !s.isBlank()) return s;
-            }
-        }
-        return null;
-    }
-
-    private String extractString(Map<String, Object> data, String... keys) {
-        for (String key : keys) {
-            Object val = data.get(key);
-            if (val instanceof String s && !s.isBlank()) return s;
-            if (val instanceof Number n) return n.toString();
-        }
-        return null;
     }
 }
