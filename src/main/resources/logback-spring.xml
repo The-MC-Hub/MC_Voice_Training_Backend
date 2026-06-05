@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- Console (keep existing behaviour) -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- In-memory appender for SSE / DB persistence -->
+  <appender name="MEMORY" class="com.mchub.config.LogAppender" />
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE" />
+    <appender-ref ref="MEMORY" />
+  </root>
+
+  <!-- App-level DEBUG -->
+  <logger name="com.mchub" level="DEBUG" additivity="false">
+    <appender-ref ref="CONSOLE" />
+    <appender-ref ref="MEMORY" />
+  </logger>
+
+</configuration>

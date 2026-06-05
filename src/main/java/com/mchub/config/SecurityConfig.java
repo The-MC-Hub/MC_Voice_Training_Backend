@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws-chat/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/search/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/social-posts").permitAll()
                         .anyRequest().authenticated())
 
                 .addFilterBefore(new JwtAuthenticationFilter(Objects.requireNonNull(jwtService)),

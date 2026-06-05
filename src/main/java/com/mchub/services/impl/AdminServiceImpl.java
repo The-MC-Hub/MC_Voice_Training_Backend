@@ -374,6 +374,7 @@ public class AdminServiceImpl implements AdminService {
         List<PracticeSession> allSessions = practiceSessionRepository.findAll();
         // Map userId -> first session time
         java.util.Map<String, java.time.Instant> firstSessionByUser = allSessions.stream()
+            .filter(s -> s.getUserId() != null && s.getCreatedAt() != null)
             .collect(java.util.stream.Collectors.toMap(
                 PracticeSession::getUserId,
                 PracticeSession::getCreatedAt,
