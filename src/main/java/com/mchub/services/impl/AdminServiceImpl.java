@@ -328,4 +328,153 @@ public class AdminServiceImpl implements AdminService {
         return userMapper.toResponseDTO(userRepository.save(user));
     }
 
+    @Override
+    public Map<String, Object> getGrowthAnalytics() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime day30Ago = now.minusDays(30);
+        LocalDateTime day7Ago  = now.minusDays(7);
+        LocalDateTime day1Ago  = now.minusDays(1);
+
+        List<User> allUsers    = userRepository.findAll();
+        List<PaymentTransaction> allTx = transactionRepository.findAll();
+
+        // ── DAU / MAU ────────────────────────────────────────────────────────
+        // MAU = distinct users who logged in last 30 days
+        List<AuditLog> logins30 = auditLogRepository.findByActionAndCreatedAtAfter(AuditAction.AUTH_LOGIN, day30Ago);
+        long mau = logins30.stream().map(AuditLog::getUserId).distinct().count();
+        // DAU = distinct users who logged in last 24h
+        List<AuditLog> logins1d = auditLogRepository.findByActionAndCreatedAtAfter(AuditAction.AUTH_LOGIN, day1Ago);
+        long dau = logins1d.stream().map(AuditLog::getUserId).distinct().count();
+        double dauMauRatio = mau > 0 ? Math.round((double) dau / mau * 1000.0) / 10.0 : 0.0;
+
+        // ── Conversion funnel ────────────────────────────────────────────────
+        long totalUsers    = allUsers.size();
+        long premiumUsers  = allUsers.stream().filter(User::isPremium).count();
+        long basicUsers    = allUsers.stream().filter(u -> u.getPlan() == SubscriptionPlan.BASIC).count();
+        long fullUsers     = allUsers.stream().filter(u -> u.getPlan() == SubscriptionPlan.FULL).count();
+        long annualUsers   = allUsers.stream().filter(u -> u.getPlan() == SubscriptionPlan.ANNUAL).count();
+        long freeUsers     = totalUsers - premiumUsers;
+        double conversionRate = totalUsers > 0 ? Math.round((double) premiumUsers / totalUsers * 1000.0) / 10.0 : 0.0;
+
+        // ── ARPU / ARPPU / LTV ───────────────────────────────────────────────
+        long totalRevenue  = allTx.stream()
+            .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
+            .mapToLong(PaymentTransaction::getAmount).sum();
+        double arpu  = totalUsers  > 0 ? Math.round((double) totalRevenue / totalUsers)  : 0;
+        double arppu = premiumUsers > 0 ? Math.round((double) totalRevenue / premiumUsers) : 0;
+        // LTV estimate: ARPPU * avg subscription months (approx 4 months avg for mixed plans)
+        double avgSubMonths = 4.0;
+        double ltv = Math.round(arppu * avgSubMonths);
+
+        // ── MRR estimate ──────────────────────────────────────────────────────
+        // BASIC=199k/mo, FULL=299k/mo, ANNUAL=1990k/12=165.8k/mo
+        long mrr = (basicUsers * 199000L) + (fullUsers * 299000L) + (long)(annualUsers * 165833L);
+
+        // ── Feature adoption: users who practiced within 7d of registration ──
+        List<PracticeSession> allSessions = practiceSessionRepository.findAll();
+        // Map userId -> first session time
+        java.util.Map<String, java.time.Instant> firstSessionByUser = allSessions.stream()
+            .collect(java.util.stream.Collectors.toMap(
+                PracticeSession::getUserId,
+                PracticeSession::getCreatedAt,
+                (a, b) -> a.isBefore(b) ? a : b
+            ));
+        long usersWhoAdoptedFeature = allUsers.stream().filter(u -> {
+            java.time.Instant firstSession = firstSessionByUser.get(u.getId());
+            if (firstSession == null || u.getCreatedAt() == null) return false;
+            java.time.Instant regTime = u.getCreatedAt().toInstant(java.time.ZoneOffset.UTC);
+            return java.time.Duration.between(regTime, firstSession).toDays() <= 7;
+        }).count();
+        double featureAdoptionRate = totalUsers > 0 ? Math.round((double) usersWhoAdoptedFeature / totalUsers * 1000.0) / 10.0 : 0.0;
+
+        // ── User segments (Warm/Hot/Cold based on engagement) ─────────────────
+        // Hot: logged in last 7 days AND has session
+        // Warm: logged in last 30 days OR has any session
+        // Cold: never logged in last 30 days
+        java.util.Set<String> loggedIn7d = auditLogRepository
+            .findByActionAndCreatedAtAfter(AuditAction.AUTH_LOGIN, day7Ago)
+            .stream().map(AuditLog::getUserId).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> loggedIn30d = logins30.stream()
+            .map(AuditLog::getUserId).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> hasSession = firstSessionByUser.keySet();
+
+        long hotUsers  = allUsers.stream().filter(u -> loggedIn7d.contains(u.getId()) && hasSession.contains(u.getId())).count();
+        long warmUsers = allUsers.stream().filter(u -> !loggedIn7d.contains(u.getId()) && (loggedIn30d.contains(u.getId()) || hasSession.contains(u.getId()))).count();
+        long coldUsers = allUsers.stream().filter(u -> !loggedIn30d.contains(u.getId())).count();
+
+        // ── New users last 7d vs 7d-14d (growth rate) ─────────────────────────
+        LocalDateTime day14Ago = now.minusDays(14);
+        long newUsers7d    = userRepository.findByCreatedAtAfter(day7Ago).size();
+        long newUsers7to14 = userRepository.findByCreatedAtBetween(day14Ago, day7Ago).size();
+        double userGrowthRate = newUsers7to14 > 0
+            ? Math.round((double)(newUsers7d - newUsers7to14) / newUsers7to14 * 1000.0) / 10.0
+            : (newUsers7d > 0 ? 100.0 : 0.0);
+
+        // ── Cohort retention (last 3 months) ─────────────────────────────────
+        List<Map<String, Object>> cohortRetention = new ArrayList<>();
+        for (int i = 2; i >= 0; i--) {
+            LocalDateTime cohortStart = now.minusMonths(i + 1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime cohortEnd   = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            List<User> cohortUsers = userRepository.findByCreatedAtBetween(cohortStart, cohortEnd);
+            int cohortSize = cohortUsers.size();
+            java.util.Set<String> cohortIds = cohortUsers.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
+
+            // retained = still active (logged in since cohort end)
+            long retained = logins30.stream()
+                .filter(a -> cohortIds.contains(a.getUserId()))
+                .map(AuditLog::getUserId).distinct().count();
+
+            double retentionRate = cohortSize > 0 ? Math.round((double) retained / cohortSize * 1000.0) / 10.0 : 0.0;
+            String monthLabel = String.format("%d-%02d", cohortStart.getYear(), cohortStart.getMonthValue());
+
+            Map<String, Object> cohort = new LinkedHashMap<>();
+            cohort.put("month", monthLabel);
+            cohort.put("cohortSize", cohortSize);
+            cohort.put("retained", retained);
+            cohort.put("retentionRate", retentionRate);
+            cohortRetention.add(cohort);
+        }
+
+        // ── Assemble result ───────────────────────────────────────────────────
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // Engagement
+        result.put("dau", dau);
+        result.put("mau", mau);
+        result.put("dauMauRatio", dauMauRatio);
+
+        // Funnel
+        result.put("totalUsers",    totalUsers);
+        result.put("freeUsers",     freeUsers);
+        result.put("premiumUsers",  premiumUsers);
+        result.put("basicUsers",    basicUsers);
+        result.put("fullUsers",     fullUsers);
+        result.put("annualUsers",   annualUsers);
+        result.put("conversionRate", conversionRate);
+
+        // Revenue metrics
+        result.put("totalRevenue", totalRevenue);
+        result.put("arpu",  (long) arpu);
+        result.put("arppu", (long) arppu);
+        result.put("ltv",   (long) ltv);
+        result.put("mrr",   mrr);
+
+        // Growth
+        result.put("newUsers7d",      newUsers7d);
+        result.put("userGrowthRate",  userGrowthRate);
+
+        // Feature adoption
+        result.put("featureAdoptionRate", featureAdoptionRate);
+
+        // Segments
+        result.put("hotUsers",  hotUsers);
+        result.put("warmUsers", warmUsers);
+        result.put("coldUsers", coldUsers);
+
+        // Cohort
+        result.put("cohortRetention", cohortRetention);
+
+        return result;
+    }
+
 }

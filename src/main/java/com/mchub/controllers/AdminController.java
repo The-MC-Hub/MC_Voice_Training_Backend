@@ -44,6 +44,11 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getAnalytics()));
     }
 
+    @GetMapping("/growth-analytics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGrowthAnalytics() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getGrowthAnalytics()));
+    }
+
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserResponseDTO>>> getAllUsers() {
         return ResponseEntity.ok(ApiResponse.success(adminService.getAllUsers()));

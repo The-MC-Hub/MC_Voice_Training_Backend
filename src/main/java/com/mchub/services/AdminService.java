@@ -32,4 +32,7 @@ public interface AdminService {
     @PreAuthorize("hasAuthority('ADMIN')")
     UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified);
 
+    @PreAuthorize("hasAuthority('ADMIN')")
+    Map<String, Object> getGrowthAnalytics();
+
 }
