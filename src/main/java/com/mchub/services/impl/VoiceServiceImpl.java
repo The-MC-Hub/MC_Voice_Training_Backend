@@ -318,8 +318,9 @@ public class VoiceServiceImpl implements VoiceService {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }
 
-            // Increment AI session counter for BASIC plan
-            if (plan == SubscriptionPlan.BASIC) {
+            // Increment AI session counter — FREE uses total session count via repository,
+            // but also track aiSessionsUsed so frontend can display X/5 correctly
+            if (plan == SubscriptionPlan.FREE || plan == SubscriptionPlan.BASIC) {
                 user.setAiSessionsUsed(user.getAiSessionsUsed() + 1);
                 userRepository.save(user);
             }
