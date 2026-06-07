@@ -41,7 +41,10 @@ public class PayOSService {
     }
 
     public Map<String, Object> createPaymentLink(String userId, SubscriptionPlan plan, long orderCode) throws Exception {
-        int amount = PlanConfig.priceFor(plan);
+        return createPaymentLink(userId, plan, orderCode, PlanConfig.priceFor(plan));
+    }
+
+    public Map<String, Object> createPaymentLink(String userId, SubscriptionPlan plan, long orderCode, int amount) throws Exception {
         // PayOS description max 25 chars
         String description = ("MCHUB " + plan.name() + " " + userId);
         if (description.length() > 25) description = description.substring(0, 25);

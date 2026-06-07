@@ -5,8 +5,10 @@ import com.mchub.enums.UserRole;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.MCProfile;
+import com.mchub.models.OtpVerification;
 import com.mchub.models.User;
 import com.mchub.repositories.MCProfileRepository;
+import com.mchub.repositories.OtpVerificationRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
@@ -17,6 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final MCProfileRepository mcProfileRepository;
     private final EmailService emailService;
+    private final OtpVerificationRepository otpRepo;
 
     @Override
     public User register(@NonNull RegisterRequest req) {
@@ -76,6 +80,9 @@ public class AuthServiceImpl implements AuthService {
 
         if (!user.isActive()) {
             throw new AppException(ErrorCode.USER_LOCKED, "Account is locked. Please contact support.");
+        }
+        if (!user.isVerified()) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "EMAIL_NOT_VERIFIED:" + email);
         }
 
         boolean isMatch;
@@ -155,6 +162,59 @@ public class AuthServiceImpl implements AuthService {
     public void disableAllTwoFactor() {
         // All 2FA fields removed from User model. 
         // This method is now a no-op as the feature is fully decommissioned.
+    }
+
+    // ── OTP ───────────────────────────────────────────────────────────────
+
+    private static final SecureRandom RNG = new SecureRandom();
+
+    private String generateOtp() {
+        return String.format("%06d", RNG.nextInt(1_000_000));
+    }
+
+    @Override
+    public void sendOtp(@NonNull String email) {
+        otpRepo.deleteAllByEmail(email);
+        String code = generateOtp();
+        otpRepo.save(OtpVerification.builder()
+                .email(email)
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .used(false)
+                .build());
+        emailService.sendSimpleEmail(email,
+                "MCHub — Mã xác thực tài khoản",
+                "Mã OTP của bạn là: " + code + "\n\nMã có hiệu lực trong 10 phút. Không chia sẻ mã này cho ai.");
+    }
+
+    @Override
+    public void verifyOtp(@NonNull String email, @NonNull String code) {
+        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc(email)
+                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
+        if (otp.isUsed()) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
+        }
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
+        }
+        if (!otp.getCode().equals(code.trim())) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
+        }
+        otp.setUsed(true);
+        otpRepo.save(otp);
+
+        userRepository.findByEmail(email).ifPresent(user -> {
+            user.setVerified(true);
+            userRepository.save(user);
+        });
+        otpRepo.deleteAllByEmail(email);
+    }
+
+    @Override
+    public void resendOtp(@NonNull String email) {
+        userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Email không tồn tại"));
+        sendOtp(email);
     }
 
     @Override

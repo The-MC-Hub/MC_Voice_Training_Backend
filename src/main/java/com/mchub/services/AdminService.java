@@ -35,4 +35,22 @@ public interface AdminService {
     @PreAuthorize("hasAuthority('ADMIN')")
     Map<String, Object> getGrowthAnalytics();
 
+    @PreAuthorize("hasAuthority('ADMIN')")
+    UserResponseDTO createUser(@NonNull String name, @NonNull String email, @NonNull String password, @NonNull String role);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    void sendPasswordResetEmail(@NonNull String userId);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    void changeUserPassword(@NonNull String userId, @NonNull String newPassword);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    void deleteUser(@NonNull String userId);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    Map<String, Object> getUserStats(@NonNull String userId);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    void sendNotificationEmail(@NonNull String userId, @NonNull String subject, @NonNull String content);
+
 }

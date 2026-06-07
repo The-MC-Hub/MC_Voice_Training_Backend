@@ -7,10 +7,12 @@ import com.mchub.enums.TransactionStatus;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.PaymentTransaction;
+import com.mchub.models.PlanDefinition;
 import com.mchub.models.User;
 import com.mchub.repositories.PaymentTransactionRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.PayOSService;
+import com.mchub.services.PlanService;
 import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +34,26 @@ public class PaymentController {
     private final UserRepository userRepository;
     private final PaymentTransactionRepository transactionRepository;
     private final PayOSService payOSService;
+    private final PlanService planService;
+
+    // ================================================================
+    //  GET /api/v1/payment/plans  (public — frontend fetches pricing)
+    // ================================================================
+    @GetMapping("/plans")
+    public ResponseEntity<ApiResponse<java.util.List<PlanDefinition>>> getActivePlans() {
+        return ResponseEntity.ok(ApiResponse.success("Plans retrieved", planService.getActivePlans()));
+    }
+
+    // ================================================================
+    //  POST /api/v1/payment/apply-discount
+    //  Validate discount code, return final price (no side effects)
+    // ================================================================
+    @PostMapping("/apply-discount")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> applyDiscount(
+            @RequestParam String code,
+            @RequestParam SubscriptionPlan plan) {
+        return ResponseEntity.ok(ApiResponse.success("Discount applied", planService.applyDiscount(code, plan)));
+    }
 
     // ================================================================
     //  POST /api/v1/payment/create-order
@@ -49,12 +71,23 @@ public class PaymentController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
+        // Use discounted price if admin has set one, otherwise fall back to PlanConfig
+        int effectiveAmount;
+        try {
+            PlanDefinition planDef = planService.getPlanByKey(plan);
+            effectiveAmount = planDef.getDiscountedPriceVnd() > 0
+                    ? planDef.getDiscountedPriceVnd()
+                    : planDef.getPriceVnd();
+        } catch (Exception e) {
+            effectiveAmount = PlanConfig.priceFor(plan);
+        }
+
         // Generate unique orderCode (PayOS requires positive long ≤ 9007199254740991)
         long orderCode = System.currentTimeMillis() % 1_000_000_000L * 100 + ThreadLocalRandom.current().nextInt(100);
 
         Map<String, Object> checkout;
         try {
-            checkout = payOSService.createPaymentLink(userId, plan, orderCode);
+            checkout = payOSService.createPaymentLink(userId, plan, orderCode, effectiveAmount);
         } catch (Exception e) {
             log.error("PayOS createPaymentLink failed: {}", SecurityUtils.safeMessage(e));
             throw new AppException(ErrorCode.INTERNAL_ERROR, "Payment service unavailable");
@@ -63,7 +96,7 @@ public class PaymentController {
         PaymentTransaction tx = PaymentTransaction.builder()
                 .userId(userId)
                 .plan(plan)
-                .amount(PlanConfig.priceFor(plan))
+                .amount(effectiveAmount)
                 .status(TransactionStatus.PENDING)
                 .orderCode(orderCode)
                 .checkoutUrl(String.valueOf(checkout.getOrDefault("checkoutUrl", "")))
@@ -74,7 +107,7 @@ public class PaymentController {
         Map<String, Object> data = new HashMap<>();
         data.put("userId", userId);
         data.put("plan", plan.name());
-        data.put("amount", PlanConfig.priceFor(plan));
+        data.put("amount", effectiveAmount);
         data.put("orderCode", orderCode);
         data.put("checkoutUrl", String.valueOf(checkout.getOrDefault("checkoutUrl", "")));
         data.put("qrCode", String.valueOf(checkout.getOrDefault("qrCode", "")));

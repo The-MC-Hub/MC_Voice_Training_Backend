@@ -20,6 +20,12 @@ public interface AuthService {
 
     void resetPassword(@NonNull String email, @NonNull String code, @NonNull String newPassword);
 
+    void sendOtp(@NonNull String email);
+
+    void verifyOtp(@NonNull String email, @NonNull String code);
+
+    void resendOtp(@NonNull String email);
+
     @PreAuthorize("isAuthenticated()")
     User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
 

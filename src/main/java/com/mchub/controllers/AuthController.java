@@ -37,13 +37,35 @@ public class AuthController {
             @RequestBody @Valid RegisterRequest req,
             HttpServletRequest request) {
         var user = authService.register(Objects.requireNonNull(req));
-        String token = jwtService.generateToken(user.getId(), user.getRole().name());
-        
+        // Send OTP async — don't block response
+        try { authService.sendOtp(user.getEmail()); } catch (Exception ignored) {}
+
         auditLogService.log(user.getId(), AuditAction.AUTH_REGISTER, "User", user.getId(),
                 "{\"role\":\"" + req.getRole() + "\"}", request);
-                
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Registration successful", Map.of("token", token, "user", userMapper.toResponseDTO(user))));
+                .body(ApiResponse.success("Registration successful. OTP sent to email.",
+                        Map.of("requiresVerification", true, "email", user.getEmail())));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyOtp(
+            @RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String code = body.get("code");
+        authService.verifyOtp(Objects.requireNonNull(email), Objects.requireNonNull(code));
+        // After verify, auto-login
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        String token = jwtService.generateToken(user.getId(), user.getRole().name());
+        return ResponseEntity.ok(ApiResponse.success("Email verified successfully",
+                Map.of("token", token, "user", userMapper.toResponseDTO(user))));
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<Void>> resendOtp(@RequestBody Map<String, String> body) {
+        authService.resendOtp(Objects.requireNonNull(body.get("email")));
+        return ResponseEntity.ok(ApiResponse.success("OTP resent", null));
     }
 
     @PostMapping("/login")

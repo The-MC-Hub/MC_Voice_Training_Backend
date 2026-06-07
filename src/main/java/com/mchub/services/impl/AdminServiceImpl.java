@@ -5,20 +5,29 @@ import com.mchub.enums.AuditAction;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.TransactionStatus;
 import com.mchub.enums.UserRole;
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.models.AuditLog;
+import com.mchub.models.OtpVerification;
 import com.mchub.models.PaymentTransaction;
 import com.mchub.models.PracticeSession;
 import com.mchub.models.User;
+import com.mchub.models.UserStats;
 import com.mchub.repositories.AuditLogRepository;
+import com.mchub.repositories.OtpVerificationRepository;
 import com.mchub.repositories.PaymentTransactionRepository;
 import com.mchub.repositories.PracticeSessionRepository;
 import com.mchub.repositories.UserRepository;
+import com.mchub.repositories.UserStatsRepository;
 import com.mchub.mapper.UserMapper;
 import com.mchub.services.AdminService;
+import com.mchub.services.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -41,6 +50,12 @@ public class AdminServiceImpl implements AdminService {
     private final PaymentTransactionRepository transactionRepository;
     private final AuditLogRepository auditLogRepository;
     private final PracticeSessionRepository practiceSessionRepository;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final OtpVerificationRepository otpRepo;
+    private final UserStatsRepository userStatsRepository;
+
+    private static final SecureRandom ADMIN_RNG = new SecureRandom();
 
     @Override
     public Map<String, Object> getAdminDashboardOverview() {
@@ -306,6 +321,136 @@ public class AdminServiceImpl implements AdminService {
         result.put("totalSessions30d",    (long) sessions30.size());
         result.put("premiumUsers",        userRepository.countByIsPremiumTrue());
         return result;
+    }
+
+    // ── Admin user management ─────────────────────────────────────────────────
+
+    @Override
+    public UserResponseDTO createUser(@NonNull String name, @NonNull String email,
+                                      @NonNull String password, @NonNull String role) {
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email already in use");
+        }
+        UserRole userRole;
+        try {
+            userRole = UserRole.valueOf(role.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            userRole = UserRole.CLIENT;
+        }
+        User user = User.builder()
+                .name(name)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .role(userRole)
+                .isVerified(true)
+                .isActive(true)
+                .build();
+        return userMapper.toResponseDTO(userRepository.save(Objects.requireNonNull(user)));
+    }
+
+    @Override
+    public void sendPasswordResetEmail(@NonNull String userId) {
+        User user = userRepository.findById(Objects.requireNonNull(userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        String code = String.format("%06d", ADMIN_RNG.nextInt(1_000_000));
+        otpRepo.deleteAllByEmail(user.getEmail());
+        otpRepo.save(OtpVerification.builder()
+                .email(user.getEmail())
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(30))
+                .used(false)
+                .build());
+        emailService.sendSimpleEmail(user.getEmail(),
+                "MCHub — Đặt lại mật khẩu",
+                "Quản trị viên đã gửi mã đặt lại mật khẩu cho bạn.\n\nMã OTP: " + code
+                + "\n\nMã có hiệu lực trong 30 phút.\nTruy cập trang web và nhập mã này để đặt lại mật khẩu.");
+    }
+
+    @Override
+    public void changeUserPassword(@NonNull String userId, @NonNull String newPassword) {
+        User user = userRepository.findById(Objects.requireNonNull(userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Override
+    public void deleteUser(@NonNull String userId) {
+        if (!userRepository.existsById(Objects.requireNonNull(userId))) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId);
+        }
+        userRepository.deleteById(userId);
+    }
+
+    @Override
+    public Map<String, Object> getUserStats(@NonNull String userId) {
+        User user = userRepository.findById(Objects.requireNonNull(userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+
+        List<PracticeSession> sessions = practiceSessionRepository
+                .findByUserIdOrderByCreatedAtDesc(userId);
+
+        long totalSessions = sessions.size();
+        double avgScore = sessions.stream()
+                .filter(s -> s.getOverallScore() > 0)
+                .mapToDouble(PracticeSession::getOverallScore)
+                .average().orElse(0.0);
+        double bestScore = sessions.stream()
+                .mapToDouble(PracticeSession::getOverallScore)
+                .max().orElse(0.0);
+
+        List<Map<String, Object>> recentSessions = sessions.stream().limit(5).map(s -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", s.getId());
+            m.put("lessonId", s.getLessonId());
+            m.put("overallScore", s.getOverallScore());
+            m.put("accuracyScore", s.getAccuracyScore());
+            m.put("rhythmScore", s.getRhythmScore());
+            m.put("speakingRateWpm", s.getSpeakingRateWpm());
+            m.put("createdAt", s.getCreatedAt());
+            return m;
+        }).toList();
+
+        UserStats stats = userStatsRepository.findByUserId(userId).orElse(null);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("userId", userId);
+        result.put("userName", user.getName());
+        result.put("email", user.getEmail());
+        result.put("totalSessions", totalSessions);
+        result.put("avgScore", Math.round(avgScore * 10.0) / 10.0);
+        result.put("bestScore", Math.round(bestScore * 10.0) / 10.0);
+        result.put("recentSessions", recentSessions);
+        result.put("aiSessionsUsed", user.getAiSessionsUsed());
+        result.put("plan", user.getPlan() != null ? user.getPlan().name() : "FREE");
+        result.put("createdAt", user.getCreatedAt());
+
+        if (stats != null) {
+            result.put("currentStreak", stats.getCurrentStreak());
+            result.put("longestStreak", stats.getLongestStreak());
+            result.put("totalPracticeHours", stats.getTotalPracticeHours());
+            result.put("cumulativeXP", stats.getCumulativeXP());
+            result.put("currentTier", stats.getCurrentTier());
+            result.put("weeklyXP", stats.getWeeklyXP());
+            result.put("lastPracticeTime", stats.getLastPracticeTime());
+        } else {
+            result.put("currentStreak", 0);
+            result.put("longestStreak", 0);
+            result.put("totalPracticeHours", 0.0);
+            result.put("cumulativeXP", 0.0);
+            result.put("currentTier", "BRONZE");
+            result.put("weeklyXP", 0.0);
+            result.put("lastPracticeTime", null);
+        }
+
+        return result;
+    }
+
+    @Override
+    public void sendNotificationEmail(@NonNull String userId, @NonNull String subject, @NonNull String content) {
+        User user = userRepository.findById(Objects.requireNonNull(userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        emailService.sendSimpleEmail(user.getEmail(), subject, content);
     }
 
     private List<Map<String, Object>> toChartList(Map<String, Long> data, String keyField, String valueField) {

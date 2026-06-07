@@ -1,6 +1,5 @@
 package com.mchub.models;
 
-import com.mchub.enums.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,44 +11,27 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-
-@Document(collection = "notifications")
+@Document(collection = "otp_verifications")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Notification {
+public class OtpVerification {
 
     @Id
     private String id;
 
-    
     @Indexed
-    private String user;
+    private String email;
 
-    
-    private String senderId;
+    private String code;
 
-    private String title;
-
-    private String body;
-
-    
-    private NotificationType type;
-
-    
-    private String relatedId;
-
-    
-    private String relatedModel;
-
-    
-    private String linkAction;
+    @Indexed(expireAfterSeconds = 600) // TTL: auto-delete after 10 min
+    private LocalDateTime expiresAt;
 
     @Builder.Default
-    private boolean isRead = false;
+    private boolean used = false;
 
-    @Indexed
     @CreatedDate
     private LocalDateTime createdAt;
 }
