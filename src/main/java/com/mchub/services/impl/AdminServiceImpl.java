@@ -67,7 +67,7 @@ public class AdminServiceImpl implements AdminService {
                                    .mapToLong(PaymentTransaction::getAmount).sum();
 
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalUsers",       userRepository.count());
+        stats.put("totalUsers",       userRepository.countByRoleNot(UserRole.ADMIN));
         stats.put("totalMCs",         userRepository.countByRole(UserRole.MC));
         stats.put("totalTransactions", allTx.size());
         stats.put("completedTransactions", completedCount);
@@ -167,8 +167,8 @@ public class AdminServiceImpl implements AdminService {
         Instant inst30Ago = day30Ago.toInstant(ZoneOffset.UTC);
         Instant instToday = today.toInstant(ZoneOffset.UTC);
 
-        // ── New users per day (last 30 days) ──────────────────────────────────
-        List<User> newUsers30 = userRepository.findByCreatedAtAfter(day30Ago);
+        // ── New users per day (last 30 days) — exclude ADMIN ─────────────────
+        List<User> newUsers30 = userRepository.findByCreatedAtAfterAndRoleNot(day30Ago, UserRole.ADMIN);
         Map<String, Long> newUsersByDay = new TreeMap<>();
         for (int i = 29; i >= 0; i--) {
             String key = now.minusDays(i).toLocalDate().toString();
@@ -229,9 +229,9 @@ public class AdminServiceImpl implements AdminService {
             }
         });
 
-        // ── Monthly new users (last 12 months) ────────────────────────────────
+        // ── Monthly new users (last 12 months) — exclude ADMIN ───────────────
         LocalDateTime month12Ago = now.minusMonths(12);
-        List<User> newUsers12M = userRepository.findByCreatedAtAfter(month12Ago);
+        List<User> newUsers12M = userRepository.findByCreatedAtAfterAndRoleNot(month12Ago, UserRole.ADMIN);
         Map<String, Long> newUsersByMonth = new TreeMap<>();
         for (int i = 11; i >= 0; i--) {
             LocalDateTime m = now.minusMonths(i);
@@ -258,8 +258,8 @@ public class AdminServiceImpl implements AdminService {
             }
         });
 
-        // ── Active vs inactive users ───────────────────────────────────────────
-        List<User> allUsers = userRepository.findAll();
+        // ── Active vs inactive users — exclude ADMIN ─────────────────────────
+        List<User> allUsers = userRepository.findByRoleNot(UserRole.ADMIN);
         long activeUsers   = allUsers.stream().filter(User::isActive).count();
         long inactiveUsers = allUsers.size() - activeUsers;
 
@@ -267,20 +267,21 @@ public class AdminServiceImpl implements AdminService {
         List<AuditLog> logins7d = auditLogRepository.findByActionAndCreatedAtAfter(AuditAction.AUTH_LOGIN, day7Ago);
         long activeUsersLast7d = logins7d.stream().map(AuditLog::getUserId).distinct().count();
 
-        // ── Plan distribution ────────────────────────────────────────────────
+        // ── Plan distribution — exclude ADMIN ────────────────────────────────
         Map<String, Long> planDist = new LinkedHashMap<>();
         for (SubscriptionPlan p : SubscriptionPlan.values()) {
-            planDist.put(p.name(), userRepository.countByPlan(p));
+            planDist.put(p.name(), userRepository.countByPlanAndRoleNot(p, UserRole.ADMIN));
         }
 
-        // ── Role distribution ────────────────────────────────────────────────
+        // ── Role distribution — exclude ADMIN ────────────────────────────────
         Map<String, Long> roleDist = new LinkedHashMap<>();
         for (UserRole r : UserRole.values()) {
+            if (r == UserRole.ADMIN) continue;
             roleDist.put(r.name(), userRepository.countByRole(r));
         }
 
-        // ── Registrations today ───────────────────────────────────────────────
-        long registrationsToday = userRepository.findByCreatedAtAfter(today).size();
+        // ── Registrations today — exclude ADMIN ──────────────────────────────
+        long registrationsToday = userRepository.findByCreatedAtAfterAndRoleNot(today, UserRole.ADMIN).size();
         long loginsToday30      = loginsToday.size();
         long sessionsToday30    = sessionsToday.size();
 
@@ -319,7 +320,7 @@ public class AdminServiceImpl implements AdminService {
         result.put("sessionsToday",       sessionsToday30);
         result.put("totalLogins30d",      (long) logins30.size());
         result.put("totalSessions30d",    (long) sessions30.size());
-        result.put("premiumUsers",        userRepository.countByIsPremiumTrue());
+        result.put("premiumUsers",        userRepository.countByIsPremiumTrueAndRoleNot(UserRole.ADMIN));
         return result;
     }
 
@@ -480,7 +481,7 @@ public class AdminServiceImpl implements AdminService {
         LocalDateTime day7Ago  = now.minusDays(7);
         LocalDateTime day1Ago  = now.minusDays(1);
 
-        List<User> allUsers    = userRepository.findAll();
+        List<User> allUsers    = userRepository.findByRoleNot(UserRole.ADMIN);
         List<PaymentTransaction> allTx = transactionRepository.findAll();
 
         // ── DAU / MAU ────────────────────────────────────────────────────────
@@ -548,10 +549,10 @@ public class AdminServiceImpl implements AdminService {
         long warmUsers = allUsers.stream().filter(u -> !loggedIn7d.contains(u.getId()) && (loggedIn30d.contains(u.getId()) || hasSession.contains(u.getId()))).count();
         long coldUsers = allUsers.stream().filter(u -> !loggedIn30d.contains(u.getId())).count();
 
-        // ── New users last 7d vs 7d-14d (growth rate) ─────────────────────────
+        // ── New users last 7d vs 7d-14d (growth rate) — exclude ADMIN ────────
         LocalDateTime day14Ago = now.minusDays(14);
-        long newUsers7d    = userRepository.findByCreatedAtAfter(day7Ago).size();
-        long newUsers7to14 = userRepository.findByCreatedAtBetween(day14Ago, day7Ago).size();
+        long newUsers7d    = userRepository.findByCreatedAtAfterAndRoleNot(day7Ago, UserRole.ADMIN).size();
+        long newUsers7to14 = userRepository.findByCreatedAtBetweenAndRoleNot(day14Ago, day7Ago, UserRole.ADMIN).size();
         double userGrowthRate = newUsers7to14 > 0
             ? Math.round((double)(newUsers7d - newUsers7to14) / newUsers7to14 * 1000.0) / 10.0
             : (newUsers7d > 0 ? 100.0 : 0.0);
@@ -561,7 +562,7 @@ public class AdminServiceImpl implements AdminService {
         for (int i = 2; i >= 0; i--) {
             LocalDateTime cohortStart = now.minusMonths(i + 1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime cohortEnd   = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-            List<User> cohortUsers = userRepository.findByCreatedAtBetween(cohortStart, cohortEnd);
+            List<User> cohortUsers = userRepository.findByCreatedAtBetweenAndRoleNot(cohortStart, cohortEnd, UserRole.ADMIN);
             int cohortSize = cohortUsers.size();
             java.util.Set<String> cohortIds = cohortUsers.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
 

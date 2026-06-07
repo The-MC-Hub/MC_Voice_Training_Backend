@@ -31,4 +31,17 @@ public interface UserRepository extends MongoRepository<User, String> {
     long countByIsPremiumTrue();
 
     List<User> findAllByOrderByCreatedAtDesc();
+
+    // Non-admin queries (exclude ADMIN role from stats)
+    List<User> findByRoleNot(UserRole role);
+
+    long countByRoleNot(UserRole role);
+
+    long countByPlanAndRoleNot(SubscriptionPlan plan, UserRole role);
+
+    long countByIsPremiumTrueAndRoleNot(UserRole role);
+
+    List<User> findByCreatedAtAfterAndRoleNot(LocalDateTime after, UserRole role);
+
+    List<User> findByCreatedAtBetweenAndRoleNot(LocalDateTime from, LocalDateTime to, UserRole role);
 }
