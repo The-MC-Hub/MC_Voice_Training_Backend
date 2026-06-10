@@ -38,9 +38,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public User register(@NonNull RegisterRequest req) {
-        if (userRepository.existsByEmail(req.getEmail())) {
-            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email is already in use");
-        }
+        userRepository.findByEmail(req.getEmail()).ifPresent(existing -> {
+            if (existing.isVerified()) {
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email is already in use");
+            }
+            // Unverified stale account — clean up so user can re-register
+            otpRepo.deleteAllByEmail(req.getEmail());
+            if (existing.getMcProfile() != null) {
+                mcProfileRepository.deleteByUser(existing.getId());
+            }
+            userRepository.delete(existing);
+        });
 
         UserRole role = UserRole.CLIENT;
         if (req.getRole() != null) {
