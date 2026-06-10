@@ -44,7 +44,8 @@ public class Announcement {
     }
 
     // Audience filter — empty = all active users
-    private List<String> targetPlans;  // e.g. ["FREE","BASIC"] — empty = everyone
+    private List<String> targetPlans;   // e.g. ["FREE","BASIC"] — empty = everyone
+    private List<String> recipientIds;  // explicit user IDs — if set, overrides targetPlans
 
     private String createdBy;   // admin userId
     private int recipientCount; // set when sent

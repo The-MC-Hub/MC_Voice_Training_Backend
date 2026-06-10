@@ -62,6 +62,7 @@ public class AnnouncementService {
         existing.setEmailSubject(updated.getEmailSubject());
         existing.setType(updated.getType());
         existing.setTargetPlans(updated.getTargetPlans());
+        existing.setRecipientIds(updated.getRecipientIds());
         existing.setRefId(updated.getRefId());
         existing.setRefType(updated.getRefType());
         return announcementRepo.save(existing);
@@ -104,9 +105,14 @@ public class AnnouncementService {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Already sent");
         }
 
+        // Priority: explicit caller list > saved recipientIds on draft > targetPlans filter
+        List<String> effectiveIds = (recipientIds != null && !recipientIds.isEmpty())
+                ? recipientIds
+                : ann.getRecipientIds();
+
         List<User> recipients;
-        if (recipientIds != null && !recipientIds.isEmpty()) {
-            Set<String> idSet = new java.util.HashSet<>(recipientIds);
+        if (effectiveIds != null && !effectiveIds.isEmpty()) {
+            Set<String> idSet = new HashSet<>(effectiveIds);
             recipients = userRepository.findAll().stream()
                     .filter(u -> idSet.contains(u.getId()))
                     .filter(u -> u.getEmail() != null && !u.getEmail().isBlank())
