@@ -15,7 +15,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${app.mail.from}")
     private String fromEmail;
 
     @Value("${mchub.fe-url:http://localhost:5173}")

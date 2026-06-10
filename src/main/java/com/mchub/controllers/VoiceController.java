@@ -114,6 +114,12 @@ public class VoiceController {
         return ResponseEntity.ok(ApiResponse.success(voiceService.getLessonById(id)));
     }
 
+    @GetMapping("/lessons/featured")
+    public ResponseEntity<ApiResponse<List<VoiceLessonResponseDTO>>> getFeaturedLessons(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(voiceService.getFeaturedLessons(limit)));
+    }
+
     // --- MC Practice Endpoints ---
     @PostMapping("/practice/analyze-voice")
     @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")

@@ -52,6 +52,10 @@ public class VoiceLesson {
     @Builder.Default
     private int passingScore = 70;
 
+    /** Total number of times this lesson has been practiced (incremented on each analyze call) */
+    @Builder.Default
+    private int practiceCount = 0;
+
     // ── Timestamps ────────────────────────────────────────────────
 
     @CreatedDate

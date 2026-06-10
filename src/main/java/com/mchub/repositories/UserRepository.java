@@ -44,4 +44,12 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByCreatedAtAfterAndRoleNot(LocalDateTime after, UserRole role);
 
     List<User> findByCreatedAtBetweenAndRoleNot(LocalDateTime from, LocalDateTime to, UserRole role);
+
+    List<User> findByPlanIn(List<SubscriptionPlan> plans);
+
+    List<User> findByRoleIn(List<UserRole> roles);
+
+    List<User> findByIsPremiumTrue();
+
+    List<User> findByEmailIn(List<String> emails);
 }

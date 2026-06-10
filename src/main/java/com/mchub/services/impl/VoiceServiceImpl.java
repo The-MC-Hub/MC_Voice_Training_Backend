@@ -36,6 +36,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -318,6 +320,10 @@ public class VoiceServiceImpl implements VoiceService {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }
 
+            // Increment lesson practice count
+            lesson.setPracticeCount(lesson.getPracticeCount() + 1);
+            lessonRepository.save(lesson);
+
             // Increment AI session counter — FREE uses total session count via repository,
             // but also track aiSessionsUsed so frontend can display X/5 correctly
             if (plan == SubscriptionPlan.FREE || plan == SubscriptionPlan.BASIC) {
@@ -415,5 +421,14 @@ public class VoiceServiceImpl implements VoiceService {
     @Override
     public com.mchub.models.LessonAdaptiveStats getAdaptiveStats(String lessonId) {
         return adaptiveStatsRepository.findByLessonId(lessonId).orElse(null);
+    }
+
+    @Override
+    public List<VoiceLessonResponseDTO> getFeaturedLessons(int limit) {
+        return lessonRepository
+                .findByPracticeCountGreaterThanOrderByPracticeCountDesc(0, PageRequest.of(0, limit))
+                .stream()
+                .map(lessonMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 }

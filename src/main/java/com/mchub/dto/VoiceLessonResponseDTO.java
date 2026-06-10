@@ -29,6 +29,7 @@ public class VoiceLessonResponseDTO {
     private int targetWpmMax;
     private String evaluationHint;
     private int passingScore;
+    private int practiceCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

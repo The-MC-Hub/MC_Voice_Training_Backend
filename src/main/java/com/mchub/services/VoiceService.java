@@ -43,4 +43,7 @@ public interface VoiceService {
 
         /** Returns adaptive calibration stats for a lesson, or null if < 10 sessions */
         LessonAdaptiveStats getAdaptiveStats(String lessonId);
+
+        /** Returns top N lessons ordered by practiceCount desc (only those with > 0 practices) */
+        List<VoiceLessonResponseDTO> getFeaturedLessons(int limit);
 }
