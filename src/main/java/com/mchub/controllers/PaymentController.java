@@ -238,4 +238,46 @@ public class PaymentController {
 
         return ResponseEntity.ok(ApiResponse.success("Payment simulated! Plan activated.", data));
     }
+
+    // ================================================================
+    //  POST /api/v1/payment/admin/complete/{transactionId}
+    //  Admin manually marks a PENDING transaction as COMPLETED
+    //  and activates the user's plan — for webhook failures
+    // ================================================================
+    @PostMapping("/admin/complete/{transactionId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> adminCompleteTransaction(
+            @PathVariable String transactionId) {
+
+        PaymentTransaction tx = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new AppException(ErrorCode.TRANSACTION_NOT_FOUND, "Transaction not found: " + transactionId));
+
+        if (tx.getStatus() == TransactionStatus.COMPLETED) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Transaction already completed");
+        }
+
+        tx.setStatus(TransactionStatus.COMPLETED);
+        tx.setBankRef("ADMIN-MANUAL-" + System.currentTimeMillis());
+        tx.setCompletedAt(LocalDateTime.now());
+        transactionRepository.save(tx);
+
+        User user = userRepository.findById(tx.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + tx.getUserId()));
+
+        user.setPremium(true);
+        user.setPlan(tx.getPlan());
+        user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
+        user.setAiSessionsUsed(0);
+        userRepository.save(user);
+
+        log.info(">>> ADMIN MANUAL COMPLETE: txId={} user={} plan={}", transactionId, user.getEmail(), tx.getPlan());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("transactionId", transactionId);
+        data.put("userId", user.getId());
+        data.put("plan", tx.getPlan());
+        data.put("planExpiresAt", user.getPlanExpiresAt());
+
+        return ResponseEntity.ok(ApiResponse.success("Transaction completed manually. Plan activated.", data));
+    }
 }
