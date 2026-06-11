@@ -61,8 +61,9 @@ public class PaymentController {
     // ================================================================
     @PostMapping("/create-order")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createPremiumOrder(
-            @RequestParam String userId,
             @RequestParam(defaultValue = "FULL") SubscriptionPlan plan) {
+
+        String userId = SecurityUtils.getCurrentUserId();
 
         if (plan == SubscriptionPlan.FREE) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Cannot purchase FREE plan");
@@ -168,6 +169,10 @@ public class PaymentController {
     // ================================================================
     @GetMapping("/status/{userId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPaymentStatus(@PathVariable String userId) {
+        String callerId = SecurityUtils.getCurrentUserId();
+        if (!callerId.equals(userId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
@@ -197,7 +202,7 @@ public class PaymentController {
     //  POST /api/v1/payment/simulate-success  (dev only)
     // ================================================================
     @PostMapping("/simulate-success")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> simulatePaymentSuccess(
             @RequestParam String userId,
             @RequestParam(defaultValue = "FULL") SubscriptionPlan plan) {

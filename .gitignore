@@ -45,6 +45,8 @@ replay_pid*
 .vscode/
 .gitnexus/
 .env
+.env.*
+!.env.example
 
 # HuggingFace model cache
 .cache/

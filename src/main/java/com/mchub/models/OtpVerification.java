@@ -32,6 +32,9 @@ public class OtpVerification {
     @Builder.Default
     private boolean used = false;
 
+    @Builder.Default
+    private int attemptCount = 0;
+
     @CreatedDate
     private LocalDateTime createdAt;
 }

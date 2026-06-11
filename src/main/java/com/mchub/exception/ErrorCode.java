@@ -70,7 +70,8 @@ public enum ErrorCode {
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ERR_9001", "System error, please try again later"),
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "ERR_9002", "Invalid input data"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_9003", "Resource not found"),
-    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "ERR_9004", "HTTP method not supported");
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "ERR_9004", "HTTP method not supported"),
+    TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "ERR_9005", "Too many failed attempts. Please request a new OTP.");
 
     
 

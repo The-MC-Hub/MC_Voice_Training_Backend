@@ -112,18 +112,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User retrieved", Map.of("user", userMapper.toResponseDTO(user))));
     }
 
-    @GetMapping("/fix-passwords")
-    public ResponseEntity<?> fixPasswords() {
-        authService.fixAllSeededPasswords();
-        return ResponseEntity.ok(ApiResponse.success("Successfully updated all passwords", null));
-    }
-
-    @GetMapping("/disable-2fa-all")
-    public ResponseEntity<?> disable2faAll() {
-        authService.disableAllTwoFactor();
-        return ResponseEntity.ok(ApiResponse.success("Successfully disabled 2FA for all users", null));
-    }
-
     @PutMapping("/settings")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateSettings(@RequestBody Map<String, Object> settings) {
         String userId = SecurityUtils.getCurrentUserId();

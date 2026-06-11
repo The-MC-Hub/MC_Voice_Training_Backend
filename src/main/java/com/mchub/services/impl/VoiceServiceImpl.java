@@ -431,4 +431,22 @@ public class VoiceServiceImpl implements VoiceService {
                 .map(lessonMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Object proxyAnalyzeVoice(MultipartFile audioFile, String scriptOrigin) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", audioFile.getResource());
+        body.add("script_origin", scriptOrigin != null ? scriptOrigin : "");
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+        try {
+            return restTemplate.postForObject(AI_SERVICE_URL, requestEntity, Map.class);
+        } catch (Exception e) {
+            log.error("AI proxy call failed: {}", e.getMessage());
+            throw new AppException(ErrorCode.INTERNAL_ERROR, "AI service unavailable");
+        }
+    }
 }

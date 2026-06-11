@@ -205,7 +205,13 @@ public class AuthServiceImpl implements AuthService {
         if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
         }
+        if (otp.getAttemptCount() >= 5) {
+            otpRepo.delete(otp);
+            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 5 lần sai. Vui lòng yêu cầu OTP mới.");
+        }
         if (!otp.getCode().equals(code.trim())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            otpRepo.save(otp);
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
         }
         otp.setUsed(true);

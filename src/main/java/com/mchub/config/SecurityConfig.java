@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/availability/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/certificates/mc/**").permitAll()
                         .requestMatchers("/ws-chat/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/social-posts").permitAll()
                         .anyRequest().authenticated())

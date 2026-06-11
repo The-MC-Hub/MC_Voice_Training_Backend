@@ -4,9 +4,12 @@ import com.mchub.dto.ApiResponse;
 import com.mchub.dto.PracticeSessionResponseDTO;
 import com.mchub.dto.VoiceLessonResponseDTO;
 import com.mchub.enums.VoiceLessonCategory;
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
 import com.mchub.services.VoiceService;
+import com.mchub.util.SecurityUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -125,9 +129,18 @@ public class VoiceController {
     @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")
     public ResponseEntity<ApiResponse<PracticeSessionResponseDTO>> analyzePractice(
             @RequestParam String lessonId,
-            @RequestParam String userId,
             @RequestParam MultipartFile audioFile) {
 
+        String ct = audioFile.getContentType();
+        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a");
+        if (ct == null || !allowedTypes.contains(ct)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
+        }
+        if (audioFile.getSize() > 20L * 1024 * 1024) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
+        }
+
+        String userId = SecurityUtils.getCurrentUserId();
         PracticeSessionResponseDTO dto = voiceService.analyzePractice(lessonId, userId, audioFile);
         return ResponseEntity.ok(ApiResponse.success("Analysis completed", dto));
     }
@@ -135,7 +148,31 @@ public class VoiceController {
     @GetMapping("/practice/history/{userId}")
     @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
     public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getHistory(@PathVariable String userId) {
+        String callerId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"));
+        if (!isAdmin && !callerId.equals(userId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
+        }
         return ResponseEntity.ok(ApiResponse.success(voiceService.getUserPracticeHistory(userId)));
+    }
+
+    @PostMapping("/proxy/analyze-voice")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")
+    public ResponseEntity<?> proxyAnalyzeVoice(
+            @RequestParam MultipartFile audioFile,
+            @RequestParam(required = false) String scriptOrigin) {
+
+        String ct = audioFile.getContentType();
+        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a");
+        if (ct == null || !allowedTypes.contains(ct)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
+        }
+        if (audioFile.getSize() > 20L * 1024 * 1024) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
+        }
+
+        return ResponseEntity.ok(voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin));
     }
 
     @GetMapping("/practice/{id}")

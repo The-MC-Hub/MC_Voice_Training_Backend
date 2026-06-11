@@ -34,6 +34,8 @@ public interface VoiceService {
 
         PracticeSessionResponseDTO analyzePractice(String lessonId, String userId, MultipartFile audioFile);
 
+        Object proxyAnalyzeVoice(MultipartFile audioFile, String scriptOrigin);
+
         List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId);
 
         PracticeSessionResponseDTO getPracticeSessionById(String id);
