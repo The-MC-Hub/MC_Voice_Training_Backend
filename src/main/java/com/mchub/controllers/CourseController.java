@@ -45,12 +45,18 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Courses retrieved", result));
     }
 
-    /** GET /api/v1/courses/{id} — course detail (includes lessons, readings, quiz) */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CourseResponseDTO>> getCourse(@PathVariable String id) {
         String userId = tryGetUserId();
         return ResponseEntity.ok(ApiResponse.success("Course detail retrieved",
                 courseService.getCourseDetail(id, userId)));
+    }
+
+    /** GET /api/v1/courses/reading-guides/{id} — get a specific reading guide */
+    @GetMapping("/reading-guides/{id}")
+    public ResponseEntity<ApiResponse<com.mchub.models.ReadingGuide>> getReadingGuide(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success("Reading guide retrieved",
+                courseService.getReadingGuide(id)));
     }
 
     // ── Authenticated user ────────────────────────────────────────────

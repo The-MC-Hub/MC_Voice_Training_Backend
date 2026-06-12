@@ -118,6 +118,12 @@ public class CourseServiceImpl implements CourseService {
         return toDetailDTO(course, progress);
     }
 
+    @Override
+    public ReadingGuide getReadingGuide(String id) {
+        return readingGuideRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Reading Guide not found: " + id));
+    }
+
     // ================================================================
     //  Enrollment & Progress
     // ================================================================

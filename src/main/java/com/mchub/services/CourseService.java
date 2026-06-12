@@ -13,6 +13,7 @@ public interface CourseService {
     List<CourseResponseDTO> getCoursesByType(CourseType type);
     List<CourseResponseDTO> getMilestoneCourses(String userId);
     CourseResponseDTO getCourseDetail(String courseId, String userId);
+    com.mchub.models.ReadingGuide getReadingGuide(String id);
 
     // ── Enrollment ───────────────────────────────────────────────────
     CourseResponseDTO.EnrollmentProgressDTO enroll(String courseId, String userId);
