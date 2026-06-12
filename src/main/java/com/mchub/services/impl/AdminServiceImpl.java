@@ -23,6 +23,7 @@ import com.mchub.mapper.UserMapper;
 import com.mchub.services.AdminService;
 import com.mchub.services.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
@@ -54,6 +56,7 @@ public class AdminServiceImpl implements AdminService {
     private final PasswordEncoder passwordEncoder;
     private final OtpVerificationRepository otpRepo;
     private final UserStatsRepository userStatsRepository;
+    private final com.mchub.repositories.DiscountCodeRepository discountCodeRepository;
 
     private static final SecureRandom ADMIN_RNG = new SecureRandom();
 
@@ -328,7 +331,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO createUser(@NonNull String name, @NonNull String email,
-                                      @NonNull String password, @NonNull String role) {
+                                      @NonNull String password, @NonNull String role,
+                                      String phoneNumber, String adminNote, String plan, String couponId) {
         if (userRepository.existsByEmail(email)) {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email already in use");
         }
@@ -338,15 +342,39 @@ public class AdminServiceImpl implements AdminService {
         } catch (IllegalArgumentException e) {
             userRole = UserRole.CLIENT;
         }
-        User user = User.builder()
+
+        User.UserBuilder builder = User.builder()
                 .name(name)
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .role(userRole)
                 .isVerified(true)
-                .isActive(true)
-                .build();
-        return userMapper.toResponseDTO(userRepository.save(Objects.requireNonNull(user)));
+                .isActive(true);
+
+        if (phoneNumber != null && !phoneNumber.isBlank()) builder.phoneNumber(phoneNumber);
+        if (adminNote   != null && !adminNote.isBlank())   builder.bio(adminNote);
+
+        if (plan != null && !plan.isBlank() && !plan.equalsIgnoreCase("FREE")) {
+            try {
+                com.mchub.enums.SubscriptionPlan sp = com.mchub.enums.SubscriptionPlan.valueOf(plan.toUpperCase());
+                builder.isPremium(true)
+                       .plan(sp)
+                       .planExpiresAt(LocalDateTime.now().plusDays(com.mchub.config.PlanConfig.daysFor(sp)))
+                       .aiSessionsUsed(0);
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        User saved = userRepository.save(Objects.requireNonNull(builder.build()));
+
+        if (couponId != null && !couponId.isBlank()) {
+            discountCodeRepository.findById(couponId).ifPresent(dc -> {
+                dc.setUsedCount(dc.getUsedCount() + 1);
+                discountCodeRepository.save(dc);
+            });
+        }
+
+        log.info(">>> ADMIN CREATE USER: email={} role={} plan={} coupon={}", email, role, plan, couponId);
+        return userMapper.toResponseDTO(saved);
     }
 
     @Override

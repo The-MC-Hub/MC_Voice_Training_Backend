@@ -36,7 +36,8 @@ public interface AdminService {
     Map<String, Object> getGrowthAnalytics();
 
     @PreAuthorize("hasAuthority('ADMIN')")
-    UserResponseDTO createUser(@NonNull String name, @NonNull String email, @NonNull String password, @NonNull String role);
+    UserResponseDTO createUser(@NonNull String name, @NonNull String email, @NonNull String password, @NonNull String role,
+                               String phoneNumber, String adminNote, String plan, String couponId);
 
     @PreAuthorize("hasAuthority('ADMIN')")
     void sendPasswordResetEmail(@NonNull String userId);

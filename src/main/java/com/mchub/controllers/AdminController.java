@@ -77,15 +77,19 @@ public class AdminController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@RequestBody Map<String, String> body) {
-        String name     = body.get("name");
-        String email    = body.get("email");
-        String password = body.get("password");
-        String role     = body.getOrDefault("role", "CLIENT");
+    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@RequestBody Map<String, Object> body) {
+        String name        = (String) body.get("name");
+        String email       = (String) body.get("email");
+        String password    = (String) body.get("password");
+        String role        = body.getOrDefault("role", "CLIENT").toString();
+        String phoneNumber = (String) body.get("phoneNumber");
+        String adminNote   = (String) body.get("adminNote");
+        String planStr     = (String) body.get("plan");
+        String couponId    = (String) body.get("couponId");
         if (name == null || email == null || password == null) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "name, email, password required");
         }
-        UserResponseDTO dto = adminService.createUser(name, email, password, role);
+        UserResponseDTO dto = adminService.createUser(name, email, password, role, phoneNumber, adminNote, planStr, couponId);
         return ResponseEntity.ok(ApiResponse.success("User created", dto));
     }
 
