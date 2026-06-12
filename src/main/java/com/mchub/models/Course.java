@@ -58,6 +58,13 @@ public class Course {
     @Builder.Default
     private int passingScore = 70; // % required to pass quiz
 
+    // ── Pricing: course included with BASIC+ plans, or buy individually ──
+    @Builder.Default
+    private int priceVnd = 199_000; // single-course purchase price
+
+    @Builder.Default
+    private int discountPercent = 0; // 0–100, admin-controlled
+
     @Builder.Default
     private boolean isActive = true;
 

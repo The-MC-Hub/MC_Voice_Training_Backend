@@ -34,6 +34,13 @@ public class CourseResponseDTO {
     private boolean isActive;
     private LocalDateTime createdAt;
 
+    // Pricing — single-course purchase (also included with BASIC+ plans)
+    private int priceVnd;
+    private int discountPercent;
+    private int finalPriceVnd;          // priceVnd after discountPercent
+    private Boolean hasAccess;          // per-user: plan BASIC+ active or purchased; null when unauthenticated
+    private Boolean purchased;          // per-user: bought individually
+
     // Populated only on detail endpoint
     private List<VoiceLessonResponseDTO> lessons;
     private List<ReadingGuideDTO> readings;

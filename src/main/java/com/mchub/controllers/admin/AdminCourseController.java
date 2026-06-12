@@ -50,6 +50,16 @@ public class AdminCourseController {
                 courseService.updateCourse(id, request)));
     }
 
+    /** PATCH /api/v1/admin/courses/{id}/pricing — set price & discount for single-course purchase */
+    @PatchMapping("/{id}/pricing")
+    public ResponseEntity<ApiResponse<CourseResponseDTO>> updatePricing(
+            @PathVariable String id,
+            @RequestParam(required = false) Integer priceVnd,
+            @RequestParam(required = false) Integer discountPercent) {
+        return ResponseEntity.ok(ApiResponse.success("Course pricing updated",
+                courseService.updatePricing(id, priceVnd, discountPercent)));
+    }
+
     /** DELETE /api/v1/admin/courses/{id} */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {

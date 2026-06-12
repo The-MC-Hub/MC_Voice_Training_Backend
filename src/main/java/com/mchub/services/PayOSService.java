@@ -44,6 +44,47 @@ public class PayOSService {
         return createPaymentLink(userId, plan, orderCode, PlanConfig.priceFor(plan));
     }
 
+    /** Payment link for a single-course purchase (one-off, not a subscription) */
+    public Map<String, Object> createCoursePaymentLink(String userId, String courseTitle, long orderCode, int amount) throws Exception {
+        String description = ("MCHUB COURSE " + userId);
+        if (description.length() > 25) description = description.substring(0, 25);
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("name", courseTitle != null && courseTitle.length() > 50 ? courseTitle.substring(0, 50) : courseTitle);
+        item.put("quantity", 1);
+        item.put("price", amount);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("orderCode", orderCode);
+        body.put("amount", amount);
+        body.put("description", description);
+        body.put("items", List.of(item));
+        body.put("cancelUrl", feUrl + "/m/payment/cancel");
+        body.put("returnUrl", feUrl + "/m/payment/success");
+
+        String signature = createSignature(body);
+        body.put("signature", signature);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-client-id", clientId);
+        headers.set("x-api-key", apiKey);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                PAYOS_API + "/v2/payment-requests", request, Map.class);
+
+        Map<String, Object> responseBody = response.getBody();
+        if (responseBody == null || !"00".equals(responseBody.get("code"))) {
+            String desc = responseBody != null ? String.valueOf(responseBody.get("desc")) : "null response";
+            throw new RuntimeException("PayOS error: " + desc);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+        return data;
+    }
+
     public Map<String, Object> createPaymentLink(String userId, SubscriptionPlan plan, long orderCode, int amount) throws Exception {
         // PayOS description max 25 chars
         String description = ("MCHUB " + plan.name() + " " + userId);

@@ -115,7 +115,15 @@ public class CourseServiceImpl implements CourseService {
                         .map(this::toProgressDTO)
                         .orElse(null)
                 : null;
-        return toDetailDTO(course, progress);
+        CourseResponseDTO dto = toDetailDTO(course, progress);
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            boolean purchased = user != null && user.getPurchasedCourseIds() != null
+                    && user.getPurchasedCourseIds().contains(courseId);
+            dto.setPurchased(purchased);
+            dto.setHasAccess(hasCourseAccess(courseId, userId));
+        }
+        return dto;
     }
 
     @Override
@@ -133,6 +141,10 @@ public class CourseServiceImpl implements CourseService {
         findCourse(courseId);
         if (enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
             throw new AppException(ErrorCode.COURSE_ALREADY_ENROLLED, "Already enrolled");
+        }
+        if (!hasCourseAccess(courseId, userId)) {
+            throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
+                    "Course requires BASIC plan or higher, or individual purchase");
         }
         CourseEnrollment enrollment = CourseEnrollment.builder()
                 .userId(userId)
@@ -289,6 +301,21 @@ public class CourseServiceImpl implements CourseService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public CourseResponseDTO updatePricing(String courseId, Integer priceVnd, Integer discountPercent) {
+        Course course = findCourse(courseId);
+        if (priceVnd != null) {
+            if (priceVnd < 0) throw new AppException(ErrorCode.VALIDATION_FAILED, "priceVnd must be >= 0");
+            course.setPriceVnd(priceVnd);
+        }
+        if (discountPercent != null) {
+            if (discountPercent < 0 || discountPercent > 100)
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "discountPercent must be 0-100");
+            course.setDiscountPercent(discountPercent);
+        }
+        return toSummaryDTO(courseRepository.save(course), null);
+    }
+
     // ================================================================
     //  Helpers
     // ================================================================
@@ -296,6 +323,21 @@ public class CourseServiceImpl implements CourseService {
     private Course findCourse(String id) {
         return courseRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Course not found: " + id));
+    }
+
+    /** BASIC+ plan (not expired) OR individually purchased course → access granted */
+    public boolean hasCourseAccess(String courseId, String userId) {
+        if (userId == null) return false;
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        if (user.getPurchasedCourseIds() != null && user.getPurchasedCourseIds().contains(courseId)) {
+            return true;
+        }
+        boolean planActive = user.getPlanExpiresAt() == null
+                || user.getPlanExpiresAt().isAfter(LocalDateTime.now());
+        return user.getPlan() != null
+                && user.getPlan() != com.mchub.enums.SubscriptionPlan.FREE
+                && planActive;
     }
 
     private CourseEnrollment findEnrollment(String userId, String courseId) {
@@ -364,8 +406,16 @@ public class CourseServiceImpl implements CourseService {
                 .passingScore(c.getPassingScore())
                 .isActive(c.isActive())
                 .createdAt(c.getCreatedAt())
+                .priceVnd(c.getPriceVnd())
+                .discountPercent(c.getDiscountPercent())
+                .finalPriceVnd(finalPrice(c))
                 .myProgress(progress)
                 .build();
+    }
+
+    private int finalPrice(Course c) {
+        int pct = Math.max(0, Math.min(100, c.getDiscountPercent()));
+        return (int) Math.round(c.getPriceVnd() * (100 - pct) / 100.0);
     }
 
     private CourseResponseDTO toDetailDTO(Course c, CourseResponseDTO.EnrollmentProgressDTO progress) {

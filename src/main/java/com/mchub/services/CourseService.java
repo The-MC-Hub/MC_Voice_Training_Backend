@@ -16,6 +16,7 @@ public interface CourseService {
     com.mchub.models.ReadingGuide getReadingGuide(String id);
 
     // ── Enrollment ───────────────────────────────────────────────────
+    boolean hasCourseAccess(String courseId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO enroll(String courseId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeReading(String courseId, String readingId, String userId);
@@ -30,4 +31,5 @@ public interface CourseService {
     CourseResponseDTO updateCourse(String courseId, SaveCourseRequest request);
     void deleteCourse(String courseId);
     List<CourseResponseDTO> getAllCoursesAdmin();
+    CourseResponseDTO updatePricing(String courseId, Integer priceVnd, Integer discountPercent);
 }

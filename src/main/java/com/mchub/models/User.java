@@ -69,6 +69,10 @@ public class User {
     @Builder.Default
     private int aiSessionsUsed = 0;
 
+    // Courses bought individually (one-off 199k purchase, independent of plan)
+    @Builder.Default
+    private java.util.List<String> purchasedCourseIds = new java.util.ArrayList<>();
+
     @CreatedDate
     private LocalDateTime createdAt;
 

@@ -35,6 +35,8 @@ public class PaymentController {
     private final PaymentTransactionRepository transactionRepository;
     private final PayOSService payOSService;
     private final PlanService planService;
+    private final com.mchub.repositories.CourseRepository courseRepository;
+    private final com.mchub.repositories.CourseEnrollmentRepository courseEnrollmentRepository;
 
     // ================================================================
     //  GET /api/v1/payment/plans  (public — frontend fetches pricing)
@@ -117,6 +119,81 @@ public class PaymentController {
     }
 
     // ================================================================
+    //  POST /api/v1/payment/course-order
+    //  Mua lẻ một khóa học (mặc định 199k, admin có thể giảm giá)
+    // ================================================================
+    @PostMapping("/course-order")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createCourseOrder(
+            @RequestParam String courseId) {
+
+        String userId = SecurityUtils.getCurrentUserId();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+
+        com.mchub.models.Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Course not found: " + courseId));
+
+        if (user.getPurchasedCourseIds() != null && user.getPurchasedCourseIds().contains(courseId)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Course already purchased");
+        }
+
+        int pct = Math.max(0, Math.min(100, course.getDiscountPercent()));
+        int effectiveAmount = (int) Math.round(course.getPriceVnd() * (100 - pct) / 100.0);
+
+        long orderCode = System.currentTimeMillis() % 1_000_000_000L * 100 + ThreadLocalRandom.current().nextInt(100);
+
+        Map<String, Object> checkout;
+        try {
+            checkout = payOSService.createCoursePaymentLink(userId, course.getTitle(), orderCode, effectiveAmount);
+        } catch (Exception e) {
+            log.error("PayOS createCoursePaymentLink failed: {}", SecurityUtils.safeMessage(e));
+            throw new AppException(ErrorCode.INTERNAL_ERROR, "Payment service unavailable");
+        }
+
+        PaymentTransaction tx = PaymentTransaction.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .amount(effectiveAmount)
+                .status(TransactionStatus.PENDING)
+                .orderCode(orderCode)
+                .checkoutUrl(String.valueOf(checkout.getOrDefault("checkoutUrl", "")))
+                .memo("MCHUB COURSE " + course.getSlug() + " " + userId)
+                .build();
+        transactionRepository.save(tx);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", userId);
+        data.put("courseId", courseId);
+        data.put("amount", effectiveAmount);
+        data.put("orderCode", orderCode);
+        data.put("checkoutUrl", String.valueOf(checkout.getOrDefault("checkoutUrl", "")));
+        data.put("qrCode", String.valueOf(checkout.getOrDefault("qrCode", "")));
+
+        return ResponseEntity.ok(ApiResponse.success("Course payment link created", data));
+    }
+
+    /** Grant course access + auto-enroll after a completed course purchase */
+    private void grantCoursePurchase(PaymentTransaction tx) {
+        userRepository.findById(tx.getUserId()).ifPresent(user -> {
+            if (user.getPurchasedCourseIds() == null) {
+                user.setPurchasedCourseIds(new java.util.ArrayList<>());
+            }
+            if (!user.getPurchasedCourseIds().contains(tx.getCourseId())) {
+                user.getPurchasedCourseIds().add(tx.getCourseId());
+                userRepository.save(user);
+            }
+            if (!courseEnrollmentRepository.existsByUserIdAndCourseId(tx.getUserId(), tx.getCourseId())) {
+                courseEnrollmentRepository.save(com.mchub.models.CourseEnrollment.builder()
+                        .userId(tx.getUserId())
+                        .courseId(tx.getCourseId())
+                        .build());
+            }
+            log.info(">>> COURSE PURCHASED: user={} course={}", user.getEmail(), tx.getCourseId());
+        });
+    }
+
+    // ================================================================
     //  POST /api/v1/payment/webhook
     //  Nhận webhook từ PayOS — verify HMAC-SHA256
     // ================================================================
@@ -147,14 +224,20 @@ public class PaymentController {
                         tx.setCompletedAt(LocalDateTime.now());
                         transactionRepository.save(tx);
 
-                        userRepository.findById(tx.getUserId()).ifPresent(user -> {
-                            user.setPremium(true);
-                            user.setPlan(tx.getPlan());
-                            user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
-                            user.setAiSessionsUsed(0);
-                            userRepository.save(user);
-                            log.info(">>> USER UPGRADED: {} → plan={}", user.getEmail(), tx.getPlan());
-                        });
+                        if (tx.getCourseId() != null) {
+                            // single-course purchase
+                            grantCoursePurchase(tx);
+                        } else {
+                            // subscription plan upgrade
+                            userRepository.findById(tx.getUserId()).ifPresent(user -> {
+                                user.setPremium(true);
+                                user.setPlan(tx.getPlan());
+                                user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
+                                user.setAiSessionsUsed(0);
+                                userRepository.save(user);
+                                log.info(">>> USER UPGRADED: {} → plan={}", user.getEmail(), tx.getPlan());
+                            });
+                        }
                     }
                 });
             }
@@ -269,6 +352,17 @@ public class PaymentController {
         User user = userRepository.findById(tx.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + tx.getUserId()));
 
+        Map<String, Object> data = new HashMap<>();
+        data.put("transactionId", transactionId);
+        data.put("userId", user.getId());
+
+        if (tx.getCourseId() != null) {
+            grantCoursePurchase(tx);
+            data.put("courseId", tx.getCourseId());
+            log.info(">>> ADMIN MANUAL COMPLETE (COURSE): txId={} user={} course={}", transactionId, user.getEmail(), tx.getCourseId());
+            return ResponseEntity.ok(ApiResponse.success("Transaction completed manually. Course unlocked.", data));
+        }
+
         user.setPremium(true);
         user.setPlan(tx.getPlan());
         user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
@@ -277,9 +371,6 @@ public class PaymentController {
 
         log.info(">>> ADMIN MANUAL COMPLETE: txId={} user={} plan={}", transactionId, user.getEmail(), tx.getPlan());
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("transactionId", transactionId);
-        data.put("userId", user.getId());
         data.put("plan", tx.getPlan());
         data.put("planExpiresAt", user.getPlanExpiresAt());
 

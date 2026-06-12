@@ -30,6 +30,9 @@ public class PaymentTransaction {
 
     private SubscriptionPlan plan;
 
+    /** Non-null when this transaction is a single-course purchase (plan is null in that case) */
+    private String courseId;
+
     @Builder.Default
     private TransactionStatus status = TransactionStatus.PENDING;
 

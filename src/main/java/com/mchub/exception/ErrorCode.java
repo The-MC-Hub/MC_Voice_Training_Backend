@@ -45,6 +45,7 @@ public enum ErrorCode {
     ENROLLMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_7004", "Enrollment not found"),
     QUIZ_ANSWER_MISMATCH(HttpStatus.BAD_REQUEST, "ERR_7005", "Number of answers does not match number of questions"),
     CERTIFICATE_ALREADY_ISSUED(HttpStatus.CONFLICT, "ERR_7006", "Certificate already issued for this course"),
+    COURSE_REQUIRES_PLAN(HttpStatus.PAYMENT_REQUIRED, "ERR_7007", "Course requires BASIC plan or higher, or individual purchase"),
 
     CERTIFICATE_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_5003", "Certificate not found"),
     CERTIFICATE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ERR_5004", "You do not have permission to manipulate this certificate"),
