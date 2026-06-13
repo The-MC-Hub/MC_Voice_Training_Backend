@@ -9,6 +9,7 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
 import com.mchub.services.VoiceService;
+import com.mchub.util.AudioMagicBytesValidator;
 import com.mchub.util.SecurityUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -141,6 +143,13 @@ public class VoiceController {
         if (audioFile.getSize() > 20L * 1024 * 1024) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
         }
+        try {
+            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
+            }
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
+        }
 
         String userId = SecurityUtils.getCurrentUserId();
         PracticeSessionResponseDTO dto = voiceService.analyzePractice(lessonId, userId, audioFile);
@@ -173,6 +182,13 @@ public class VoiceController {
         }
         if (audioFile.getSize() > 20L * 1024 * 1024) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
+        }
+        try {
+            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
+            }
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
         }
 
         return ResponseEntity.ok(voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin));

@@ -73,6 +73,16 @@ public class User {
     @Builder.Default
     private java.util.List<String> purchasedCourseIds = new java.util.ArrayList<>();
 
+    // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
+    private LocalDateTime passwordChangedAt;
+
+    // Brute-force lockout: incremented on each failed login, reset on success
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    // Account locked until this time (null = not locked)
+    private LocalDateTime lockedUntil;
+
     @CreatedDate
     private LocalDateTime createdAt;
 

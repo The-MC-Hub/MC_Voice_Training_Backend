@@ -400,6 +400,7 @@ public class AdminServiceImpl implements AdminService {
         User user = userRepository.findById(Objects.requireNonNull(userId))
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordChangedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
     }
 

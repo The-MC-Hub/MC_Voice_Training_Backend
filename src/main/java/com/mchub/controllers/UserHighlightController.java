@@ -26,7 +26,7 @@ public class UserHighlightController {
                     highlightRepository.findByUserIdAndReadingGuideIdOrderByCreatedAtDesc(userId, guideId)
             ));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.fail(e.getMessage()));
+            return ResponseEntity.internalServerError().body(ApiResponse.fail("An internal error occurred"));
         }
     }
 
@@ -38,7 +38,7 @@ public class UserHighlightController {
             UserHighlight saved = highlightRepository.save(highlight);
             return ResponseEntity.ok(ApiResponse.success("Highlight created", saved));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.fail(e.getMessage()));
+            return ResponseEntity.internalServerError().body(ApiResponse.fail("An internal error occurred"));
         }
     }
 
@@ -54,7 +54,7 @@ public class UserHighlightController {
                 return ResponseEntity.ok(ApiResponse.success("Highlight updated", highlightRepository.save(highlight)));
             }).orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.fail(e.getMessage()));
+            return ResponseEntity.internalServerError().body(ApiResponse.fail("An internal error occurred"));
         }
     }
 
@@ -64,7 +64,7 @@ public class UserHighlightController {
             highlightRepository.deleteById(id);
             return ResponseEntity.ok(ApiResponse.success("Highlight deleted", null));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.fail(e.getMessage()));
+            return ResponseEntity.internalServerError().body(ApiResponse.fail("An internal error occurred"));
         }
     }
 }

@@ -52,3 +52,10 @@ replay_pid*
 .cache/
 undefined/
 **/*.onnx
+
+# Seed / import scripts (contain hardcoded accounts/passwords)
+src/main/java/com/mchub/config/DataSeeder.java
+import_data.py
+seed_data/
+**/seed_*.js
+**/seed_*.py

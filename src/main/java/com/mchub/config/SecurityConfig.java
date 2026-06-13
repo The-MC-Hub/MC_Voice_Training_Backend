@@ -1,5 +1,6 @@
 package com.mchub.config;
 
+import com.mchub.repositories.UserRepository;
 import com.mchub.services.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ import java.util.Objects;
 public class SecurityConfig {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Value("${mchub.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsRaw;
@@ -42,6 +44,14 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .headers(headers -> headers
+                        .xssProtection(xss -> xss.disable()) // modern browsers use CSP instead
+                        .contentTypeOptions(ct -> {})        // X-Content-Type-Options: nosniff
+                        .frameOptions(frame -> frame.deny()) // X-Frame-Options: DENY (clickjacking)
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(31536000)
+                                .includeSubDomains(true))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
@@ -62,7 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/social-posts").permitAll()
                         .anyRequest().authenticated())
 
-                .addFilterBefore(new JwtAuthenticationFilter(Objects.requireNonNull(jwtService)),
+                .addFilterBefore(new JwtAuthenticationFilter(Objects.requireNonNull(jwtService), userRepository),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

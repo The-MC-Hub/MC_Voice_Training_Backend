@@ -3,6 +3,7 @@ package com.mchub.enums;
 public enum AuditAction {
     
         AUTH_LOGIN,
+        AUTH_LOGIN_FAILED,
         AUTH_LOGOUT,
         AUTH_REGISTER,
         AUTH_CHANGE_PASSWORD,

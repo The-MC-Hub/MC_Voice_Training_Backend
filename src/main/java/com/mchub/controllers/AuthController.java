@@ -84,11 +84,11 @@ public class AuthController {
                 return ResponseEntity.status(202).body(ApiResponse.success("ADMIN_OTP_REQUIRED",
                         Map.of("requiresAdminOtp", true, "email", adminEmail)));
             }
-            auditLogService.logError(null, AuditAction.AUTH_LOGIN, "User", ex.getMessage(), request);
+            auditLogService.logError(null, AuditAction.AUTH_LOGIN_FAILED, "User", "email=" + req.getEmail() + " " + SecurityUtils.safeMessage(ex), request);
             throw ex;
         } catch (Exception ex) {
-            auditLogService.logError(null, AuditAction.AUTH_LOGIN, "User", ex.getMessage(), request);
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS, ex.getMessage());
+            auditLogService.logError(null, AuditAction.AUTH_LOGIN_FAILED, "User", "email=" + req.getEmail() + " " + SecurityUtils.safeMessage(ex), request);
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
     }
 
@@ -102,7 +102,7 @@ public class AuthController {
         String code = body.get("code");
         AuthService.LoginResponse resp = authService.verifyAdminLoginOtp(
                 Objects.requireNonNull(email), Objects.requireNonNull(code));
-        auditLogService.log(resp.user().getId(), AuditAction.AUTH_LOGIN,
+        auditLogService.log(resp.user().getId(), AuditAction.ADMIN_LOGIN_OTP_VERIFY,
                 "User", resp.user().getId(), "{\"method\":\"admin-otp\"}", request);
         return ResponseEntity.ok(ApiResponse.success("Admin login verified",
                 Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));

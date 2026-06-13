@@ -14,6 +14,7 @@ import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
 import com.mchub.services.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,15 +38,23 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final OtpVerificationRepository otpRepo;
 
-    // Admin account index → OTP destination email (admin1=index 1, ..., admin6=index 6)
-    private static final Map<String, String> ADMIN_OTP_EMAILS = new HashMap<>(Map.of(
-        "admin1@mchub.vn", "letritrung2605@gmail.com",
-        "admin2@mchub.vn", "tiensminh11@gmail.com",
-        "admin3@mchub.vn", "phuonglinh2004tranle@gmail.com",
-        "admin4@mchub.vn", "duymc64@gmail.com",
-        "admin5@mchub.vn", "14032004tranlevy@gmail.com",
-        "admin6@mchub.vn", "huynhthiminhnguyet198@gmail.com"
-    ));
+    @Value("${mchub.admin.otp.email.1:}") private String adminOtpEmail1;
+    @Value("${mchub.admin.otp.email.2:}") private String adminOtpEmail2;
+    @Value("${mchub.admin.otp.email.3:}") private String adminOtpEmail3;
+    @Value("${mchub.admin.otp.email.4:}") private String adminOtpEmail4;
+    @Value("${mchub.admin.otp.email.5:}") private String adminOtpEmail5;
+    @Value("${mchub.admin.otp.email.6:}") private String adminOtpEmail6;
+
+    private Map<String, String> buildAdminOtpEmails() {
+        Map<String, String> m = new HashMap<>();
+        if (!adminOtpEmail1.isBlank()) m.put("admin1@mchub.vn", adminOtpEmail1);
+        if (!adminOtpEmail2.isBlank()) m.put("admin2@mchub.vn", adminOtpEmail2);
+        if (!adminOtpEmail3.isBlank()) m.put("admin3@mchub.vn", adminOtpEmail3);
+        if (!adminOtpEmail4.isBlank()) m.put("admin4@mchub.vn", adminOtpEmail4);
+        if (!adminOtpEmail5.isBlank()) m.put("admin5@mchub.vn", adminOtpEmail5);
+        if (!adminOtpEmail6.isBlank()) m.put("admin6@mchub.vn", adminOtpEmail6);
+        return m;
+    }
 
     @Override
     public User register(@NonNull RegisterRequest req) {
@@ -92,6 +101,9 @@ public class AuthServiceImpl implements AuthService {
         return savedUser;
     }
 
+    private static final int MAX_FAILED_ATTEMPTS = 10;
+    private static final int LOCKOUT_MINUTES = 15;
+
     @Override
     public LoginResponse login(@NonNull String email, @NonNull String password) {
         User user = userRepository.findByEmail(email)
@@ -102,6 +114,12 @@ public class AuthServiceImpl implements AuthService {
         }
         if (!user.isVerified()) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "EMAIL_NOT_VERIFIED:" + email);
+        }
+
+        // Check temporary lockout from brute force
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.USER_LOCKED,
+                    "Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Thử lại sau " + LOCKOUT_MINUTES + " phút.");
         }
 
         boolean isMatch;
@@ -115,13 +133,26 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (!isMatch) {
+            int attempts = user.getFailedLoginAttempts() + 1;
+            user.setFailedLoginAttempts(attempts);
+            if (attempts >= MAX_FAILED_ATTEMPTS) {
+                user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
+            }
+            userRepository.save(user);
             throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
+        }
+
+        // Success — reset lockout counters
+        if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+            userRepository.save(user);
         }
 
         // Admin 2FA: send OTP to mapped email, block JWT until verified
         if (user.getRole() == UserRole.ADMIN) {
-            String otpDestination = ADMIN_OTP_EMAILS.get(email.toLowerCase());
-            if (otpDestination == null) otpDestination = email; // fallback: send to self
+            String otpDestination = buildAdminOtpEmails().get(email.toLowerCase());
+            if (otpDestination == null || otpDestination.isBlank()) otpDestination = email;
             sendAdminLoginOtp(email, otpDestination);
             throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + email);
         }
@@ -150,9 +181,9 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
         if (otp.isUsed()) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
         if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
-        if (otp.getAttemptCount() >= 5) {
+        if (otp.getAttemptCount() >= 3) {
             otpRepo.delete(otp);
-            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 5 lần sai. Vui lòng đăng nhập lại.");
+            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 3 lần sai. Vui lòng đăng nhập lại.");
         }
         if (!otp.getCode().equals(code.trim())) {
             otp.setAttemptCount(otp.getAttemptCount() + 1);
@@ -176,6 +207,7 @@ public class AuthServiceImpl implements AuthService {
     public void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword) {
         userRepository.findById(Objects.requireNonNull(userId)).ifPresent(user -> {
             user.setPassword(passwordEncoder.encode(plainPassword));
+            user.setPasswordChangedAt(LocalDateTime.now());
             userRepository.save(Objects.requireNonNull(user));
         });
     }
@@ -207,6 +239,7 @@ public class AuthServiceImpl implements AuthService {
             user.setBio((String) settings.get("bio"));
         if (settings.containsKey("password")) {
             user.setPassword(passwordEncoder.encode((String) settings.get("password")));
+            user.setPasswordChangedAt(LocalDateTime.now());
         }
 
         return userRepository.save(user);

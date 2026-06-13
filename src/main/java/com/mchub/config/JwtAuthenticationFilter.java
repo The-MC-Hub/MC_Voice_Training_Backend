@@ -1,5 +1,7 @@
 package com.mchub.config;
 
+import com.mchub.models.User;
+import com.mchub.repositories.UserRepository;
 import com.mchub.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +17,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,6 +28,7 @@ import java.util.Objects;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -33,17 +38,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // 1. Extract token — header first, then ?token= query param (used by SSE/EventSource)
+        // Extract token from Authorization header only (never from query params — logs would expose it)
         String jwt;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7).trim();
         } else {
-            String queryToken = request.getParameter("token");
-            if (queryToken == null || queryToken.isBlank()) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-            jwt = queryToken.trim();
+            filterChain.doFilter(request, response);
+            return;
         }
         if (jwt.isEmpty() || jwt.equals("null") || jwt.equals("undefined")) {
             filterChain.doFilter(request, response);
@@ -51,35 +52,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            // 3. Decode token to get userId and role
             String userId = jwtService.extractUserId(jwt);
-            String role = jwtService.extractRole(jwt); // e.g. "MC", "CLIENT", "ADMIN"
+            String role   = jwtService.extractRole(jwt);
+            Date issuedAt = jwtService.extractIssuedAt(jwt);
 
-            // 4. If not yet authenticated in Context, perform authentication
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Create authority from role in JWT (e.g. "ADMIN" →
-                // SimpleGrantedAuthority("ADMIN"))
+                // Reject token if password was changed after it was issued
+                if (issuedAt != null) {
+                    User user = userRepository.findById(userId).orElse(null);
+                    if (user != null && user.getPasswordChangedAt() != null) {
+                        long pwChangedMs = user.getPasswordChangedAt().toInstant(ZoneOffset.UTC).toEpochMilli();
+                        if (issuedAt.getTime() < pwChangedMs) {
+                            log.warn("⚠️ [JWT] Token issued before password change — userId={}", userId);
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+                    }
+                }
+
                 List<SimpleGrantedAuthority> authorities = (role != null && !role.isBlank())
                         ? Collections.singletonList(new SimpleGrantedAuthority(role))
                         : Collections.emptyList();
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userId, // Principal = userId (SecurityUtils.getCurrentUserId() đọc từ đây)
-                        null,
-                        authorities // GrantedAuthority list — required for @PreAuthorize to work
-                );
-
-                authToken
-                        .setDetails(new WebAuthenticationDetailsSource().buildDetails(Objects.requireNonNull(request)));
+                        userId, null, authorities);
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(Objects.requireNonNull(request)));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                log.debug("JWT Auth OK — userId={}, role={}, path={}",
-                        userId, role, request.getRequestURI());
+                log.debug("JWT Auth OK — userId={}, role={}, path={}", userId, role, request.getRequestURI());
             }
         } catch (Exception e) {
-            // Token expired or invalid — log and continue (Spring Security will block if
-            // route needs auth)
             log.warn("⚠️ [JWT] Token validation failed for {}: {}", request.getRequestURI(),
                     Objects.requireNonNull(e).getMessage());
         }
