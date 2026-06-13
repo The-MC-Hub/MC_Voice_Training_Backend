@@ -26,6 +26,8 @@ public interface AuthService {
 
     void resendOtp(@NonNull String email);
 
+    LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code);
+
     @PreAuthorize("isAuthenticated()")
     User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
 

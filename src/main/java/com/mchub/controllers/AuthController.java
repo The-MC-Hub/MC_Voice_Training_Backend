@@ -74,14 +74,16 @@ public class AuthController {
             HttpServletRequest request) {
         try {
             AuthService.LoginResponse resp = authService.login(Objects.requireNonNull(req.getEmail()), Objects.requireNonNull(req.getPassword()));
-            
-
-
             auditLogService.log(resp.user().getId(), AuditAction.AUTH_LOGIN,
                     "User", resp.user().getId(), null, request);
             return ResponseEntity.ok(ApiResponse.success("Login successful",
                     Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
         } catch (AppException ex) {
+            if (ex.getErrorCode() == ErrorCode.ADMIN_OTP_REQUIRED) {
+                String adminEmail = ex.getMessage().replace("ADMIN_OTP_REQUIRED:", "");
+                return ResponseEntity.status(202).body(ApiResponse.success("ADMIN_OTP_REQUIRED",
+                        Map.of("requiresAdminOtp", true, "email", adminEmail)));
+            }
             auditLogService.logError(null, AuditAction.AUTH_LOGIN, "User", ex.getMessage(), request);
             throw ex;
         } catch (Exception ex) {
@@ -91,6 +93,20 @@ public class AuthController {
     }
 
 
+
+    @PostMapping("/verify-admin-login-otp")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyAdminLoginOtp(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        String email = body.get("email");
+        String code = body.get("code");
+        AuthService.LoginResponse resp = authService.verifyAdminLoginOtp(
+                Objects.requireNonNull(email), Objects.requireNonNull(code));
+        auditLogService.log(resp.user().getId(), AuditAction.AUTH_LOGIN,
+                "User", resp.user().getId(), "{\"method\":\"admin-otp\"}", request);
+        return ResponseEntity.ok(ApiResponse.success("Admin login verified",
+                Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
+    }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody Map<String, String> body) {

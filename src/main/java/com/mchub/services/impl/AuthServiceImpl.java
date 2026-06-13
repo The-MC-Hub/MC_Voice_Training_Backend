@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +36,16 @@ public class AuthServiceImpl implements AuthService {
     private final MCProfileRepository mcProfileRepository;
     private final EmailService emailService;
     private final OtpVerificationRepository otpRepo;
+
+    // Admin account index → OTP destination email (admin1=index 1, ..., admin6=index 6)
+    private static final Map<String, String> ADMIN_OTP_EMAILS = new HashMap<>(Map.of(
+        "admin1@mchub.vn", "letritrung2605@gmail.com",
+        "admin2@mchub.vn", "tiensminh11@gmail.com",
+        "admin3@mchub.vn", "phuonglinh2004tranle@gmail.com",
+        "admin4@mchub.vn", "duymc64@gmail.com",
+        "admin5@mchub.vn", "14032004tranlevy@gmail.com",
+        "admin6@mchub.vn", "huynhthiminhnguyet198@gmail.com"
+    ));
 
     @Override
     public User register(@NonNull RegisterRequest req) {
@@ -107,8 +118,53 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
 
+        // Admin 2FA: send OTP to mapped email, block JWT until verified
+        if (user.getRole() == UserRole.ADMIN) {
+            String otpDestination = ADMIN_OTP_EMAILS.get(email.toLowerCase());
+            if (otpDestination == null) otpDestination = email; // fallback: send to self
+            sendAdminLoginOtp(email, otpDestination);
+            throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + email);
+        }
 
+        String token = jwtService.generateToken(user.getId(), user.getRole().name());
+        return new LoginResponse(user, token);
+    }
 
+    private void sendAdminLoginOtp(@NonNull String adminEmail, @NonNull String destination) {
+        otpRepo.deleteAllByEmail("admin_login:" + adminEmail);
+        String code = generateOtp();
+        otpRepo.save(OtpVerification.builder()
+                .email("admin_login:" + adminEmail)
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .used(false)
+                .build());
+        emailService.sendSimpleEmail(destination,
+                "MCHub Admin — Mã xác thực đăng nhập",
+                "Mã OTP đăng nhập admin của bạn là: " + code + "\n\nMã có hiệu lực trong 10 phút.\nNếu bạn không thực hiện đăng nhập này, hãy bỏ qua email này.");
+    }
+
+    @Override
+    public LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code) {
+        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc("admin_login:" + email)
+                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
+        if (otp.isUsed()) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
+        if (otp.getAttemptCount() >= 5) {
+            otpRepo.delete(otp);
+            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 5 lần sai. Vui lòng đăng nhập lại.");
+        }
+        if (!otp.getCode().equals(code.trim())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            otpRepo.save(otp);
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
+        }
+        otp.setUsed(true);
+        otpRepo.save(otp);
+        otpRepo.deleteAllByEmail("admin_login:" + email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Admin not found"));
         String token = jwtService.generateToken(user.getId(), user.getRole().name());
         return new LoginResponse(user, token);
     }
