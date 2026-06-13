@@ -405,10 +405,11 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteUser(@NonNull String userId) {
-        if (!userRepository.existsById(Objects.requireNonNull(userId))) {
-            throw new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId);
-        }
-        userRepository.deleteById(userId);
+        User user = userRepository.findById(Objects.requireNonNull(userId))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        // Soft delete: deactivate instead of hard delete to preserve data integrity
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Override

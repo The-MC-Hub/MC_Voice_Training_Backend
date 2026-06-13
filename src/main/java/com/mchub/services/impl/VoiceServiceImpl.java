@@ -136,7 +136,7 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public List<VoiceLessonResponseDTO> getAllLessons() {
-        return lessonRepository.findAll().stream()
+        return lessonRepository.findByIsActiveTrue().stream()
                 .map(lessonMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -150,13 +150,15 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public void deleteLesson(String id) {
-        lessonRepository.deleteById(id);
-        lessonSearchService.deleteLesson(id);
+        VoiceLesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new AppException(com.mchub.exception.ErrorCode.RESOURCE_NOT_FOUND, "Lesson not found: " + id));
+        lesson.setActive(false);
+        lessonRepository.save(lesson);
     }
 
     @Override
     public List<VoiceLessonResponseDTO> getLessonsByCategory(VoiceLessonCategory category) {
-        return lessonRepository.findByCategory(category).stream()
+        return lessonRepository.findByCategoryAndIsActiveTrue(category).stream()
                 .map(lessonMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }

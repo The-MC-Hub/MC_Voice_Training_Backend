@@ -12,4 +12,7 @@ import java.util.List;
 public interface VoiceLessonRepository extends MongoRepository<VoiceLesson, String> {
     List<VoiceLesson> findByCategory(VoiceLessonCategory category);
     List<VoiceLesson> findByPracticeCountGreaterThanOrderByPracticeCountDesc(int minCount, Pageable pageable);
+    List<VoiceLesson> findByIsActiveTrue();
+    List<VoiceLesson> findByCategoryAndIsActiveTrue(VoiceLessonCategory category);
+    List<VoiceLesson> findByPracticeCountGreaterThanAndIsActiveTrueOrderByPracticeCountDesc(int minCount, Pageable pageable);
 }

@@ -20,4 +20,7 @@ public interface AuditLogRepository extends MongoRepository<AuditLog, String> {
     List<AuditLog> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
     long countByAction(AuditAction action);
     long countByActionAndCreatedAtAfter(AuditAction action, LocalDateTime after);
+    long deleteByCreatedAtBefore(LocalDateTime before);
+    List<AuditLog> findAllByOrderByCreatedAtDesc();
+    List<AuditLog> findByUserIdOrderByCreatedAtDesc(String userId);
 }

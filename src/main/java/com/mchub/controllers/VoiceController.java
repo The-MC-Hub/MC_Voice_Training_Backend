@@ -132,8 +132,10 @@ public class VoiceController {
             @RequestParam MultipartFile audioFile) {
 
         String ct = audioFile.getContentType();
-        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a");
-        if (ct == null || !allowedTypes.contains(ct)) {
+        // Strip codec suffix e.g. "audio/webm;codecs=opus" → "audio/webm"
+        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
+        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
+        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
         }
         if (audioFile.getSize() > 20L * 1024 * 1024) {
@@ -164,8 +166,9 @@ public class VoiceController {
             @RequestParam(required = false) String scriptOrigin) {
 
         String ct = audioFile.getContentType();
-        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a");
-        if (ct == null || !allowedTypes.contains(ct)) {
+        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
+        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
+        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
         }
         if (audioFile.getSize() > 20L * 1024 * 1024) {

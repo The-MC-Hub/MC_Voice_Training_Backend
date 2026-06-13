@@ -52,12 +52,20 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     public List<AuditLog> getUserLogs(String userId) {
-        return auditLogRepository.findByUserId(userId);
+        return auditLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
     @Override
     public List<AuditLog> getAllLogs() {
-        return auditLogRepository.findAll();
+        return auditLogRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Override
+    public long purgeLogs(int daysOld) {
+        // Hard floor: never delete logs younger than 3 days
+        int safeDays = Math.max(daysOld, 3);
+        java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(safeDays);
+        return auditLogRepository.deleteByCreatedAtBefore(cutoff);
     }
 
     private String getClientIp(HttpServletRequest request) {

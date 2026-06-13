@@ -15,6 +15,7 @@ public class AuditLogResponseDTO {
     private String resourceId;
     private String details;
     private String ipAddress;
+    private String userAgent;
     private String status;
     private String errorMessage;
     private LocalDateTime createdAt;

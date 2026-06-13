@@ -1,16 +1,18 @@
 package com.mchub.controllers;
 
 import com.mchub.dto.*;
+import com.mchub.enums.AuditAction;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.services.AdminService;
+import com.mchub.services.AuditLogService;
 import com.mchub.services.impl.DatabaseMigrationService;
+import com.mchub.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final DatabaseMigrationService migrationService;
+    private final AuditLogService auditLogService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboard() {
@@ -66,18 +69,23 @@ public class AdminController {
     @PutMapping("/users/{id}/status")
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateUserStatus(
             @PathVariable String id,
-            @RequestBody Map<String, Boolean> body) {
+            @RequestBody Map<String, Boolean> body,
+            HttpServletRequest request) {
         Boolean isActive = body.get("isActive");
         Boolean isVerified = body.get("isVerified");
         if (isActive == null || isVerified == null) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "isActive and isVerified are required");
         }
         UserResponseDTO dto = adminService.updateUserStatus(Objects.requireNonNull(id), isActive, isVerified);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_UPDATE_USER_STATUS,
+                "User", id, "{\"isActive\":" + isActive + ",\"isVerified\":" + isVerified + "}", request);
         return ResponseEntity.ok(ApiResponse.success("Update successful", dto));
     }
 
     @PostMapping("/users")
-    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest request) {
         String name        = (String) body.get("name");
         String email       = (String) body.get("email");
         String password    = (String) body.get("password");
@@ -90,29 +98,41 @@ public class AdminController {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "name, email, password required");
         }
         UserResponseDTO dto = adminService.createUser(name, email, password, role, phoneNumber, adminNote, planStr, couponId);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_CREATE_USER,
+                "User", dto.getId(), "{\"email\":\"" + email + "\",\"role\":\"" + role + "\"}", request);
         return ResponseEntity.ok(ApiResponse.success("User created", dto));
     }
 
     @PostMapping("/users/{id}/send-reset-email")
-    public ResponseEntity<ApiResponse<Void>> sendResetEmail(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Void>> sendResetEmail(
+            @PathVariable String id, HttpServletRequest request) {
         adminService.sendPasswordResetEmail(id);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_SEND_RESET_EMAIL,
+                "User", id, null, request);
         return ResponseEntity.ok(ApiResponse.success("Reset email sent", null));
     }
 
     @PostMapping("/users/{id}/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-            @PathVariable String id, @RequestBody Map<String, String> body) {
+            @PathVariable String id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
         String newPassword = body.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "newPassword required");
         }
         adminService.changeUserPassword(id, newPassword);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_CHANGE_PASSWORD,
+                "User", id, null, request);
         return ResponseEntity.ok(ApiResponse.success("Password changed", null));
     }
 
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable String id, HttpServletRequest request) {
         adminService.deleteUser(id);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_DELETE_USER,
+                "User", id, null, request);
         return ResponseEntity.ok(ApiResponse.success("User deleted", null));
     }
 
@@ -123,19 +143,25 @@ public class AdminController {
 
     @PostMapping("/users/{id}/notify-email")
     public ResponseEntity<ApiResponse<Void>> sendNotificationEmail(
-            @PathVariable String id, @RequestBody Map<String, String> body) {
+            @PathVariable String id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
         String subject = body.get("subject");
         String content = body.get("content");
         if (subject == null || content == null || subject.isBlank() || content.isBlank()) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "subject and content required");
         }
         adminService.sendNotificationEmail(id, subject, content);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_NOTIFY_EMAIL,
+                "User", id, "{\"subject\":\"" + subject + "\"}", request);
         return ResponseEntity.ok(ApiResponse.success("Email sent", null));
     }
 
     @PostMapping("/migrate-db")
-    public ResponseEntity<ApiResponse<String>> migrateDb() {
+    public ResponseEntity<ApiResponse<String>> migrateDb(HttpServletRequest request) {
         migrationService.migrateFromMcHub();
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_MIGRATE_DB,
+                "System", null, null, request);
         return ResponseEntity.ok(ApiResponse.success("Database migration started/completed successfully"));
     }
 

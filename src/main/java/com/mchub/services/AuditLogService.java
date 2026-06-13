@@ -20,4 +20,8 @@ public interface AuditLogService {
 
     @PreAuthorize("hasAuthority('ADMIN')")
     List<AuditLog> getAllLogs();
+
+    /** Purge logs older than {@code daysOld} days. Minimum enforced: 3 days. Returns deleted count. */
+    @PreAuthorize("hasAuthority('ADMIN')")
+    long purgeLogs(int daysOld);
 }

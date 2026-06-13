@@ -56,6 +56,9 @@ public class VoiceLesson {
     @Builder.Default
     private int practiceCount = 0;
 
+    @Builder.Default
+    private boolean isActive = true;
+
     // ── Timestamps ────────────────────────────────────────────────
 
     @CreatedDate
