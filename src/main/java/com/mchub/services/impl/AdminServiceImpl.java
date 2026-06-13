@@ -87,6 +87,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public UserResponseDTO getUserById(@NonNull String userId) {
+        return userRepository.findById(userId)
+                .map(userMapper::toResponseDTO)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+    }
+
+    @Override
     public List<UserResponseDTO> getAllMCs() {
         return userRepository.findByRole(UserRole.MC).stream()
             .map(userMapper::toResponseDTO).toList();

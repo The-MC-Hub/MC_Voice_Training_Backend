@@ -18,6 +18,9 @@ public interface AdminService {
     List<UserResponseDTO> getAllUsers();
 
     @PreAuthorize("hasAuthority('ADMIN')")
+    UserResponseDTO getUserById(@NonNull String userId);
+
+    @PreAuthorize("hasAuthority('ADMIN')")
     List<UserResponseDTO> getAllMCs();
 
     @PreAuthorize("hasAuthority('ADMIN')")
