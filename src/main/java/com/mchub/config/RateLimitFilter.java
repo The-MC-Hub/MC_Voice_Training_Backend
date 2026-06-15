@@ -41,34 +41,34 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Bucket bucket = null;
 
         if (path.equals("/api/v1/auth/login")) {
-            // 5 attempts per 15 minutes per IP
+            // 20 attempts per 15 minutes per IP
             bucket = loginBuckets.computeIfAbsent(ip, k ->
                 Bucket.builder()
                     .addLimit(Bandwidth.builder()
-                        .capacity(5)
-                        .refillIntervally(5, Duration.ofMinutes(15))
+                        .capacity(20)
+                        .refillIntervally(20, Duration.ofMinutes(15))
                         .build())
                     .build());
 
         } else if (path.equals("/api/v1/auth/verify-otp")
                 || path.equals("/api/v1/auth/verify-admin-login-otp")) {
-            // 3 attempts per 5 minutes per IP
+            // 20 attempts per 5 minutes per IP
             bucket = otpBuckets.computeIfAbsent(ip, k ->
                 Bucket.builder()
                     .addLimit(Bandwidth.builder()
-                        .capacity(3)
-                        .refillIntervally(3, Duration.ofMinutes(5))
+                        .capacity(20)
+                        .refillIntervally(20, Duration.ofMinutes(5))
                         .build())
                     .build());
 
         } else if (path.equals("/api/v1/auth/register")
                 || path.equals("/api/v1/auth/resend-otp")) {
-            // 3 attempts per hour per IP
+            // 20 attempts per hour per IP
             bucket = registerBuckets.computeIfAbsent(ip, k ->
                 Bucket.builder()
                     .addLimit(Bandwidth.builder()
-                        .capacity(3)
-                        .refillIntervally(3, Duration.ofHours(1))
+                        .capacity(20)
+                        .refillIntervally(20, Duration.ofHours(1))
                         .build())
                     .build());
         }
