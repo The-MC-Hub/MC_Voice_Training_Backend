@@ -30,6 +30,10 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public String getFeUrl() {
+        return feUrl;
+    }
+
     public void sendHtmlEmail(String to, String subject, String htmlContent) throws Exception {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -207,6 +211,95 @@ public class EmailService {
                 feUrl,                   // footer manage
                 year                     // copyright
         );
+    }
+
+    /**
+     * Verification email template — body is trusted HTML (caller constructs it),
+     * so we do NOT escape it. Use only for OTP/magic-link emails.
+     */
+    public String buildVerificationEmail(String recipientName, String trustedHtmlBody) {
+        String year = String.valueOf(java.time.Year.now().getValue());
+        return """
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MC Hub — Xác thực email</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f0f2;font-family:'Helvetica Neue',Arial,sans-serif;">
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f0f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" border="0"
+      style="max-width:600px;width:100%%;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.14);">
+
+      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:4px;"></td></tr>
+
+      <!-- HEADER -->
+      <tr>
+        <td style="background:#09090b;padding:24px 36px 20px;">
+          <table width="100%%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td>
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">MC</td>
+                    <td style="padding:0 4px;vertical-align:middle;">
+                      <span style="display:inline-block;width:6px;height:6px;border-radius:50%%;background:#f5a623;margin-bottom:1px;"></span>
+                    </td>
+                    <td style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Hub</td>
+                  </tr>
+                </table>
+                <p style="color:#52525b;font-size:10px;margin-top:3px;letter-spacing:0.8px;text-transform:uppercase;">AI Voice Training Platform</p>
+              </td>
+              <td align="right" style="vertical-align:middle;">
+                <span style="display:inline-block;background:#10b981;color:#fff;font-size:10px;font-weight:700;padding:5px 12px;border-radius:4px;letter-spacing:0.8px;text-transform:uppercase;">Xác thực</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- HERO -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#052e16 0%%,#14532d 100%%);">
+          <div style="padding:44px 36px 40px;">
+            <p style="color:rgba(255,255,255,0.55);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Xác thực tài khoản</p>
+            <h1 style="color:#ffffff;font-size:26px;font-weight:800;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
+              Chào <span style="color:#34d399;">%s</span> 👋<br/>Chỉ một bước nữa thôi!
+            </h1>
+          </div>
+        </td>
+      </tr>
+
+      <tr><td style="background:linear-gradient(90deg,#10b981,#34d399);height:2px;"></td></tr>
+
+      <!-- BODY -->
+      <tr>
+        <td style="background:#ffffff;padding:36px 36px 32px;">
+          <div style="font-size:15px;line-height:1.8;color:#27272a;">
+            %s
+          </div>
+        </td>
+      </tr>
+
+      <!-- FOOTER -->
+      <tr>
+        <td style="background:#09090b;padding:20px 36px 28px;border-top:1px solid #1f1f23;">
+          <p style="color:#3f3f46;font-size:11px;line-height:1.7;text-align:center;">
+            Nếu bạn không tạo tài khoản này, hãy bỏ qua email này.<br/>
+            <span style="color:#27272a;">© %s MC Hub · Việt Nam</span>
+          </p>
+        </td>
+      </tr>
+
+      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:4px;"></td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>
+""".formatted(recipientName, trustedHtmlBody, year);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

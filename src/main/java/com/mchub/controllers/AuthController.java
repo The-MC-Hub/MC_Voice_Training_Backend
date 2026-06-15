@@ -62,6 +62,13 @@ public class AuthController {
                         Map.of("requiresVerification", true, "email", user.getEmail())));
     }
 
+    @GetMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyEmailByToken(@RequestParam String token) {
+        AuthService.LoginResponse resp = authService.verifyEmailByToken(token);
+        return ResponseEntity.ok(ApiResponse.success("Email verified successfully",
+                Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<Map<String, Object>>> verifyOtp(
             @RequestBody Map<String, String> body) {

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -321,9 +322,55 @@ public class AuthServiceImpl implements AuthService {
                 .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .used(false)
                 .build());
-        emailService.sendSimpleEmail(email,
-                "MCHub — Mã xác thực tài khoản",
-                "Mã OTP của bạn là: " + code + "\n\nMã có hiệu lực trong 10 phút. Không chia sẻ mã này cho ai.");
+
+        // Generate magic-link token, persist on user
+        String magicToken = UUID.randomUUID().toString();
+        userRepository.findByEmail(email).ifPresent(u -> {
+            u.setEmailVerificationToken(magicToken);
+            userRepository.save(u);
+        });
+
+        // Send HTML email with both magic link button + OTP fallback
+        String userName = userRepository.findByEmail(email)
+                .map(u -> u.getName() != null ? u.getName() : "bạn")
+                .orElse("bạn");
+
+        String feUrl = emailService.getFeUrl();
+        String magicLink = feUrl + "/verify-email?token=" + magicToken + "&email=" + email;
+
+        String body = """
+Chào mừng bạn đến với <strong>MC Hub</strong> — nền tảng luyện giọng AI dành cho MC chuyên nghiệp.
+
+Để hoàn tất đăng ký, vui lòng xác thực địa chỉ email của bạn bằng một trong hai cách:
+
+<div style="text-align:center;margin:28px 0;">
+  <a href="%s"
+     style="display:inline-block;background:#f5a623;color:#000;font-size:15px;font-weight:700;
+            padding:16px 40px;border-radius:12px;text-decoration:none;letter-spacing:0.2px;">
+    ✅ &nbsp;Xác nhận email ngay
+  </a>
+  <p style="color:#71717a;font-size:12px;margin-top:10px;">Nút trên có hiệu lực trong <strong>10 phút</strong>.</p>
+</div>
+
+<hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0;"/>
+
+<p style="color:#52525b;font-size:13px;margin-bottom:6px;">Hoặc nhập mã xác thực thủ công trên trang web:</p>
+<div style="text-align:center;margin:16px 0;">
+  <span style="display:inline-block;background:#09090b;color:#f5a623;font-size:28px;font-weight:800;
+               letter-spacing:10px;padding:14px 28px;border-radius:12px;border:1px solid #27272a;">%s</span>
+</div>
+<p style="color:#71717a;font-size:12px;text-align:center;">Mã OTP có hiệu lực trong 10 phút. Không chia sẻ mã này cho ai.</p>
+""".formatted(magicLink, code);
+
+        try {
+            String html = emailService.buildVerificationEmail(userName, body);
+            emailService.sendHtmlEmail(email, "MC Hub — Xác thực tài khoản của bạn", html);
+        } catch (Exception e) {
+            // Fallback plain text if HTML fails
+            emailService.sendSimpleEmail(email,
+                    "MCHub — Mã xác thực tài khoản",
+                    "Mã OTP của bạn là: " + code + "\n\nXác thực nhanh: " + magicLink + "\n\nMã có hiệu lực trong 10 phút.");
+        }
     }
 
     @Override
@@ -350,9 +397,27 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.findByEmail(email).ifPresent(user -> {
             user.setVerified(true);
+            user.setEmailVerificationToken(null); // clear magic-link token on OTP verify
             userRepository.save(user);
         });
         otpRepo.deleteAllByEmail(email);
+    }
+
+    @Override
+    public LoginResponse verifyEmailByToken(@NonNull String token) {
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Link xác thực không hợp lệ hoặc đã hết hạn."));
+        if (user.isVerified()) {
+            // Already verified — just return login response
+            String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
+            return new LoginResponse(user, jwt);
+        }
+        user.setVerified(true);
+        user.setEmailVerificationToken(null);
+        userRepository.save(user);
+        otpRepo.deleteAllByEmail(user.getEmail());
+        String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
+        return new LoginResponse(user, jwt);
     }
 
     @Override

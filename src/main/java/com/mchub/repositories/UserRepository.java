@@ -54,4 +54,6 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByEmailIn(List<String> emails);
 
     Optional<User> findByReferralCode(String referralCode);
+
+    Optional<User> findByEmailVerificationToken(String token);
 }

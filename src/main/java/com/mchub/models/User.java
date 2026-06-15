@@ -76,6 +76,10 @@ public class User {
     // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
     private LocalDateTime passwordChangedAt;
 
+    // One-click email verification token (UUID, cleared after use)
+    @Indexed(sparse = true)
+    private String emailVerificationToken;
+
     @Indexed(unique = true, sparse = true)
     private String referralCode;
 

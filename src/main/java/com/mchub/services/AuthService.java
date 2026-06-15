@@ -24,6 +24,8 @@ public interface AuthService {
 
     void verifyOtp(@NonNull String email, @NonNull String code);
 
+    LoginResponse verifyEmailByToken(@NonNull String token);
+
     void resendOtp(@NonNull String email);
 
     LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code);
