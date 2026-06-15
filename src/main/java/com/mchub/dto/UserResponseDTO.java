@@ -31,5 +31,7 @@ public class UserResponseDTO {
     private int aiSessionsUsed;
     private LocalDateTime planExpiresAt;
     private LocalDateTime createdAt;
+    private String referralCode;
+    private int referralCount;
 
 }

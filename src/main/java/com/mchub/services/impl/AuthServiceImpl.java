@@ -7,8 +7,10 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.models.MCProfile;
 import com.mchub.models.OtpVerification;
 import com.mchub.models.User;
+import com.mchub.models.Referral;
 import com.mchub.repositories.MCProfileRepository;
 import com.mchub.repositories.OtpVerificationRepository;
+import com.mchub.repositories.ReferralRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
@@ -37,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private final MCProfileRepository mcProfileRepository;
     private final EmailService emailService;
     private final OtpVerificationRepository otpRepo;
+    private final ReferralRepository referralRepository;
 
     @Value("${mchub.admin.otp.email.1:}") private String adminOtpEmail1;
     @Value("${mchub.admin.otp.email.2:}") private String adminOtpEmail2;
@@ -94,11 +97,50 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(Objects.requireNonNull(user));
 
+        // Generate referral code (retry on collision)
+        String code = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            String candidate = generateReferralCode();
+            if (userRepository.findByReferralCode(candidate).isEmpty()) {
+                code = candidate;
+                break;
+            }
+        }
+        if (code != null) {
+            savedUser.setReferralCode(code);
+        }
+
+        // Process incoming referral code
+        if (req.getReferralCode() != null && !req.getReferralCode().isBlank()) {
+            userRepository.findByReferralCode(req.getReferralCode().toUpperCase().trim()).ifPresent(referrer -> {
+                referralRepository.save(Referral.builder()
+                        .referrerId(referrer.getId())
+                        .referredUserId(savedUser.getId())
+                        .build());
+                referrer.setReferralCount(referrer.getReferralCount() + 1);
+                userRepository.save(referrer);
+                savedUser.setReferralCount(savedUser.getReferralCount() + 1);
+            });
+        }
+
+        userRepository.save(savedUser);
+
         if (role == UserRole.MC) {
             initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
         }
 
         return savedUser;
+    }
+
+    private static final String REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
+
+    private String generateReferralCode() {
+        StringBuilder sb = new StringBuilder(5);
+        for (int i = 0; i < 5; i++) {
+            sb.append(REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(REFERRAL_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     private static final int MAX_FAILED_ATTEMPTS = 10;

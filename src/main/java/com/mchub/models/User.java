@@ -76,6 +76,12 @@ public class User {
     // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
     private LocalDateTime passwordChangedAt;
 
+    @Indexed(unique = true, sparse = true)
+    private String referralCode;
+
+    @Builder.Default
+    private int referralCount = 0;
+
     // Brute-force lockout: incremented on each failed login, reset on success
     @Builder.Default
     private int failedLoginAttempts = 0;

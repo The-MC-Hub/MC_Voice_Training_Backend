@@ -52,4 +52,6 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByIsPremiumTrue();
 
     List<User> findByEmailIn(List<String> emails);
+
+    Optional<User> findByReferralCode(String referralCode);
 }

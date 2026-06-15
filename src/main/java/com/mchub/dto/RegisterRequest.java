@@ -27,4 +27,5 @@ public class RegisterRequest {
 
     private String phoneNumber;
     private String bio;
+    private String referralCode;
 }

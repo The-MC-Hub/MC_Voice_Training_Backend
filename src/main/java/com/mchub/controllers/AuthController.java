@@ -18,6 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.mchub.repositories.ReferralRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Objects;
 
@@ -31,6 +35,16 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final UserRepository userRepository;
+    private final ReferralRepository referralRepository;
+
+    private static final String REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
+
+    private String generateReferralCode() {
+        StringBuilder sb = new StringBuilder(5);
+        for (int i = 0; i < 5; i++) sb.append(REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(REFERRAL_CHARS.length())));
+        return sb.toString();
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(
@@ -126,6 +140,31 @@ public class AuthController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
         return ResponseEntity.ok(ApiResponse.success("User retrieved", Map.of("user", userMapper.toResponseDTO(user))));
+    }
+
+    @PostMapping("/referral-code/generate")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateReferralCodeEndpoint() {
+        String userId = SecurityUtils.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        if (user.getReferralCode() != null) {
+            return ResponseEntity.ok(ApiResponse.success("Referral code retrieved",
+                    Map.of("referralCode", user.getReferralCode())));
+        }
+        String code = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            String candidate = generateReferralCode();
+            if (userRepository.findByReferralCode(candidate).isEmpty()) {
+                code = candidate;
+                break;
+            }
+        }
+        if (code == null) code = generateReferralCode();
+        user.setReferralCode(code);
+        userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Referral code generated",
+                Map.of("referralCode", code)));
     }
 
     @PutMapping("/settings")
