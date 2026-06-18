@@ -227,33 +227,34 @@ public class EmailService {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>MC Hub — Xác thực email</title>
 </head>
-<body style="margin:0;padding:0;background:#f0f0f2;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f0f2;padding:40px 16px;">
+<body style="margin:0;padding:0;background:#0a0a0c;font-family:'Helvetica Neue',Arial,sans-serif;">
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a0c;padding:40px 16px;">
   <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" border="0"
-      style="max-width:600px;width:100%%;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.14);">
+    <table width="580" cellpadding="0" cellspacing="0" border="0"
+      style="max-width:580px;width:100%%;border-radius:24px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6);border:1px solid #1f1f23;">
 
-      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:4px;"></td></tr>
+      <!-- TOP ACCENT -->
+      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:3px;"></td></tr>
 
       <!-- HEADER -->
       <tr>
-        <td style="background:#09090b;padding:24px 36px 20px;">
+        <td style="background:#09090b;padding:22px 32px 18px;">
           <table width="100%%" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td>
                 <table cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">MC</td>
-                    <td style="padding:0 4px;vertical-align:middle;">
-                      <span style="display:inline-block;width:6px;height:6px;border-radius:50%%;background:#f5a623;margin-bottom:1px;"></span>
+                    <td style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;">MC</td>
+                    <td style="padding:0 3px;vertical-align:middle;">
+                      <span style="display:inline-block;width:5px;height:5px;border-radius:50%%;background:#f5a623;"></span>
                     </td>
-                    <td style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Hub</td>
+                    <td style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Hub</td>
                   </tr>
                 </table>
-                <p style="color:#52525b;font-size:10px;margin-top:3px;letter-spacing:0.8px;text-transform:uppercase;">AI Voice Training Platform</p>
+                <p style="color:#3f3f46;font-size:9px;margin-top:2px;letter-spacing:1px;text-transform:uppercase;">AI Voice Training Platform</p>
               </td>
               <td align="right" style="vertical-align:middle;">
-                <span style="display:inline-block;background:#10b981;color:#fff;font-size:10px;font-weight:700;padding:5px 12px;border-radius:4px;letter-spacing:0.8px;text-transform:uppercase;">Xác thực</span>
+                <span style="display:inline-block;background:rgba(16,185,129,0.12);color:#34d399;font-size:9px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(52,211,153,0.2);">✦ Xác thực</span>
               </td>
             </tr>
           </table>
@@ -262,22 +263,39 @@ public class EmailService {
 
       <!-- HERO -->
       <tr>
-        <td style="background:linear-gradient(135deg,#052e16 0%%,#14532d 100%%);">
-          <div style="padding:44px 36px 40px;">
-            <p style="color:rgba(255,255,255,0.55);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Xác thực tài khoản</p>
-            <h1 style="color:#ffffff;font-size:26px;font-weight:800;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
-              Chào <span style="color:#34d399;">%s</span> 👋<br/>Chỉ một bước nữa thôi!
-            </h1>
-          </div>
+        <td style="background:linear-gradient(135deg,#071a10 0%%,#0a2818 50%%,#0d3320 100%%;padding:0;position:relative;">
+          <table width="100%%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding:40px 32px 36px;">
+                <p style="color:rgba(52,211,153,0.5);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;font-weight:600;">Xác thực tài khoản</p>
+                <h1 style="color:#ffffff;font-size:28px;font-weight:800;line-height:1.25;letter-spacing:-0.8px;margin:0 0 10px 0;">
+                  Chào <span style="color:#34d399;">%s</span> 👋
+                </h1>
+                <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0;line-height:1.5;">Chỉ một bước nữa để bắt đầu hành trình luyện giọng.</p>
+              </td>
+              <td style="padding:40px 32px 36px 0;vertical-align:middle;" align="right">
+                <!-- mic icon -->
+                <div style="width:64px;height:64px;border-radius:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);display:inline-flex;align-items:center;justify-content:center;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="9" y="2" width="6" height="11" rx="3" fill="#34d399" opacity="0.8"/>
+                    <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="12" y1="17" x2="12" y2="21" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="9" y1="21" x2="15" y2="21" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
 
-      <tr><td style="background:linear-gradient(90deg,#10b981,#34d399);height:2px;"></td></tr>
+      <!-- THIN LINE -->
+      <tr><td style="background:linear-gradient(90deg,transparent,#10b981,transparent);height:1px;"></td></tr>
 
       <!-- BODY -->
       <tr>
-        <td style="background:#ffffff;padding:36px 36px 32px;">
-          <div style="font-size:15px;line-height:1.8;color:#27272a;">
+        <td style="background:#0d0d0f;padding:32px 32px 28px;">
+          <div style="font-size:14px;line-height:1.75;color:#a1a1aa;">
             %s
           </div>
         </td>
@@ -285,15 +303,17 @@ public class EmailService {
 
       <!-- FOOTER -->
       <tr>
-        <td style="background:#09090b;padding:20px 36px 28px;border-top:1px solid #1f1f23;">
-          <p style="color:#3f3f46;font-size:11px;line-height:1.7;text-align:center;">
+        <td style="background:#09090b;padding:18px 32px 24px;border-top:1px solid #1a1a1d;">
+          <p style="color:#27272a;font-size:11px;line-height:1.8;text-align:center;margin:0;">
             Nếu bạn không tạo tài khoản này, hãy bỏ qua email này.<br/>
-            <span style="color:#27272a;">© %s MC Hub · Việt Nam</span>
+            <span style="color:#1f1f23;">© %s MC Hub · Việt Nam</span>
           </p>
         </td>
       </tr>
 
-      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:4px;"></td></tr>
+      <!-- BOTTOM ACCENT -->
+      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:3px;"></td></tr>
+
     </table>
   </td></tr>
 </table>

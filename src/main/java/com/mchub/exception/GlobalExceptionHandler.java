@@ -11,6 +11,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -98,8 +99,18 @@ public class GlobalExceptionHandler {
                                 .body(buildErrorResponse(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ex.getMessage()));
         }
 
+        @ExceptionHandler(AsyncRequestNotUsableException.class)
+        public void handleClientAbort(AsyncRequestNotUsableException ex) {
+                // Client closed connection before response was sent — not a server error, ignore silently
+        }
+
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+                // Suppress client-abort noise at ERROR level
+                if (ex.getMessage() != null && ex.getMessage().contains("An established connection was aborted")) {
+                        log.debug("Client aborted connection: {}", ex.getMessage());
+                        return null;
+                }
                 log.error("💥 [{}] Unexpected internal error: {}", ErrorCode.INTERNAL_ERROR.getCode(), ex.getMessage(),
                                 ex);
                 return ResponseEntity

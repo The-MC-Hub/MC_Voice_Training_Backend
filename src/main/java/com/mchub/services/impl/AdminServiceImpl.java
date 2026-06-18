@@ -512,6 +512,29 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public UserResponseDTO updateUserPlan(@NonNull String id, @NonNull String planStr) {
+        User user = userRepository.findById(Objects.requireNonNull(id))
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        
+        if (planStr.equalsIgnoreCase("FREE")) {
+            user.setPremium(false);
+            user.setPlan(SubscriptionPlan.FREE);
+            user.setPlanExpiresAt(null);
+        } else {
+            try {
+                SubscriptionPlan sp = SubscriptionPlan.valueOf(planStr.toUpperCase());
+                user.setPremium(true);
+                user.setPlan(sp);
+                user.setPlanExpiresAt(LocalDateTime.now().plusDays(com.mchub.config.PlanConfig.daysFor(sp)));
+                user.setAiSessionsUsed(0);
+            } catch (IllegalArgumentException e) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid plan: " + planStr);
+            }
+        }
+        return userMapper.toResponseDTO(userRepository.save(user));
+    }
+
+    @Override
     public Map<String, Object> getGrowthAnalytics() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime day30Ago = now.minusDays(30);

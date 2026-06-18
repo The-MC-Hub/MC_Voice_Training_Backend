@@ -40,6 +40,8 @@ public class PaymentTransaction {
 
     private Long orderCode;
 
+    private String discountCode;
+
     private String checkoutUrl;
 
     private String bankRef;

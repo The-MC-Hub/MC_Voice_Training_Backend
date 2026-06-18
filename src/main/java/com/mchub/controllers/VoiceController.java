@@ -8,11 +8,16 @@ import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
+import com.mchub.models.GuestVoiceUsage;
+import com.mchub.models.SystemSetting;
+import com.mchub.repositories.GuestVoiceUsageRepository;
+import com.mchub.repositories.SystemSettingRepository;
 import com.mchub.services.VoiceService;
 import com.mchub.util.AudioMagicBytesValidator;
 import com.mchub.util.SecurityUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/voice")
@@ -34,6 +40,8 @@ import java.util.List;
 public class VoiceController {
 
     private final VoiceService voiceService;
+    private final GuestVoiceUsageRepository guestUsageRepo;
+    private final SystemSettingRepository systemSettingRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // --- Admin Endpoints ---
@@ -194,6 +202,53 @@ public class VoiceController {
         return ResponseEntity.ok(voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin));
     }
 
+    @PostMapping("/practice/analyze-guest")
+    public ResponseEntity<?> analyzeGuestVoice(
+            @RequestParam MultipartFile audioFile,
+            @RequestParam(required = false) String scriptOrigin,
+            HttpServletRequest request) {
+
+        String ip = request.getRemoteAddr();
+        GuestVoiceUsage usage = guestUsageRepo.findById(ip).orElse(null);
+        
+        int cooldownHours = 3;
+        SystemSetting setting = systemSettingRepo.findById("GUEST_COOLDOWN_HOURS").orElse(null);
+        if (setting != null) {
+            try { cooldownHours = Integer.parseInt(setting.getValue()); } catch (Exception ignored) {}
+        }
+        
+        if (usage != null && usage.getLastUsedAt().plusHours(cooldownHours).isAfter(java.time.LocalDateTime.now())) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Bạn đã sử dụng lượt thử miễn phí. Vui lòng quay lại sau " + cooldownHours + " tiếng hoặc đăng ký tài khoản để tiếp tục.");
+        }
+
+        String ct = audioFile.getContentType();
+        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
+        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
+        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
+        }
+        if (audioFile.getSize() > 20L * 1024 * 1024) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
+        }
+        try {
+            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
+            }
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
+        }
+
+        var result = voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin);
+
+        if (usage == null) {
+            usage = GuestVoiceUsage.builder().ipAddress(ip).build();
+        }
+        usage.setLastUsedAt(java.time.LocalDateTime.now());
+        guestUsageRepo.save(usage);
+
+        return ResponseEntity.ok(ApiResponse.success("Phân tích thành công", result));
+    }
+
     @GetMapping("/practice/{id}")
     @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
     public ResponseEntity<ApiResponse<PracticeSessionResponseDTO>> getPracticeById(@PathVariable String id) {
@@ -225,5 +280,13 @@ public class VoiceController {
         headers.setContentLength(wavBytes.length);
 
         return ResponseEntity.ok().headers(headers).body(wavBytes);
+    }
+
+    @GetMapping("/guest-cooldown-hours")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGuestCooldownHours() {
+        int hours = systemSettingRepo.findById("GUEST_COOLDOWN_HOURS")
+                .map(s -> { try { return Integer.parseInt(s.getValue()); } catch (Exception e) { return 3; } })
+                .orElse(3);
+        return ResponseEntity.ok(ApiResponse.success("OK", Map.of("hours", hours)));
     }
 }

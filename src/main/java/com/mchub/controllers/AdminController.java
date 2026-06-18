@@ -7,6 +7,8 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.services.AdminService;
 import com.mchub.services.AuditLogService;
 import com.mchub.services.impl.DatabaseMigrationService;
+import com.mchub.models.SystemSetting;
+import com.mchub.repositories.SystemSettingRepository;
 import com.mchub.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class AdminController {
     private final AdminService adminService;
     private final DatabaseMigrationService migrationService;
     private final AuditLogService auditLogService;
+    private final SystemSettingRepository systemSettingRepo;
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboard() {
@@ -85,6 +88,21 @@ public class AdminController {
         auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_UPDATE_USER_STATUS,
                 "User", id, "{\"isActive\":" + isActive + ",\"isVerified\":" + isVerified + "}", request);
         return ResponseEntity.ok(ApiResponse.success("Update successful", dto));
+    }
+
+    @PutMapping("/users/{id}/plan")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateUserPlan(
+            @PathVariable String id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        String plan = body.get("plan");
+        if (plan == null || plan.isBlank()) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Plan is required");
+        }
+        UserResponseDTO dto = adminService.updateUserPlan(id, plan);
+        auditLogService.log(SecurityUtils.getCurrentUserId(), AuditAction.ADMIN_UPDATE_USER_STATUS,
+                "User", id, "{\"newPlan\":\"" + plan + "\"}", request);
+        return ResponseEntity.ok(ApiResponse.success("Plan updated successfully", dto));
     }
 
     @PostMapping("/users")
@@ -170,5 +188,24 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Database migration started/completed successfully"));
     }
 
+    @GetMapping("/settings/guest-cooldown")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGuestCooldown() {
+        int hours = systemSettingRepo.findById("GUEST_COOLDOWN_HOURS")
+                .map(s -> { try { return Integer.parseInt(s.getValue()); } catch (Exception e) { return 3; } })
+                .orElse(3);
+        return ResponseEntity.ok(ApiResponse.success("OK", Map.of("hours", hours)));
+    }
 
+    @PutMapping("/settings/guest-cooldown")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> setGuestCooldown(@RequestParam int hours) {
+        if (hours < 1 || hours > 168) throw new AppException(ErrorCode.VALIDATION_FAILED, "Giờ phải từ 1 đến 168");
+        SystemSetting s = systemSettingRepo.findById("GUEST_COOLDOWN_HOURS")
+                .orElse(new SystemSetting());
+        s.setKey("GUEST_COOLDOWN_HOURS");
+        s.setValue(String.valueOf(hours));
+        systemSettingRepo.save(s);
+        return ResponseEntity.ok(ApiResponse.success("Guest cooldown updated to " + hours + " hours", null));
+    }
 }

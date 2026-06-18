@@ -312,6 +312,18 @@ public class AuthServiceImpl implements AuthService {
         return String.format("%06d", RNG.nextInt(1_000_000));
     }
 
+    private String formatOtpDigits(String code) {
+        StringBuilder sb = new StringBuilder();
+        for (char c : code.toCharArray()) {
+            sb.append("<span style=\"display:inline-block;background:#1a1a1e;border:1px solid #2a2a2e;border-radius:10px;")
+              .append("width:38px;height:48px;line-height:48px;text-align:center;font-size:24px;font-weight:800;")
+              .append("color:#f5a623;font-family:'Courier New',monospace;margin:0 3px;\">")
+              .append(c)
+              .append("</span>");
+        }
+        return sb.toString();
+    }
+
     @Override
     public void sendOtp(@NonNull String email) {
         otpRepo.deleteAllByEmail(email);
@@ -339,28 +351,49 @@ public class AuthServiceImpl implements AuthService {
         String magicLink = feUrl + "/verify-email?token=" + magicToken + "&email=" + email;
 
         String body = """
-Chào mừng bạn đến với <strong>MC Hub</strong> — nền tảng luyện giọng AI dành cho MC chuyên nghiệp.
+<p style="margin:0 0 20px 0;color:#a1a1aa;font-size:14px;line-height:1.75;">
+  Chào mừng bạn đến với <span style="color:#fff;font-weight:600;">MC Hub</span> — nền tảng luyện giọng AI dành cho MC chuyên nghiệp.<br/>
+  Để hoàn tất đăng ký, vui lòng xác thực địa chỉ email của bạn.
+</p>
 
-Để hoàn tất đăng ký, vui lòng xác thực địa chỉ email của bạn bằng một trong hai cách:
+<!-- Magic link button -->
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 8px 0;">
+  <tr>
+    <td align="center">
+      <a href="%s"
+         style="display:inline-block;background:#f5a623;color:#000000;font-size:14px;font-weight:700;
+                padding:15px 44px;border-radius:12px;text-decoration:none;letter-spacing:0.3px;">
+        Xác nhận email ngay →
+      </a>
+    </td>
+  </tr>
+</table>
+<p style="color:#3f3f46;font-size:11px;text-align:center;margin:8px 0 0 0;">Nút có hiệu lực trong <span style="color:#71717a;font-weight:600;">10 phút</span></p>
 
-<div style="text-align:center;margin:28px 0;">
-  <a href="%s"
-     style="display:inline-block;background:#f5a623;color:#000;font-size:15px;font-weight:700;
-            padding:16px 40px;border-radius:12px;text-decoration:none;letter-spacing:0.2px;">
-    ✅ &nbsp;Xác nhận email ngay
-  </a>
-  <p style="color:#71717a;font-size:12px;margin-top:10px;">Nút trên có hiệu lực trong <strong>10 phút</strong>.</p>
-</div>
+<!-- Divider -->
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;">
+  <tr>
+    <td style="border-top:1px solid #1f1f23;"></td>
+    <td style="padding:0 12px;white-space:nowrap;color:#3f3f46;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">hoặc dùng mã</td>
+    <td style="border-top:1px solid #1f1f23;"></td>
+  </tr>
+</table>
 
-<hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0;"/>
-
-<p style="color:#52525b;font-size:13px;margin-bottom:6px;">Hoặc nhập mã xác thực thủ công trên trang web:</p>
-<div style="text-align:center;margin:16px 0;">
-  <span style="display:inline-block;background:#09090b;color:#f5a623;font-size:28px;font-weight:800;
-               letter-spacing:10px;padding:14px 28px;border-radius:12px;border:1px solid #27272a;">%s</span>
-</div>
-<p style="color:#71717a;font-size:12px;text-align:center;">Mã OTP có hiệu lực trong 10 phút. Không chia sẻ mã này cho ai.</p>
-""".formatted(magicLink, code);
+<!-- OTP block -->
+<table width="100%%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center">
+      <div style="display:inline-block;background:#111113;border:1px solid #2a2a2e;border-radius:16px;padding:24px 40px;">
+        <p style="color:#3f3f46;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px 0;font-weight:600;">Mã xác thực</p>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          %s
+        </div>
+        <p style="color:#27272a;font-size:10px;margin:14px 0 0 0;letter-spacing:0.3px;">Không chia sẻ mã này cho bất kỳ ai</p>
+      </div>
+    </td>
+  </tr>
+</table>
+""".formatted(magicLink, formatOtpDigits(code));
 
         try {
             String html = emailService.buildVerificationEmail(userName, body);
