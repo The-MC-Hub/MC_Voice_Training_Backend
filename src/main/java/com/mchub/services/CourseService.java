@@ -18,6 +18,7 @@ public interface CourseService {
     // ── Enrollment ───────────────────────────────────────────────────
     boolean hasCourseAccess(String courseId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO enroll(String courseId, String userId);
+    CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeReading(String courseId, String readingId, String userId);
     QuizResultDTO submitQuiz(String courseId, String userId, QuizSubmitRequest request);

@@ -70,6 +70,15 @@ public class CourseController {
                 courseService.enroll(id, userId)));
     }
 
+    /** POST /api/v1/courses/{id}/gift-enroll — bypass plan check (used for welcome gift) */
+    @PostMapping("/{id}/gift-enroll")
+    public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> giftEnroll(
+            @PathVariable String id) {
+        String userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success("Gift course enrolled",
+                courseService.giftEnroll(id, userId)));
+    }
+
     /** POST /api/v1/courses/{id}/lessons/{lessonId}/complete */
     @PostMapping("/{id}/lessons/{lessonId}/complete")
     public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> completeLesson(

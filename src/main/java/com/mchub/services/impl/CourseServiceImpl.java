@@ -154,6 +154,20 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
+    public CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId) {
+        findCourse(courseId);
+        if (enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
+            return toProgressDTO(enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND, "Enrollment not found")));
+        }
+        CourseEnrollment enrollment = CourseEnrollment.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .build();
+        return toProgressDTO(enrollmentRepository.save(enrollment));
+    }
+
+    @Override
     public CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId) {
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
         if (!enrollment.getCompletedLessonIds().contains(lessonId)) {
