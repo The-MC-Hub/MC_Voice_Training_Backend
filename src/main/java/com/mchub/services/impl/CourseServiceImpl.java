@@ -44,16 +44,26 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public List<CourseResponseDTO> getAllActiveCourses() {
-        return courseRepository.findByIsActiveTrue().stream()
-                .map(c -> toSummaryDTO(c, null))
-                .collect(Collectors.toList());
+    public List<CourseResponseDTO> getAllActiveCourses(String userId) {
+        List<Course> courses = courseRepository.findByIsActiveTrue();
+        return mapWithProgress(courses, userId);
     }
 
     @Override
-    public List<CourseResponseDTO> getCoursesByType(CourseType type) {
-        return courseRepository.findByTypeAndIsActiveTrue(type).stream()
-                .map(c -> toSummaryDTO(c, null))
+    public List<CourseResponseDTO> getCoursesByType(CourseType type, String userId) {
+        List<Course> courses = courseRepository.findByTypeAndIsActiveTrue(type);
+        return mapWithProgress(courses, userId);
+    }
+
+    private List<CourseResponseDTO> mapWithProgress(List<Course> courses, String userId) {
+        if (userId == null || courses.isEmpty()) {
+            return courses.stream().map(c -> toSummaryDTO(c, null)).collect(Collectors.toList());
+        }
+        // Batch-fetch all enrollments for this user — no DB calls inside loop
+        java.util.Map<String, CourseEnrollment> enrollmentMap = enrollmentRepository.findByUserId(userId)
+                .stream().collect(Collectors.toMap(CourseEnrollment::getCourseId, e -> e, (a, b) -> a));
+        return courses.stream()
+                .map(c -> toSummaryDTO(c, enrollmentMap.containsKey(c.getId()) ? toProgressDTO(enrollmentMap.get(c.getId())) : null))
                 .collect(Collectors.toList());
     }
 

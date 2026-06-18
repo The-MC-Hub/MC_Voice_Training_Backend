@@ -9,8 +9,8 @@ public interface CourseService {
 
     // ── Public / User ────────────────────────────────────────────────
     List<String> getAllCourseTypes();
-    List<CourseResponseDTO> getAllActiveCourses();
-    List<CourseResponseDTO> getCoursesByType(CourseType type);
+    List<CourseResponseDTO> getAllActiveCourses(String userId);
+    List<CourseResponseDTO> getCoursesByType(CourseType type, String userId);
     List<CourseResponseDTO> getMilestoneCourses(String userId);
     CourseResponseDTO getCourseDetail(String courseId, String userId);
     com.mchub.models.ReadingGuide getReadingGuide(String id);

@@ -39,9 +39,10 @@ public class CourseController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<CourseResponseDTO>>> listCourses(
             @RequestParam(required = false) CourseType type) {
+        String userId = tryGetUserId();
         List<CourseResponseDTO> result = type != null
-                ? courseService.getCoursesByType(type)
-                : courseService.getAllActiveCourses();
+                ? courseService.getCoursesByType(type, userId)
+                : courseService.getAllActiveCourses(userId);
         return ResponseEntity.ok(ApiResponse.success("Courses retrieved", result));
     }
 
