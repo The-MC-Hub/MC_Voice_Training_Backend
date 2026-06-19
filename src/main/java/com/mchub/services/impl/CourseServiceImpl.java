@@ -166,6 +166,16 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId) {
         findCourse(courseId);
+        // Grant permanent ownership — same as individual purchase (199k), independent of plan
+        userRepository.findById(userId).ifPresent(user -> {
+            if (user.getPurchasedCourseIds() == null) {
+                user.setPurchasedCourseIds(new java.util.ArrayList<>());
+            }
+            if (!user.getPurchasedCourseIds().contains(courseId)) {
+                user.getPurchasedCourseIds().add(courseId);
+                userRepository.save(user);
+            }
+        });
         if (enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
             return toProgressDTO(enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
                     .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND, "Enrollment not found")));
@@ -179,6 +189,10 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId) {
+        if (!hasCourseAccess(courseId, userId)) {
+            throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
+                    "Plan expired. Renew to continue learning.");
+        }
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
         if (!enrollment.getCompletedLessonIds().contains(lessonId)) {
             enrollment.getCompletedLessonIds().add(lessonId);
@@ -190,6 +204,10 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public CourseResponseDTO.EnrollmentProgressDTO completeReading(String courseId, String readingId, String userId) {
+        if (!hasCourseAccess(courseId, userId)) {
+            throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
+                    "Plan expired. Renew to continue learning.");
+        }
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
         if (!enrollment.getCompletedReadingIds().contains(readingId)) {
             enrollment.getCompletedReadingIds().add(readingId);
@@ -201,6 +219,10 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public QuizResultDTO submitQuiz(String courseId, String userId, QuizSubmitRequest request) {
+        if (!hasCourseAccess(courseId, userId)) {
+            throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
+                    "Plan expired. Renew to continue learning.");
+        }
         Course course = findCourse(courseId);
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
 
@@ -349,7 +371,7 @@ public class CourseServiceImpl implements CourseService {
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Course not found: " + id));
     }
 
-    /** BASIC+ plan (not expired) OR individually purchased course → access granted */
+    /** Any paid plan (not expired) OR individually purchased course → access granted */
     public boolean hasCourseAccess(String courseId, String userId) {
         if (userId == null) return false;
         User user = userRepository.findById(userId)
@@ -357,11 +379,14 @@ public class CourseServiceImpl implements CourseService {
         if (user.getPurchasedCourseIds() != null && user.getPurchasedCourseIds().contains(courseId)) {
             return true;
         }
-        boolean planActive = user.getPlanExpiresAt() == null
-                || user.getPlanExpiresAt().isAfter(LocalDateTime.now());
-        return user.getPlan() != null
-                && user.getPlan() != com.mchub.enums.SubscriptionPlan.FREE
-                && planActive;
+        boolean planActive = user.getPlanExpiresAt() != null
+                && user.getPlanExpiresAt().isAfter(LocalDateTime.now());
+        com.mchub.enums.SubscriptionPlan plan = user.getPlan();
+        boolean isPaidPlan = plan == com.mchub.enums.SubscriptionPlan.DAILY
+                || plan == com.mchub.enums.SubscriptionPlan.BASIC
+                || plan == com.mchub.enums.SubscriptionPlan.FULL
+                || plan == com.mchub.enums.SubscriptionPlan.ANNUAL;
+        return isPaidPlan && planActive;
     }
 
     private CourseEnrollment findEnrollment(String userId, String courseId) {

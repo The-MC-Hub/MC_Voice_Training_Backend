@@ -10,12 +10,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LeaderboardEntryDTO {
+    private int rank;
     private String userId;
     private String userName;
     private String userAvatar;
     private double totalPracticeHours;
     private int totalSessions;
     private double cumulativeXP;
+    private double weeklyXP;
     private int currentStreak;
     private String currentTier;
 }

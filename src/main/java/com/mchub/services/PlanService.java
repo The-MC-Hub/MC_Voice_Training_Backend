@@ -86,6 +86,7 @@ public class PlanService {
         existing.setDiscountValue(updated.getDiscountValue());
         existing.setApplicablePlans(updated.getApplicablePlans());
         existing.setMaxUses(updated.getMaxUses());
+        existing.setStartsAt(updated.getStartsAt());
         existing.setExpiresAt(updated.getExpiresAt());
         existing.setActive(updated.isActive());
         existing.setDescription(updated.getDescription());
@@ -141,6 +142,20 @@ public class PlanService {
                 "finalPrice", finalPrice,
                 "description", dc.getDescription() != null ? dc.getDescription() : ""
         );
+    }
+
+    /**
+     * Returns all discount codes that are currently within their active time window,
+     * have remaining uses, and are marked active. Used by the flash-deal sidebar.
+     */
+    public List<DiscountCode> getActiveFlashDeals() {
+        LocalDateTime now = LocalDateTime.now();
+        return discountRepo.findAll().stream()
+                .filter(dc -> dc.isActive())
+                .filter(dc -> dc.getStartsAt() == null || !dc.getStartsAt().isAfter(now))
+                .filter(dc -> dc.getExpiresAt() == null || dc.getExpiresAt().isAfter(now))
+                .filter(dc -> dc.getMaxUses() <= 0 || dc.getUsedCount() < dc.getMaxUses())
+                .toList();
     }
 
     /** Called after payment confirmed — increment usedCount */

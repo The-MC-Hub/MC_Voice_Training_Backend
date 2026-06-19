@@ -7,13 +7,12 @@ import com.mchub.dto.LeaderboardEntryDTO;
 import com.mchub.services.CommunityService;
 import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/community")
@@ -27,14 +26,38 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success(communityService.getCommunityStats()));
     }
 
-    @GetMapping("/leaderboards")
-    public ResponseEntity<ApiResponse<Map<String, List<LeaderboardEntryDTO>>>> getLeaderboards() {
-        Map<String, List<LeaderboardEntryDTO>> leaderboards = Map.of(
-                "diligent", communityService.getDiligentLeaderboard(),
-                "precision", communityService.getPrecisionLeaderboard(),
-                "streak", communityService.getStreakLeaderboard()
-        );
-        return ResponseEntity.ok(ApiResponse.success(leaderboards));
+    /**
+     * GET /api/v1/community/leaderboard
+     * @param type   streak | diligent | precision | sessions  (default: streak)
+     * @param period all_time | weekly                         (default: all_time)
+     * @param page   0-based page index                        (default: 0)
+     * @param size   page size, capped at 50                   (default: 20)
+     */
+    @GetMapping("/leaderboard")
+    public ResponseEntity<ApiResponse<Page<LeaderboardEntryDTO>>> getLeaderboard(
+            @RequestParam(defaultValue = "streak")   String type,
+            @RequestParam(defaultValue = "all_time") String period,
+            @RequestParam(defaultValue = "0")        int page,
+            @RequestParam(defaultValue = "20")       int size) {
+
+        int cappedSize = Math.min(size, 50);
+        Page<LeaderboardEntryDTO> result = communityService.getLeaderboard(
+                type, period, PageRequest.of(page, cappedSize));
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * GET /api/v1/community/leaderboard/me
+     * Returns the current user's rank entry for a given type+period.
+     */
+    @GetMapping("/leaderboard/me")
+    public ResponseEntity<ApiResponse<LeaderboardEntryDTO>> getMyRank(
+            @RequestParam(defaultValue = "streak")   String type,
+            @RequestParam(defaultValue = "all_time") String period) {
+
+        String userId = SecurityUtils.getCurrentUserId();
+        LeaderboardEntryDTO entry = communityService.getUserRank(userId, type, period);
+        return ResponseEntity.ok(ApiResponse.success(entry));
     }
 
     @GetMapping("/active-arenas")
@@ -43,7 +66,7 @@ public class CommunityController {
         try {
             userId = SecurityUtils.getCurrentUserId();
         } catch (Exception e) {
-            // User not authenticated, fetch standard public arena info
+            // unauthenticated
         }
         return ResponseEntity.ok(ApiResponse.success(communityService.getActiveArenas(userId)));
     }

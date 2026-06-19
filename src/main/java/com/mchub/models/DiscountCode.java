@@ -38,6 +38,7 @@ public class DiscountCode {
     private int maxUses;     // 0 = unlimited
     private int usedCount;
 
+    private LocalDateTime startsAt;   // null = active immediately
     private LocalDateTime expiresAt; // null = never expires
 
     private boolean active;

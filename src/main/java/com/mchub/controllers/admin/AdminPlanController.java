@@ -1,6 +1,8 @@
 package com.mchub.controllers.admin;
 
+import com.mchub.config.PlanConfig;
 import com.mchub.dto.ApiResponse;
+import com.mchub.enums.SubscriptionPlan;
 import com.mchub.models.DiscountCode;
 import com.mchub.models.PlanDefinition;
 import com.mchub.services.PlanService;
@@ -31,6 +33,33 @@ public class AdminPlanController {
             @PathVariable String id,
             @RequestBody PlanDefinition updated) {
         return ResponseEntity.ok(ApiResponse.success("Plan updated", planService.updatePlan(id, updated)));
+    }
+
+    @PostMapping("/seed-daily")
+    public ResponseEntity<ApiResponse<PlanDefinition>> seedDailyPlan() {
+        try {
+            PlanDefinition existing = planService.getPlanByKey(SubscriptionPlan.DAILY);
+            return ResponseEntity.ok(ApiResponse.success("Daily plan already exists", existing));
+        } catch (Exception ignored) {}
+
+        PlanDefinition daily = new PlanDefinition();
+        daily.setPlan(SubscriptionPlan.DAILY);
+        daily.setPriceVnd(PlanConfig.DAILY_PRICE_VND);
+        daily.setDurationDays(PlanConfig.DAILY_DAYS);
+        daily.setAiSessionLimit(PlanConfig.DAILY_AI_SESSION_LIMIT);
+        daily.setDisplayName("Goi Ngay");
+        daily.setTagline("Trai nghiem day du trong 24 gio");
+        daily.setBadge("Linh hoat");
+        daily.setUrgencyText("Chi 10.000d/ngay");
+        daily.setSocialProof("Phu hop de thu truoc khi dang ky thang");
+        daily.setHighlights(java.util.List.of(
+            "10 AI coaching sessions",
+            "Tat ca chu de MC",
+            "Phan tich giong day du",
+            "Tracking tien trinh"
+        ));
+        daily.setActive(true);
+        return ResponseEntity.ok(ApiResponse.success("Daily plan seeded", planService.savePlan(daily)));
     }
 
     // ── Discount code endpoints ────────────────────────────────────────

@@ -9,9 +9,13 @@ import com.mchub.repositories.*;
 import com.mchub.services.CommunityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,7 +36,6 @@ public class CommunityServiceImpl implements CommunityService {
                 .mapToDouble(UserStats::getTotalPracticeHours)
                 .sum();
 
-        // Get the first script title as the popular script, or default if empty
         String popularScript = "Bản tin thời sự tổng hợp MCHub";
         List<VoiceLesson> lessons = voiceLessonRepository.findAll();
         if (!lessons.isEmpty()) {
@@ -50,30 +53,56 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
-    public List<LeaderboardEntryDTO> getDiligentLeaderboard() {
-        return userStatsRepository.findAll().stream()
-                .sorted(Comparator.comparingDouble(UserStats::getTotalPracticeHours).reversed())
-                .limit(10)
-                .map(this::mapToLeaderboardEntry)
+    public Page<LeaderboardEntryDTO> getLeaderboard(String type, String period, Pageable pageable) {
+        boolean isWeekly = "weekly".equalsIgnoreCase(period);
+        Page<UserStats> statsPage;
+
+        if (isWeekly) {
+            // Weekly: all types sort by weeklyXP (proxy for weekly activity)
+            statsPage = userStatsRepository.findAllByOrderByWeeklyXPDesc(pageable);
+        } else {
+            statsPage = switch (type.toLowerCase()) {
+                case "streak"    -> userStatsRepository.findAllByOrderByCurrentStreakDesc(pageable);
+                case "precision" -> userStatsRepository.findAllByOrderByCumulativeXPDesc(pageable);
+                case "sessions"  -> userStatsRepository.findAllByOrderByTotalSessionsDesc(pageable);
+                default          -> userStatsRepository.findAllByOrderByTotalPracticeHoursDesc(pageable);
+            };
+        }
+
+        // Base rank offset from page (page 0 item 0 = rank 1)
+        int rankOffset = (int) pageable.getOffset();
+        AtomicInteger counter = new AtomicInteger(rankOffset + 1);
+
+        List<LeaderboardEntryDTO> entries = statsPage.getContent().stream()
+                .map(s -> mapToEntry(s, counter.getAndIncrement()))
                 .collect(Collectors.toList());
+
+        return new PageImpl<>(entries, pageable, statsPage.getTotalElements());
     }
 
     @Override
-    public List<LeaderboardEntryDTO> getPrecisionLeaderboard() {
-        return userStatsRepository.findAll().stream()
-                .sorted(Comparator.comparingDouble(UserStats::getCumulativeXP).reversed())
-                .limit(10)
-                .map(this::mapToLeaderboardEntry)
-                .collect(Collectors.toList());
-    }
+    public LeaderboardEntryDTO getUserRank(String userId, String type, String period) {
+        boolean isWeekly = "weekly".equalsIgnoreCase(period);
 
-    @Override
-    public List<LeaderboardEntryDTO> getStreakLeaderboard() {
-        return userStatsRepository.findAll().stream()
-                .sorted(Comparator.comparingInt(UserStats::getCurrentStreak).reversed())
-                .limit(10)
-                .map(this::mapToLeaderboardEntry)
-                .collect(Collectors.toList());
+        // Fetch all sorted, find position — acceptable for leaderboard (cached in prod)
+        List<UserStats> all;
+        if (isWeekly) {
+            all = userStatsRepository.findAllByOrderByWeeklyXPDesc(Pageable.unpaged()).getContent();
+        } else {
+            all = switch (type.toLowerCase()) {
+                case "streak"    -> userStatsRepository.findAllByOrderByCurrentStreakDesc(Pageable.unpaged()).getContent();
+                case "precision" -> userStatsRepository.findAllByOrderByCumulativeXPDesc(Pageable.unpaged()).getContent();
+                case "sessions"  -> userStatsRepository.findAllByOrderByTotalSessionsDesc(Pageable.unpaged()).getContent();
+                default          -> userStatsRepository.findAllByOrderByTotalPracticeHoursDesc(Pageable.unpaged()).getContent();
+            };
+        }
+
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).getUserId().equals(userId)) {
+                return mapToEntry(all.get(i), i + 1);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -84,7 +113,7 @@ public class CommunityServiceImpl implements CommunityService {
         for (Competition comp : activeComps) {
             String scriptTitle = "Thử thách phát sóng";
             String scriptContent = "";
-            
+
             if (comp.getChallengeScriptId() != null) {
                 Optional<VoiceLesson> lessonOpt = voiceLessonRepository.findById(comp.getChallengeScriptId());
                 if (lessonOpt.isPresent()) {
@@ -93,10 +122,11 @@ public class CommunityServiceImpl implements CommunityService {
                 }
             }
 
-            // Fetch arena leaderboard
             List<CompetitionRecord> records = competitionRecordRepository.findByCompetitionId(comp.getId());
             List<ArenaLeaderboardEntryDTO> leaderboard = records.stream()
-                    .sorted((r1, r2) -> Double.compare(r2.getBestAccuracy() + r2.getBestRhythm(), r1.getBestAccuracy() + r1.getBestRhythm()))
+                    .sorted((r1, r2) -> Double.compare(
+                            r2.getBestAccuracy() + r2.getBestRhythm(),
+                            r1.getBestAccuracy() + r1.getBestRhythm()))
                     .map(r -> ArenaLeaderboardEntryDTO.builder()
                             .userId(r.getUserId())
                             .userName(r.getUserName())
@@ -108,11 +138,10 @@ public class CommunityServiceImpl implements CommunityService {
                             .build())
                     .collect(Collectors.toList());
 
-            // Fetch current user's arena performance
             ArenaLeaderboardEntryDTO userRecord = null;
             if (userId != null) {
                 userRecord = leaderboard.stream()
-                        .filter(entry -> entry.getUserId().equals(userId))
+                        .filter(e -> e.getUserId().equals(userId))
                         .findFirst()
                         .orElse(null);
             }
@@ -129,18 +158,17 @@ public class CommunityServiceImpl implements CommunityService {
         return arenas;
     }
 
-    private LeaderboardEntryDTO mapToLeaderboardEntry(UserStats stats) {
+    private LeaderboardEntryDTO mapToEntry(UserStats stats, int rank) {
         User user = userRepository.findById(stats.getUserId()).orElse(null);
-        String name = user != null ? user.getName() : "Học viên ẩn danh";
-        String avatar = user != null ? user.getAvatar() : "default-avatar.png";
-
         return LeaderboardEntryDTO.builder()
+                .rank(rank)
                 .userId(stats.getUserId())
-                .userName(name)
-                .userAvatar(avatar)
+                .userName(user != null ? user.getName() : "Học viên")
+                .userAvatar(user != null ? user.getAvatar() : null)
                 .totalPracticeHours(stats.getTotalPracticeHours())
                 .totalSessions(stats.getTotalSessions())
                 .cumulativeXP(stats.getCumulativeXP())
+                .weeklyXP(stats.getWeeklyXP())
                 .currentStreak(stats.getCurrentStreak())
                 .currentTier(stats.getCurrentTier())
                 .build();

@@ -196,6 +196,11 @@ public class VoiceServiceImpl implements VoiceService {
                 throw new AppException(ErrorCode.LIMIT_EXCEEDED,
                         "Free plan limit: " + PlanConfig.FREE_SESSION_LIMIT + " sessions. Upgrade to continue.");
             }
+        } else if (plan == SubscriptionPlan.DAILY) {
+            if (user.getAiSessionsUsed() >= PlanConfig.DAILY_AI_SESSION_LIMIT) {
+                throw new AppException(ErrorCode.LIMIT_EXCEEDED,
+                        "Goi Ngay: da dung het " + PlanConfig.DAILY_AI_SESSION_LIMIT + " AI sessions. Gia han them 1 ngay de tiep tuc.");
+            }
         } else if (plan == SubscriptionPlan.BASIC) {
             // BASIC: all categories allowed, max 20 AI sessions/month
             if (user.getAiSessionsUsed() >= PlanConfig.BASIC_AI_SESSION_LIMIT) {
@@ -328,7 +333,7 @@ public class VoiceServiceImpl implements VoiceService {
 
             // Increment AI session counter — FREE uses total session count via repository,
             // but also track aiSessionsUsed so frontend can display X/5 correctly
-            if (plan == SubscriptionPlan.FREE || plan == SubscriptionPlan.BASIC) {
+            if (plan == SubscriptionPlan.FREE || plan == SubscriptionPlan.DAILY || plan == SubscriptionPlan.BASIC) {
                 user.setAiSessionsUsed(user.getAiSessionsUsed() + 1);
                 userRepository.save(user);
             }

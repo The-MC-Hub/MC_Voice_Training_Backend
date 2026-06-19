@@ -47,6 +47,15 @@ public class PaymentController {
     }
 
     // ================================================================
+    //  GET /api/v1/payment/flash-deals  (public — no auth required)
+    //  Returns discount codes currently within their active time window
+    // ================================================================
+    @GetMapping("/flash-deals")
+    public ResponseEntity<ApiResponse<java.util.List<com.mchub.models.DiscountCode>>> getFlashDeals() {
+        return ResponseEntity.ok(ApiResponse.success("Flash deals retrieved", planService.getActiveFlashDeals()));
+    }
+
+    // ================================================================
     //  POST /api/v1/payment/apply-discount
     //  Validate discount code, return final price (no side effects)
     // ================================================================
