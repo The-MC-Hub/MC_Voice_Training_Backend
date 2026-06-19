@@ -152,6 +152,7 @@ public class PlanService {
         LocalDateTime now = LocalDateTime.now();
         return discountRepo.findAll().stream()
                 .filter(dc -> dc.isActive())
+                .filter(dc -> dc.isShowInSidebar())
                 .filter(dc -> dc.getStartsAt() == null || !dc.getStartsAt().isAfter(now))
                 .filter(dc -> dc.getExpiresAt() == null || dc.getExpiresAt().isAfter(now))
                 .filter(dc -> dc.getMaxUses() <= 0 || dc.getUsedCount() < dc.getMaxUses())

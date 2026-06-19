@@ -43,6 +43,8 @@ public class DiscountCode {
 
     private boolean active;
 
+    private boolean showInSidebar; // if true, shows in the AdSidebar flash-deal widget
+
     private String description; // admin note
 
     @CreatedDate
