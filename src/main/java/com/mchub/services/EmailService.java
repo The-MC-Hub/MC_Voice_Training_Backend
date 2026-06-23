@@ -227,99 +227,176 @@ public class EmailService {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>MC Hub — Xác thực email</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0a0c;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a0c;padding:40px 16px;">
+<body style="margin:0;padding:0;background:#f4f4f6;font-family:'Helvetica Neue',Arial,sans-serif;">
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f6;padding:40px 16px;">
   <tr><td align="center">
-    <table width="580" cellpadding="0" cellspacing="0" border="0"
-      style="max-width:580px;width:100%%;border-radius:24px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6);border:1px solid #1f1f23;">
+    <table width="560" cellpadding="0" cellspacing="0" border="0"
+      style="max-width:560px;width:100%%;border-radius:20px;overflow:hidden;
+             box-shadow:0 4px 32px rgba(0,0,0,0.10);border:1px solid #e8e8ec;">
 
-      <!-- TOP ACCENT -->
-      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:3px;"></td></tr>
-
-      <!-- HEADER -->
+      <!-- TOP ACCENT BAR -->
       <tr>
-        <td style="background:#09090b;padding:22px 32px 18px;">
+        <td style="background:#f5a623;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
+
+      <!-- HEADER (dark strip) -->
+      <tr>
+        <td style="background:#111113;padding:20px 32px 16px;">
           <table width="100%%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td>
+              <td style="vertical-align:middle;">
                 <table cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;">MC</td>
-                    <td style="padding:0 3px;vertical-align:middle;">
-                      <span style="display:inline-block;width:5px;height:5px;border-radius:50%%;background:#f5a623;"></span>
+                    <td style="font-size:17px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">MC</td>
+                    <td style="padding:0 4px 0 3px;vertical-align:middle;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr><td width="5" height="5" style="background:#f5a623;border-radius:50%%;font-size:0;line-height:0;">&nbsp;</td></tr>
+                      </table>
                     </td>
-                    <td style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Hub</td>
+                    <td style="font-size:17px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Hub</td>
                   </tr>
                 </table>
-                <p style="color:#3f3f46;font-size:9px;margin-top:2px;letter-spacing:1px;text-transform:uppercase;">AI Voice Training Platform</p>
+                <p style="color:#52525b;font-size:9px;margin:3px 0 0 0;letter-spacing:1.2px;text-transform:uppercase;font-family:'Helvetica Neue',Arial,sans-serif;">AI VOICE TRAINING PLATFORM</p>
               </td>
               <td align="right" style="vertical-align:middle;">
-                <span style="display:inline-block;background:rgba(16,185,129,0.12);color:#34d399;font-size:9px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(52,211,153,0.2);">✦ Xác thực</span>
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background:#1d3a26;border:1px solid #2d5c3a;border-radius:5px;padding:4px 11px;">
+                      <span style="color:#4ade80;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:'Helvetica Neue',Arial,sans-serif;">+ XAC THUC</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
         </td>
       </tr>
 
-      <!-- HERO -->
+      <!-- HERO (white with gold left border) -->
       <tr>
-        <td style="background:linear-gradient(135deg,#071a10 0%%,#0a2818 50%%,#0d3320 100%%;padding:0;position:relative;">
+        <td style="background:#ffffff;padding:0;">
           <table width="100%%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td style="padding:40px 32px 36px;">
-                <p style="color:rgba(52,211,153,0.5);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;font-weight:600;">Xác thực tài khoản</p>
-                <h1 style="color:#ffffff;font-size:28px;font-weight:800;line-height:1.25;letter-spacing:-0.8px;margin:0 0 10px 0;">
-                  Chào <span style="color:#34d399;">%s</span> 👋
-                </h1>
-                <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0;line-height:1.5;">Chỉ một bước nữa để bắt đầu hành trình luyện giọng.</p>
+              <!-- Gold left accent bar -->
+              <td width="4" style="background:#f5a623;font-size:0;line-height:0;">&nbsp;</td>
+              <td style="padding:36px 32px 32px 28px;">
+                <p style="color:#b45309;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px 0;font-weight:700;font-family:'Helvetica Neue',Arial,sans-serif;">X&#225;c th&#7921;c t&#224;i kho&#7843;n</p>
+                <p style="color:#111113;font-size:26px;font-weight:800;line-height:1.25;letter-spacing:-0.5px;margin:0 0 8px 0;font-family:'Helvetica Neue',Arial,sans-serif;">
+                  Ch&#224;o <span style="color:#d97706;">%s</span>
+                </p>
+                <p style="color:#71717a;font-size:13px;margin:0;line-height:1.6;font-family:'Helvetica Neue',Arial,sans-serif;">Ch&#7881; m&#7897;t b&#432;&#7899;c n&#7919;a &#273;&#7875; b&#7855;t &#273;&#7847;u h&#224;nh tr&#236;nh luy&#7879;n gi&#7885;ng.</p>
               </td>
-              <td style="padding:40px 32px 36px 0;vertical-align:middle;" align="right">
-                <!-- mic icon -->
-                <div style="width:64px;height:64px;border-radius:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);display:inline-flex;align-items:center;justify-content:center;">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="9" y="2" width="6" height="11" rx="3" fill="#34d399" opacity="0.8"/>
-                    <path d="M5 10c0 3.866 3.134 7 7 7s7-3.134 7-7" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
-                    <line x1="12" y1="17" x2="12" y2="21" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
-                    <line x1="9" y1="21" x2="15" y2="21" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/>
-                  </svg>
-                </div>
+              <td width="90" style="padding:0 28px 0 0;vertical-align:middle;" align="right">
+                <!-- Mic icon using table (email-safe, no SVG render issues) -->
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="64" height="64"
+                      style="background:#fffbeb;border:1px solid #fde68a;border-radius:14px;text-align:center;vertical-align:middle;font-size:28px;line-height:64px;">
+                      &#127908;
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
         </td>
       </tr>
 
-      <!-- THIN LINE -->
-      <tr><td style="background:linear-gradient(90deg,transparent,#10b981,transparent);height:1px;"></td></tr>
-
-      <!-- BODY -->
+      <!-- GOLD DIVIDER -->
       <tr>
-        <td style="background:#0d0d0f;padding:32px 32px 28px;">
-          <div style="font-size:14px;line-height:1.75;color:#a1a1aa;">
+        <td style="background:#f5a623;height:1px;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
+
+      <!-- BODY (white) -->
+      <tr>
+        <td style="background:#ffffff;padding:28px 32px 24px;">
+          <div style="font-size:14px;line-height:1.8;color:#3f3f46;font-family:'Helvetica Neue',Arial,sans-serif;">
             %s
           </div>
         </td>
       </tr>
 
+      <!-- WEBSITE BANNER -->
+      <tr>
+        <td style="background:#111113;padding:18px 32px 16px;text-align:center;">
+          <a href="%s" style="text-decoration:none;">
+            <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+              <tr>
+                <td style="font-size:15px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">MC</td>
+                <td style="padding:0 4px 0 3px;vertical-align:middle;">
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr><td width="5" height="5" style="background:#f5a623;border-radius:50%%;font-size:0;line-height:0;">&nbsp;</td></tr>
+                  </table>
+                </td>
+                <td style="font-size:15px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Hub</td>
+              </tr>
+            </table>
+            <p style="color:#52525b;font-size:9px;margin:4px 0 0 0;letter-spacing:1.2px;text-transform:uppercase;font-family:'Helvetica Neue',Arial,sans-serif;">mchub.vn &nbsp;&bull;&nbsp; AI Voice Training</p>
+          </a>
+        </td>
+      </tr>
+
+      <!-- SOCIAL ICONS -->
+      <tr>
+        <td style="background:#111113;padding:0 32px 18px;text-align:center;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+            <tr>
+              <!-- Facebook -->
+              <td style="padding:0 6px;">
+                <a href="https://facebook.com/mchub.vn" style="text-decoration:none;">
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="32" height="32" style="background:#1877f2;border-radius:8px;text-align:center;vertical-align:middle;font-size:15px;line-height:32px;color:#ffffff;font-weight:800;font-family:'Helvetica Neue',Arial,sans-serif;">f</td>
+                    </tr>
+                  </table>
+                </a>
+              </td>
+              <!-- TikTok -->
+              <td style="padding:0 6px;">
+                <a href="https://tiktok.com/@mchub.vn" style="text-decoration:none;">
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="32" height="32" style="background:#010101;border:1px solid #333;border-radius:8px;text-align:center;vertical-align:middle;font-size:13px;line-height:32px;color:#ffffff;font-family:'Helvetica Neue',Arial,sans-serif;">&#9835;</td>
+                    </tr>
+                  </table>
+                </a>
+              </td>
+              <!-- YouTube -->
+              <td style="padding:0 6px;">
+                <a href="https://youtube.com/@mchub" style="text-decoration:none;">
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="32" height="32" style="background:#ff0000;border-radius:8px;text-align:center;vertical-align:middle;font-size:13px;line-height:32px;color:#ffffff;font-family:'Helvetica Neue',Arial,sans-serif;">&#9654;</td>
+                    </tr>
+                  </table>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
       <!-- FOOTER -->
       <tr>
-        <td style="background:#09090b;padding:18px 32px 24px;border-top:1px solid #1a1a1d;">
-          <p style="color:#27272a;font-size:11px;line-height:1.8;text-align:center;margin:0;">
-            Nếu bạn không tạo tài khoản này, hãy bỏ qua email này.<br/>
-            <span style="color:#1f1f23;">© %s MC Hub · Việt Nam</span>
+        <td style="background:#fafafa;padding:14px 32px 20px;border-top:1px solid #f0f0f2;">
+          <p style="color:#a1a1aa;font-size:11px;line-height:1.8;text-align:center;margin:0;font-family:'Helvetica Neue',Arial,sans-serif;">
+            N&#7871;u b&#7841;n kh&#244;ng t&#7841;o t&#224;i kho&#7843;n n&#224;y, h&#227;y b&#7887; qua email n&#224;y.<br/>
+            <span style="color:#d1d1d4;">&#169; %s MC Hub &middot; Vi&#7879;t Nam</span>
           </p>
         </td>
       </tr>
 
-      <!-- BOTTOM ACCENT -->
-      <tr><td style="background:linear-gradient(90deg,#f5a623,#fbbf24,#f5a623);height:3px;"></td></tr>
+      <!-- BOTTOM ACCENT BAR -->
+      <tr>
+        <td style="background:#f5a623;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
 
     </table>
   </td></tr>
 </table>
 </body>
 </html>
-""".formatted(recipientName, trustedHtmlBody, year);
+""".formatted(recipientName, trustedHtmlBody, feUrl, year);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

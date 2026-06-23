@@ -86,6 +86,13 @@ public class User {
     @Builder.Default
     private int referralCount = 0;
 
+    // Newbie quest tracking — set of completed quest IDs
+    @Builder.Default
+    private java.util.Set<String> completedQuests = new java.util.HashSet<>();
+
+    @Builder.Default
+    private boolean newbieVoucherClaimed = false;
+
     // Brute-force lockout: incremented on each failed login, reset on success
     @Builder.Default
     private int failedLoginAttempts = 0;
