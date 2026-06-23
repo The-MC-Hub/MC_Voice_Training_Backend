@@ -341,7 +341,7 @@ public class AdminServiceImpl implements AdminService {
                                       @NonNull String password, @NonNull String role,
                                       String phoneNumber, String adminNote, String plan, String couponId) {
         if (userRepository.existsByEmail(email)) {
-            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email already in use");
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email nay da duoc su dung.");
         }
         UserRole userRole;
         try {

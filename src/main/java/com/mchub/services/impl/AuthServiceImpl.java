@@ -64,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
     public User register(@NonNull RegisterRequest req) {
         userRepository.findByEmail(req.getEmail()).ifPresent(existing -> {
             if (existing.isVerified()) {
-                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email is already in use");
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email này đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập.");
             }
             // Unverified stale account — clean up so user can re-register
             otpRepo.deleteAllByEmail(req.getEmail());
@@ -150,10 +150,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(@NonNull String email, @NonNull String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password"));
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung."));
 
         if (!user.isActive()) {
-            throw new AppException(ErrorCode.USER_LOCKED, "Account is locked. Please contact support.");
+            throw new AppException(ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
         }
         if (!user.isVerified()) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "EMAIL_NOT_VERIFIED:" + email);
@@ -182,7 +182,7 @@ public class AuthServiceImpl implements AuthService {
                 user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
             }
             userRepository.save(user);
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung.");
         }
 
         // Success — reset lockout counters
@@ -257,14 +257,93 @@ public class AuthServiceImpl implements AuthService {
 
 
 
+    private static final String PWD_RESET_PREFIX = "pwd_reset:";
+
     @Override
     public void forgotPassword(@NonNull String email) {
-        throw new UnsupportedOperationException("Not implemented yet after 2FA removal");
+        // Silently succeed if email not found — prevent user enumeration
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) return;
+
+        String key = PWD_RESET_PREFIX + email;
+        otpRepo.deleteAllByEmail(key);
+
+        String code = generateOtp();
+        otpRepo.save(OtpVerification.builder()
+                .email(key)
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .used(false)
+                .build());
+
+        String userName = user.getName() != null ? user.getName() : "ban";
+        String body = """
+<p style="margin:0 0 20px 0;color:#374151;font-size:14px;line-height:1.85;font-family:'Helvetica Neue',Arial,sans-serif;">
+  Ban vua yeu cau dat lai mat khau tai khoan <strong style="color:#111113;">MC Hub</strong>.<br/>
+  Su dung ma OTP sau de dat lai mat khau cua ban. Ma co hieu luc trong <strong>10 phut</strong>.
+</p>
+""" + """
+<!-- OTP display -->
+<table width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+  <tr>
+    <td align="center">
+      <div style="display:inline-block;background:#f5f5f5;border:2px dashed #f5a623;border-radius:12px;padding:16px 40px;">
+        <span style="font-size:32px;font-weight:800;letter-spacing:0.4em;color:#111113;font-family:monospace;">%s</span>
+      </div>
+    </td>
+  </tr>
+</table>
+<p style="color:#6b7280;font-size:12px;text-align:center;margin:0;font-family:'Helvetica Neue',Arial,sans-serif;">
+  Neu ban khong yeu cau dat lai mat khau, vui long bo qua email nay.
+</p>
+""".formatted(formatOtpDigits(code));
+
+        try {
+            String html = emailService.buildVerificationEmail(userName, body);
+            emailService.sendHtmlEmail(email, "MC Hub — Ma dat lai mat khau", html);
+        } catch (Exception e) {
+            emailService.sendSimpleEmail(email,
+                    "MC Hub — Ma dat lai mat khau",
+                    "Ma OTP dat lai mat khau cua ban: " + code + "\n\nMa co hieu luc trong 10 phut.\nNeu ban khong yeu cau, hay bo qua email nay.");
+        }
     }
 
     @Override
     public void resetPassword(@NonNull String email, @NonNull String code, @NonNull String newPassword) {
-        throw new UnsupportedOperationException("Not implemented yet after 2FA removal");
+        String key = PWD_RESET_PREFIX + email;
+        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc(key)
+                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Khong tim thay ma OTP. Vui long yeu cau lai."));
+
+        if (otp.isUsed())
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP da duoc su dung.");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP da het han. Vui long yeu cau lai.");
+        if (otp.getAttemptCount() >= 5) {
+            otpRepo.delete(otp);
+            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bi khoa sau 5 lan sai. Vui long yeu cau OTP moi.");
+        }
+        if (!otp.getCode().equals(code.trim())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            otpRepo.save(otp);
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung.");
+        }
+
+        // Mark used
+        otp.setUsed(true);
+        otpRepo.save(otp);
+
+        // Update password
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (newPassword.length() < 8)
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mat khau phai co it nhat 8 ky tu.");
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordChangedAt(LocalDateTime.now());
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+
+        otpRepo.deleteAllByEmail(key);
     }
 
     @Override
