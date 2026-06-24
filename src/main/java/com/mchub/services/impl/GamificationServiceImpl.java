@@ -102,6 +102,43 @@ public class GamificationServiceImpl implements GamificationService {
         return savedStats;
     }
 
+    @Override
+    public UserStats processLoginStreak(String userId) {
+        UserStats stats = getOrCreateUserStats(userId);
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        LocalDate last = stats.getLastLoginDate();
+
+        // Auto-refill freeze on first login of a new month
+        LocalDate lastFreeze = stats.getLastFreezeGranted();
+        if (lastFreeze == null || lastFreeze.getMonth() != today.getMonth() || lastFreeze.getYear() != today.getYear()) {
+            stats.setFreezesAvailable(1);
+            stats.setLastFreezeGranted(today);
+        }
+
+        if (last == null) {
+            stats.setLoginStreak(1);
+        } else {
+            long gap = ChronoUnit.DAYS.between(last, today);
+            if (gap == 0) {
+                // Already logged in today — no-op
+                return stats;
+            } else if (gap == 1) {
+                stats.setLoginStreak(stats.getLoginStreak() + 1);
+            } else if (gap == 2 && stats.getFreezesAvailable() > 0) {
+                // Use freeze: skipped 1 day, still count as consecutive
+                stats.setFreezesAvailable(stats.getFreezesAvailable() - 1);
+                stats.setLoginStreak(stats.getLoginStreak() + 1);
+                log.info("Freeze used for user: {} (streak kept at {})", userId, stats.getLoginStreak());
+            } else {
+                stats.setLoginStreak(1);
+            }
+        }
+
+        stats.setLongestLoginStreak(Math.max(stats.getLongestLoginStreak(), stats.getLoginStreak()));
+        stats.setLastLoginDate(today);
+        return userStatsRepository.save(stats);
+    }
+
     private String calculateTier(double cumulativeXP) {
         if (cumulativeXP >= 25000) return "ELITE_LEGEND";
         if (cumulativeXP >= 10000) return "DIAMOND";

@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Document(collection = "user_stats")
 @Data
@@ -34,4 +35,19 @@ public class UserStats {
     
     private Instant lastPracticeTime;
     private double weeklyXP;
+
+    // ── Login streak (separate from practice streak) ──────────────────────────
+    @Builder.Default
+    private int loginStreak = 0;
+
+    @Builder.Default
+    private int longestLoginStreak = 0;
+
+    private LocalDate lastLoginDate;
+
+    // Freeze: skipping 1 day won't break streak. Resets to 1 on the 1st of each month.
+    @Builder.Default
+    private int freezesAvailable = 1;
+
+    private LocalDate lastFreezeGranted; // month tracking for auto-refill
 }

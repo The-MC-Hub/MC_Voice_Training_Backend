@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.mchub.repositories.ReferralRepository;
+import com.mchub.services.GamificationService;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.security.SecureRandom;
@@ -36,6 +37,7 @@ public class AuthController {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
     private final ReferralRepository referralRepository;
+    private final GamificationService gamificationService;
 
     private static final String REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
@@ -97,6 +99,7 @@ public class AuthController {
             AuthService.LoginResponse resp = authService.login(Objects.requireNonNull(req.getEmail()), Objects.requireNonNull(req.getPassword()));
             auditLogService.log(resp.user().getId(), AuditAction.AUTH_LOGIN,
                     "User", resp.user().getId(), null, request);
+            try { gamificationService.processLoginStreak(resp.user().getId()); } catch (Exception ignored) {}
             return ResponseEntity.ok(ApiResponse.success("Login successful",
                     Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
         } catch (AppException ex) {
