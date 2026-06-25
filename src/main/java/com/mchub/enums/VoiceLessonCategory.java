@@ -6,5 +6,7 @@ public enum VoiceLessonCategory {
     TALKSHOW,
     GALA,
     CEREMONY,
-    GENERAL
+    GENERAL,
+    EVENT,
+    PODCAST
 }
