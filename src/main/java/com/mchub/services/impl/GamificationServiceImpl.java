@@ -139,6 +139,15 @@ public class GamificationServiceImpl implements GamificationService {
         return userStatsRepository.save(stats);
     }
 
+    @Override
+    public UserStats addMinigameXP(String userId, double xpEarned) {
+        UserStats stats = getOrCreateUserStats(userId);
+        stats.setCumulativeXP(stats.getCumulativeXP() + xpEarned);
+        stats.setWeeklyXP(stats.getWeeklyXP() + xpEarned);
+        stats.setCurrentTier(calculateTier(stats.getCumulativeXP()));
+        return userStatsRepository.save(stats);
+    }
+
     private String calculateTier(double cumulativeXP) {
         if (cumulativeXP >= 25000) return "ELITE_LEGEND";
         if (cumulativeXP >= 10000) return "DIAMOND";

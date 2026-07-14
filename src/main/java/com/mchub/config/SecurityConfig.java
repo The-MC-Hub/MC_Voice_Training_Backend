@@ -71,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/social-posts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/minigames/speed-reader/prompts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/minigames/leaderboard").permitAll()
                         .anyRequest().authenticated())
 
                 .addFilterBefore(new JwtAuthenticationFilter(Objects.requireNonNull(jwtService), userRepository),
