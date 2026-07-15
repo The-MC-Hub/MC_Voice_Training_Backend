@@ -135,6 +135,24 @@ public class VoiceServiceImpl implements VoiceService {
     }
 
     @Override
+    public VoiceLessonResponseDTO setSampleAudio(String id, MultipartFile audioFile) {
+        VoiceLesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+
+        if (audioFile == null || audioFile.isEmpty()) {
+            lesson.setSampleAudioUrl(null);
+        } else {
+            try {
+                lesson.setSampleAudioUrl(mediaService.uploadFile(audioFile, "voice_lesson_samples"));
+            } catch (IOException e) {
+                log.error("Failed to upload sample audio for lesson {}", id, e);
+                throw new AppException(ErrorCode.INTERNAL_ERROR, "Failed to upload sample audio: " + SecurityUtils.safeMessage(e));
+            }
+        }
+        return lessonMapper.toResponseDTO(lessonRepository.save(lesson));
+    }
+
+    @Override
     public List<VoiceLessonResponseDTO> getAllLessons() {
         return lessonRepository.findByIsActiveTrue().stream()
                 .map(lessonMapper::toResponseDTO)
@@ -291,6 +309,10 @@ public class VoiceServiceImpl implements VoiceService {
             Map<String, Object> voiceQuality = (Map<String, Object>) response.get("voice_quality");
             @SuppressWarnings("unchecked")
             Map<String, Object> emotionBreakdown = (Map<String, Object>) response.get("emotion_breakdown");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> wordAlignment = (List<Map<String, Object>>) response.get("word_alignment");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> sentenceFeedback = (List<Map<String, Object>>) response.get("sentence_feedback");
 
             PracticeSession session = PracticeSession.builder()
                     .lessonId(lessonId)
@@ -315,6 +337,8 @@ public class VoiceServiceImpl implements VoiceService {
                     .fillerWords(fillerWords)
                     .voiceQuality(voiceQuality)
                     .emotionBreakdown(emotionBreakdown)
+                    .wordAlignment(wordAlignment)
+                    .sentenceFeedback(sentenceFeedback)
                     .createdAt(java.time.Instant.now())
                     .build();
 
@@ -322,7 +346,7 @@ public class VoiceServiceImpl implements VoiceService {
 
             try {
                 gamificationService.processPracticeSession(userId, lessonId, session.getAccuracyScore(),
-                        session.getRhythmScore());
+                        session.getRhythmScore(), session.getOverallScore());
             } catch (Exception e) {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }

@@ -25,6 +25,14 @@ public class UserController {
     private static final int ELITE_DAYS    = 60;
     private static final int IMMORTAL_DAYS = 100;
 
+    @GetMapping("/me/practice-stats")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserStats>> getPracticeStats() {
+        String userId = SecurityUtils.getCurrentUserId();
+        UserStats stats = gamificationService.getOrCreateUserStats(userId);
+        return ResponseEntity.ok(ApiResponse.success("OK", stats));
+    }
+
     @GetMapping("/me/streak")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LoginStreakDTO>> getLoginStreak() {

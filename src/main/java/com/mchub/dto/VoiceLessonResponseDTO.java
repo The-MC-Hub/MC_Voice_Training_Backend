@@ -24,6 +24,7 @@ public class VoiceLessonResponseDTO {
     private String description;
     private String thumbnailUrl;
     private String videoUrl;
+    private String sampleAudioUrl;
     private List<VoiceLesson.EvaluationCriteria> evaluationCriteria;
     private int targetWpmMin;
     private int targetWpmMax;

@@ -51,14 +51,14 @@ public class GamificationServiceImpl implements GamificationService {
     }
 
     @Override
-    public UserStats processPracticeSession(String userId, String lessonId, double accuracy, double rhythm) {
+    public UserStats processPracticeSession(String userId, String lessonId, double accuracy, double rhythm, double overallScore) {
         log.info("Processing gamification for user: {} with accuracy: {} and rhythm: {}", userId, accuracy, rhythm);
-        
+
         UserStats stats = getOrCreateUserStats(userId);
-        
+
         // 1. Calculate XP (e.g., accuracy * rhythm / 100 or simply average of both)
         double xpEarned = (accuracy + rhythm) * 0.5;
-        
+
         // 2. Calculate Streak
         Instant now = Instant.now();
         if (stats.getLastPracticeTime() != null) {
@@ -89,7 +89,24 @@ public class GamificationServiceImpl implements GamificationService {
         
         // 5. Update Tier
         stats.setCurrentTier(calculateTier(stats.getCumulativeXP()));
-        
+
+        // 5b. High-score streak: consecutive sessions scoring >= 90 overall
+        if (overallScore >= 90.0) {
+            stats.setHighScoreStreak(stats.getHighScoreStreak() + 1);
+            stats.setLongestHighScoreStreak(Math.max(stats.getLongestHighScoreStreak(), stats.getHighScoreStreak()));
+        } else {
+            stats.setHighScoreStreak(0);
+        }
+
+        // 5c. Award milestone badges (idempotent — only added once, never removed)
+        awardBadgeIfEligible(stats, "SESSIONS_10", stats.getTotalSessions() >= 10);
+        awardBadgeIfEligible(stats, "SESSIONS_50", stats.getTotalSessions() >= 50);
+        awardBadgeIfEligible(stats, "SESSIONS_100", stats.getTotalSessions() >= 100);
+        awardBadgeIfEligible(stats, "STREAK_7", stats.getCurrentStreak() >= 7);
+        awardBadgeIfEligible(stats, "STREAK_30", stats.getCurrentStreak() >= 30);
+        awardBadgeIfEligible(stats, "HIGH_SCORE_STREAK_5", stats.getHighScoreStreak() >= 5);
+        awardBadgeIfEligible(stats, "HIGH_SCORE_STREAK_10", stats.getHighScoreStreak() >= 10);
+
         UserStats savedStats = userStatsRepository.save(stats);
         
         // 6. Check and update active Competitions (Daily/Weekly Arena)
@@ -146,6 +163,13 @@ public class GamificationServiceImpl implements GamificationService {
         stats.setWeeklyXP(stats.getWeeklyXP() + xpEarned);
         stats.setCurrentTier(calculateTier(stats.getCumulativeXP()));
         return userStatsRepository.save(stats);
+    }
+
+    private void awardBadgeIfEligible(UserStats stats, String badgeSlug, boolean eligible) {
+        if (eligible && !stats.getEarnedBadges().contains(badgeSlug)) {
+            stats.getEarnedBadges().add(badgeSlug);
+            log.info("Badge awarded: {} to user {}", badgeSlug, stats.getUserId());
+        }
     }
 
     private String calculateTier(double cumulativeXP) {

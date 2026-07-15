@@ -31,9 +31,19 @@ public class PracticeSession {
     private String userId;
     
     private String audioUrl;
-    
+
     // AI Analysis results
     private String textSpoken;
+
+    /** Server-truth per-word timing from Whisper: [{word, start, end}] — used to sync
+     *  karaoke highlight to actual audio playback after recording, instead of the
+     *  live browser SpeechRecognition guess used only during the recording itself. */
+    private List<Map<String, Object>> wordAlignment;
+
+    /** Per-sentence pace/pitch feedback from Whisper segment boundaries:
+     *  [{text, start, end, wpm, pitch_std, issues, needs_rework}] — lets the UI
+     *  flag which specific sentence needs a reread instead of the whole take. */
+    private List<Map<String, Object>> sentenceFeedback;
     private double accuracyScore;
     private double rhythmScore;
     private double speakingRateWpm;

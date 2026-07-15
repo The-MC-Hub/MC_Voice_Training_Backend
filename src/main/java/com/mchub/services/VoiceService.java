@@ -23,6 +23,11 @@ public interface VoiceService {
 
         List<VoiceLessonResponseDTO> getAllLessons();
 
+        /** Uploads/replaces the professional MC reference recording for a lesson,
+         *  used to overlay the user's pitch contour against a reference in the
+         *  practice UI. Pass null audioFile to clear the existing sample. */
+        VoiceLessonResponseDTO setSampleAudio(String id, MultipartFile audioFile);
+
         void deleteLesson(String id);
 
         // MC methods

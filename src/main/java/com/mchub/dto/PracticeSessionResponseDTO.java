@@ -82,6 +82,12 @@ public class PracticeSessionResponseDTO {
     @com.fasterxml.jackson.annotation.JsonProperty("emotion_breakdown")
     private java.util.Map<String, Object> emotionBreakdown;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("word_alignment")
+    private List<java.util.Map<String, Object>> wordAlignment;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("sentence_feedback")
+    private List<java.util.Map<String, Object>> sentenceFeedback;
+
     @com.fasterxml.jackson.annotation.JsonProperty("created_at")
     private java.time.Instant createdAt;
 

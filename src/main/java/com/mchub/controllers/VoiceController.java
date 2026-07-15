@@ -92,6 +92,16 @@ public class VoiceController {
         return ResponseEntity.ok(ApiResponse.success("Lesson updated successfully", dto));
     }
 
+    @PutMapping("/admin/lessons/{id}/sample-audio")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<VoiceLessonResponseDTO>> setSampleAudio(
+            @PathVariable String id,
+            @RequestParam(required = false) MultipartFile audio) {
+        VoiceLessonResponseDTO dto = voiceService.setSampleAudio(id, audio);
+        return ResponseEntity.ok(ApiResponse.success(
+                audio == null || audio.isEmpty() ? "Sample audio cleared" : "Sample audio uploaded", dto));
+    }
+
     private List<VoiceLesson.EvaluationCriteria> parseCriteria(String json) {
         if (json == null || json.isBlank())
             return new ArrayList<>();

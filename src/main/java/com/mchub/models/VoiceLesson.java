@@ -32,6 +32,11 @@ public class VoiceLesson {
     private String thumbnailUrl;
     private String videoUrl;
 
+    /** Optional professional MC reference recording for this lesson's script.
+     *  When present, the practice UI can overlay the user's pitch contour
+     *  against this reference for direct visual comparison. */
+    private String sampleAudioUrl;
+
     // ── Evaluation configuration ──────────────────────────────────
 
     /** Per-criterion weights for AI scoring. Weights should sum to 100. */

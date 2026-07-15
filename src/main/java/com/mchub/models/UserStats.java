@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 @Document(collection = "user_stats")
 @Data
@@ -50,4 +51,16 @@ public class UserStats {
     private int freezesAvailable = 1;
 
     private LocalDate lastFreezeGranted; // month tracking for auto-refill
+
+    // ── Practice achievements ───────────────────────────────────────────────
+    /** Consecutive practice sessions scoring overallScore >= 90 (resets on any lower score) */
+    @Builder.Default
+    private int highScoreStreak = 0;
+
+    @Builder.Default
+    private int longestHighScoreStreak = 0;
+
+    /** Earned badge slugs, e.g. "SESSIONS_100", "HIGH_SCORE_STREAK_5" — awarded once, never removed */
+    @Builder.Default
+    private List<String> earnedBadges = new java.util.ArrayList<>();
 }
