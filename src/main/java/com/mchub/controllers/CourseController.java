@@ -4,6 +4,7 @@ import com.mchub.dto.*;
 import com.mchub.enums.CourseType;
 import com.mchub.services.CourseService;
 import com.mchub.util.SecurityUtils;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -104,7 +105,7 @@ public class CourseController {
     @PostMapping("/{id}/quiz/submit")
     public ResponseEntity<ApiResponse<QuizResultDTO>> submitQuiz(
             @PathVariable String id,
-            @RequestBody QuizSubmitRequest request) {
+            @Valid @RequestBody QuizSubmitRequest request) {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Quiz submitted",
                 courseService.submitQuiz(id, userId, request)));

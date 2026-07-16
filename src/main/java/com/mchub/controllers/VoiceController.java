@@ -114,6 +114,28 @@ public class VoiceController {
         }
     }
 
+    private static final List<String> ALLOWED_AUDIO_TYPES = List.of(
+            "audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
+
+    private void validateAudioFile(MultipartFile audioFile) {
+        String ct = audioFile.getContentType();
+        // Strip codec suffix e.g. "audio/webm;codecs=opus" → "audio/webm"
+        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
+        if (ctBase.isEmpty() || !ALLOWED_AUDIO_TYPES.contains(ctBase)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
+        }
+        if (audioFile.getSize() > 20L * 1024 * 1024) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
+        }
+        try {
+            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
+                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
+            }
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
+        }
+    }
+
     @DeleteMapping("/admin/lessons/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteLesson(@PathVariable String id) {
@@ -151,23 +173,7 @@ public class VoiceController {
             @RequestParam String lessonId,
             @RequestParam MultipartFile audioFile) {
 
-        String ct = audioFile.getContentType();
-        // Strip codec suffix e.g. "audio/webm;codecs=opus" → "audio/webm"
-        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
-        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
-        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
-        }
-        if (audioFile.getSize() > 20L * 1024 * 1024) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
-        }
-        try {
-            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
-                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
-            }
-        } catch (IOException e) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
-        }
+        validateAudioFile(audioFile);
 
         String userId = SecurityUtils.getCurrentUserId();
         PracticeSessionResponseDTO dto = voiceService.analyzePractice(lessonId, userId, audioFile);
@@ -192,22 +198,7 @@ public class VoiceController {
             @RequestParam MultipartFile audioFile,
             @RequestParam(required = false) String scriptOrigin) {
 
-        String ct = audioFile.getContentType();
-        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
-        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
-        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
-        }
-        if (audioFile.getSize() > 20L * 1024 * 1024) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
-        }
-        try {
-            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
-                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
-            }
-        } catch (IOException e) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
-        }
+        validateAudioFile(audioFile);
 
         return ResponseEntity.ok(voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin));
     }
@@ -231,22 +222,7 @@ public class VoiceController {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Bạn đã sử dụng lượt thử miễn phí. Vui lòng quay lại sau " + cooldownHours + " tiếng hoặc đăng ký tài khoản để tiếp tục.");
         }
 
-        String ct = audioFile.getContentType();
-        String ctBase = ct != null ? ct.split(";")[0].trim().toLowerCase() : "";
-        List<String> allowedTypes = List.of("audio/wav", "audio/mpeg", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/x-wav");
-        if (ctBase.isEmpty() || !allowedTypes.contains(ctBase)) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Chỉ hỗ trợ file audio (wav, mp3, webm, ogg, m4a)");
-        }
-        if (audioFile.getSize() > 20L * 1024 * 1024) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "File không được vượt quá 20MB");
-        }
-        try {
-            if (!AudioMagicBytesValidator.isValidAudio(audioFile.getInputStream())) {
-                throw new AppException(ErrorCode.VALIDATION_FAILED, "Nội dung file không hợp lệ");
-            }
-        } catch (IOException e) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Không thể đọc file");
-        }
+        validateAudioFile(audioFile);
 
         var result = voiceService.proxyAnalyzeVoice(audioFile, scriptOrigin);
 

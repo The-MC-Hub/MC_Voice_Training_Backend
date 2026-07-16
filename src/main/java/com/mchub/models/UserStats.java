@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "user_stats")
@@ -62,5 +63,5 @@ public class UserStats {
 
     /** Earned badge slugs, e.g. "SESSIONS_100", "HIGH_SCORE_STREAK_5" — awarded once, never removed */
     @Builder.Default
-    private List<String> earnedBadges = new java.util.ArrayList<>();
+    private List<String> earnedBadges = new ArrayList<>();
 }

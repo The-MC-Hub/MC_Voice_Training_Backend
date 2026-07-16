@@ -38,15 +38,20 @@ public class PublicServiceImpl implements PublicService {
         Map<String, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
 
+        // Batch-fetch all sessions for all MC users in one query — no DB calls inside loop
+        Map<String, List<com.mchub.models.PracticeSession>> sessionsByUser = practiceSessionRepository
+                .findByUserIdIn(userIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(com.mchub.models.PracticeSession::getUserId));
+
         List<MCTrainingStatsDTO> statsList = new ArrayList<>();
 
         for (MCProfile profile : profiles) {
             String uId = profile.getUser();
             if (uId == null) continue;
-            
+
             User user = userMap.get(uId);
-            List<com.mchub.models.PracticeSession> sessions = practiceSessionRepository.findByUserId(uId);
-            
+            List<com.mchub.models.PracticeSession> sessions = sessionsByUser.getOrDefault(uId, List.of());
+
             double totalHours = sessions.size() * 0.5; // Mock: each session is 30 mins
             double avgAcc = sessions.stream().mapToDouble(com.mchub.models.PracticeSession::getAccuracyScore).average().orElse(0.0);
             double avgRhy = sessions.stream().mapToDouble(com.mchub.models.PracticeSession::getRhythmScore).average().orElse(0.0);

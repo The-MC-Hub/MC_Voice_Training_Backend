@@ -1,5 +1,6 @@
 package com.mchub.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -7,89 +8,90 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PracticeSessionResponseDTO {
-    @com.fasterxml.jackson.annotation.JsonProperty("id")
+    @JsonProperty("id")
     private String id;
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_id")
+    @JsonProperty("lesson_id")
     private String lessonId;
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_title")
+    @JsonProperty("lesson_title")
     private String lessonTitle;
-    @com.fasterxml.jackson.annotation.JsonProperty("user_id")
+    @JsonProperty("user_id")
     private String userId;
-    @com.fasterxml.jackson.annotation.JsonProperty("audio_url")
+    @JsonProperty("audio_url")
     private String audioUrl;
-    @com.fasterxml.jackson.annotation.JsonProperty("text_spoken")
+    @JsonProperty("text_spoken")
     private String textSpoken;
-    @com.fasterxml.jackson.annotation.JsonProperty("accuracy_score")
+    @JsonProperty("accuracy_score")
     private double accuracyScore;
-    @com.fasterxml.jackson.annotation.JsonProperty("rhythm_score")
+    @JsonProperty("rhythm_score")
     private double rhythmScore;
-    @com.fasterxml.jackson.annotation.JsonProperty("speaking_rate_wpm")
+    @JsonProperty("speaking_rate_wpm")
     private double speakingRateWpm;
-    @com.fasterxml.jackson.annotation.JsonProperty("feedback_vi")
+    @JsonProperty("feedback_vi")
     private String feedbackVi;
-    @com.fasterxml.jackson.annotation.JsonProperty("feedback_en")
+    @JsonProperty("feedback_en")
     private String feedbackEn;
-    @com.fasterxml.jackson.annotation.JsonProperty("report_vi")
+    @JsonProperty("report_vi")
     private String reportVi;
-    @com.fasterxml.jackson.annotation.JsonProperty("report_en")
+    @JsonProperty("report_en")
     private String reportEn;
-    @com.fasterxml.jackson.annotation.JsonProperty("tips_vi")
+    @JsonProperty("tips_vi")
     private List<ExpertTipDTO> expertTipsVi;
-    @com.fasterxml.jackson.annotation.JsonProperty("tips_en")
+    @JsonProperty("tips_en")
     private List<ExpertTipDTO> expertTipsEn;
-    @com.fasterxml.jackson.annotation.JsonProperty("criteria_scores")
-    private java.util.Map<String, Double> criteriaScores;
+    @JsonProperty("criteria_scores")
+    private Map<String, Double> criteriaScores;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("overall_score")
+    @JsonProperty("overall_score")
     private double overallScore;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_content")
+    @JsonProperty("lesson_content")
     private String lessonContent;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_category")
+    @JsonProperty("lesson_category")
     private String lessonCategory;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_difficulty")
+    @JsonProperty("lesson_difficulty")
     private String lessonDifficulty;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("lesson_description")
+    @JsonProperty("lesson_description")
     private String lessonDescription;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("cer_rate")
+    @JsonProperty("cer_rate")
     private double cerRate;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("wer_rate")
+    @JsonProperty("wer_rate")
     private double werRate;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("spectral_features")
-    private java.util.Map<String, Object> spectralFeatures;
+    @JsonProperty("spectral_features")
+    private Map<String, Object> spectralFeatures;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("pitch_contour")
-    private java.util.Map<String, Object> pitchContour;
+    @JsonProperty("pitch_contour")
+    private Map<String, Object> pitchContour;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("filler_words")
-    private java.util.Map<String, Object> fillerWords;
+    @JsonProperty("filler_words")
+    private Map<String, Object> fillerWords;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("voice_quality")
-    private java.util.Map<String, Object> voiceQuality;
+    @JsonProperty("voice_quality")
+    private Map<String, Object> voiceQuality;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("emotion_breakdown")
-    private java.util.Map<String, Object> emotionBreakdown;
+    @JsonProperty("emotion_breakdown")
+    private Map<String, Object> emotionBreakdown;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("word_alignment")
-    private List<java.util.Map<String, Object>> wordAlignment;
+    @JsonProperty("word_alignment")
+    private List<Map<String, Object>> wordAlignment;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("sentence_feedback")
-    private List<java.util.Map<String, Object>> sentenceFeedback;
+    @JsonProperty("sentence_feedback")
+    private List<Map<String, Object>> sentenceFeedback;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("created_at")
-    private java.time.Instant createdAt;
+    @JsonProperty("created_at")
+    private Instant createdAt;
 
     @Data
     @Builder

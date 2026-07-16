@@ -196,10 +196,7 @@ public class PaymentController {
         int effectiveAmount = (int) Math.round(course.getPriceVnd() * (100 - pct) / 100.0);
 
         if (discountCode != null && !discountCode.trim().isEmpty()) {
-            // Note: Currently PlanService.applyDiscount only takes a SubscriptionPlan.
-            // If we want to support course discount codes, we need a separate applyCourseDiscount method.
-            // But if the user meant plans when they said "courses", this might be enough for now.
-            // I'll leave the course logic intact for now, or just throw unsupported if discountCode is passed.
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá không áp dụng cho mua khóa học lẻ");
         }
 
         long orderCode = System.currentTimeMillis() % 1_000_000_000L * 100 + ThreadLocalRandom.current().nextInt(100);

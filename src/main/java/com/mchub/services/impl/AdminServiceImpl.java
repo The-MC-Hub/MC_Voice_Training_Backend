@@ -505,7 +505,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified) {
         User user = userRepository.findById(Objects.requireNonNull(id))
-            .orElseThrow(() -> new RuntimeException("User does not exist"));
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + id));
         user.setActive(isActive);
         user.setVerified(isVerified);
         return userMapper.toResponseDTO(userRepository.save(user));

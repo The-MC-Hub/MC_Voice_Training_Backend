@@ -2,6 +2,7 @@ package com.mchub.models;
 
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.UserRole;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,10 +12,12 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
-
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Document(collection = "users")
 @Data
@@ -34,7 +37,6 @@ public class User {
     @JsonIgnore
     private String password;
 
-    
     @Builder.Default
     private UserRole role = UserRole.CLIENT;
 
@@ -49,12 +51,9 @@ public class User {
     @Builder.Default
     private boolean isVerified = false;
 
-
-
     @Builder.Default
     private boolean isActive = true;
 
-    
     private String mcProfile;
 
     @Builder.Default
@@ -71,7 +70,7 @@ public class User {
 
     // Courses bought individually (one-off 199k purchase, independent of plan)
     @Builder.Default
-    private java.util.List<String> purchasedCourseIds = new java.util.ArrayList<>();
+    private List<String> purchasedCourseIds = new ArrayList<>();
 
     // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
     private LocalDateTime passwordChangedAt;
@@ -88,7 +87,7 @@ public class User {
 
     // Newbie quest tracking — set of completed quest IDs
     @Builder.Default
-    private java.util.Set<String> completedQuests = new java.util.HashSet<>();
+    private Set<String> completedQuests = new HashSet<>();
 
     @Builder.Default
     private boolean newbieVoucherClaimed = false;

@@ -63,10 +63,7 @@ public class VoiceServiceImpl implements VoiceService {
     private final LessonAdaptiveStatsRepository adaptiveStatsRepository;
 
     @Value("${ai.service.analyze-url:http://127.0.0.1:8001/analyze-voice}")
-    private String AI_SERVICE_URL;
-
-    @Value("${ai.service.tts-url:http://127.0.0.1:8001/generate-mc-voice}")
-    private String AI_TTS_SERVICE_URL;
+    private String aiServiceUrl;
 
     @Override
     public VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
@@ -258,7 +255,7 @@ public class VoiceServiceImpl implements VoiceService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         try {
-            Map<String, Object> response = restTemplate.postForObject(AI_SERVICE_URL, requestEntity, Map.class);
+            Map<String, Object> response = restTemplate.postForObject(aiServiceUrl, requestEntity, Map.class);
 
             log.info(">>> RAW AI RESPONSE FROM PYTHON: {}", response);
 
@@ -271,6 +268,8 @@ public class VoiceServiceImpl implements VoiceService {
             List<Map<String, String>> tipsViRaw = (List<Map<String, String>>) response.get("tips_vi");
             @SuppressWarnings("unchecked")
             List<Map<String, String>> tipsEnRaw = (List<Map<String, String>>) response.get("tips_en");
+            if (tipsViRaw == null) tipsViRaw = List.of();
+            if (tipsEnRaw == null) tipsEnRaw = List.of();
 
             List<PracticeSession.ExpertTip> expertTipsVi = tipsViRaw.stream()
                     .map(t -> PracticeSession.ExpertTip.builder()
@@ -474,7 +473,7 @@ public class VoiceServiceImpl implements VoiceService {
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
         try {
-            return restTemplate.postForObject(AI_SERVICE_URL, requestEntity, Map.class);
+            return restTemplate.postForObject(aiServiceUrl, requestEntity, Map.class);
         } catch (Exception e) {
             log.error("AI proxy call failed: {}", e.getMessage());
             throw new AppException(ErrorCode.INTERNAL_ERROR, "AI service unavailable");

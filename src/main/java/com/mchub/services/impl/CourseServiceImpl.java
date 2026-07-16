@@ -193,10 +193,14 @@ public class CourseServiceImpl implements CourseService {
             throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
                     "Plan expired. Renew to continue learning.");
         }
+        Course course = findCourse(courseId);
+        if (!course.getLessonIds().contains(lessonId)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Lesson does not belong to this course: " + lessonId);
+        }
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
         if (!enrollment.getCompletedLessonIds().contains(lessonId)) {
             enrollment.getCompletedLessonIds().add(lessonId);
-            recalcCompletion(enrollment, findCourse(courseId));
+            recalcCompletion(enrollment, course);
             enrollmentRepository.save(enrollment);
         }
         return toProgressDTO(enrollment);
@@ -208,10 +212,14 @@ public class CourseServiceImpl implements CourseService {
             throw new AppException(ErrorCode.COURSE_REQUIRES_PLAN,
                     "Plan expired. Renew to continue learning.");
         }
+        Course course = findCourse(courseId);
+        if (!course.getReadingIds().contains(readingId)) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Reading does not belong to this course: " + readingId);
+        }
         CourseEnrollment enrollment = findEnrollment(userId, courseId);
         if (!enrollment.getCompletedReadingIds().contains(readingId)) {
             enrollment.getCompletedReadingIds().add(readingId);
-            recalcCompletion(enrollment, findCourse(courseId));
+            recalcCompletion(enrollment, course);
             enrollmentRepository.save(enrollment);
         }
         return toProgressDTO(enrollment);

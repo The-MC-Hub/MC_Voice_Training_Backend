@@ -4,6 +4,7 @@ import com.mchub.dto.ApiResponse;
 import com.mchub.dto.CourseResponseDTO;
 import com.mchub.dto.SaveCourseRequest;
 import com.mchub.services.CourseService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,7 +37,7 @@ public class AdminCourseController {
     /** POST /api/v1/admin/courses */
     @PostMapping
     public ResponseEntity<ApiResponse<CourseResponseDTO>> create(
-            @RequestBody SaveCourseRequest request) {
+            @Valid @RequestBody SaveCourseRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Course created",
                 courseService.createCourse(request)));
     }
@@ -45,7 +46,7 @@ public class AdminCourseController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CourseResponseDTO>> update(
             @PathVariable String id,
-            @RequestBody SaveCourseRequest request) {
+            @Valid @RequestBody SaveCourseRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Course updated",
                 courseService.updateCourse(id, request)));
     }

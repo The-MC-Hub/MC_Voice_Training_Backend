@@ -10,47 +10,47 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface VoiceService {
-        // Admin methods
-        VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
-                        String difficulty, String description, MultipartFile thumbnail, String videoUrl,
-                        List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
-                        int targetWpmMin, int targetWpmMax, int passingScore);
+    // Admin methods
+    VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
+            String difficulty, String description, MultipartFile thumbnail, String videoUrl,
+            List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
+            int targetWpmMin, int targetWpmMax, int passingScore);
 
-        VoiceLessonResponseDTO updateLesson(String id, String title, String content, VoiceLessonCategory category,
-                        String difficulty, String description, MultipartFile thumbnail, String videoUrl,
-                        List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
-                        int targetWpmMin, int targetWpmMax, int passingScore);
+    VoiceLessonResponseDTO updateLesson(String id, String title, String content, VoiceLessonCategory category,
+            String difficulty, String description, MultipartFile thumbnail, String videoUrl,
+            List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
+            int targetWpmMin, int targetWpmMax, int passingScore);
 
-        List<VoiceLessonResponseDTO> getAllLessons();
+    List<VoiceLessonResponseDTO> getAllLessons();
 
-        /** Uploads/replaces the professional MC reference recording for a lesson,
-         *  used to overlay the user's pitch contour against a reference in the
-         *  practice UI. Pass null audioFile to clear the existing sample. */
-        VoiceLessonResponseDTO setSampleAudio(String id, MultipartFile audioFile);
+    /** Uploads/replaces the professional MC reference recording for a lesson,
+     *  used to overlay the user's pitch contour against a reference in the
+     *  practice UI. Pass null audioFile to clear the existing sample. */
+    VoiceLessonResponseDTO setSampleAudio(String id, MultipartFile audioFile);
 
-        void deleteLesson(String id);
+    void deleteLesson(String id);
 
-        // MC methods
-        List<VoiceLessonResponseDTO> searchLessons(String searchTerm, VoiceLessonCategory category);
+    // MC methods
+    List<VoiceLessonResponseDTO> searchLessons(String searchTerm, VoiceLessonCategory category);
 
-        List<VoiceLessonResponseDTO> getLessonsByCategory(VoiceLessonCategory category);
+    List<VoiceLessonResponseDTO> getLessonsByCategory(VoiceLessonCategory category);
 
-        VoiceLessonResponseDTO getLessonById(String id);
+    VoiceLessonResponseDTO getLessonById(String id);
 
-        PracticeSessionResponseDTO analyzePractice(String lessonId, String userId, MultipartFile audioFile);
+    PracticeSessionResponseDTO analyzePractice(String lessonId, String userId, MultipartFile audioFile);
 
-        Object proxyAnalyzeVoice(MultipartFile audioFile, String scriptOrigin);
+    Object proxyAnalyzeVoice(MultipartFile audioFile, String scriptOrigin);
 
-        List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId);
+    List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId);
 
-        PracticeSessionResponseDTO getPracticeSessionById(String id);
+    PracticeSessionResponseDTO getPracticeSessionById(String id);
 
-        /** Calls Python AI /generate-mc-voice and returns raw WAV bytes */
-        byte[] generateTTSAudio(String text, String voice);
+    /** Calls Python AI /generate-mc-voice and returns raw WAV bytes */
+    byte[] generateTTSAudio(String text, String voice);
 
-        /** Returns adaptive calibration stats for a lesson, or null if < 10 sessions */
-        LessonAdaptiveStats getAdaptiveStats(String lessonId);
+    /** Returns adaptive calibration stats for a lesson, or null if < 10 sessions */
+    LessonAdaptiveStats getAdaptiveStats(String lessonId);
 
-        /** Returns top N lessons ordered by practiceCount desc (only those with > 0 practices) */
-        List<VoiceLessonResponseDTO> getFeaturedLessons(int limit);
+    /** Returns top N lessons ordered by practiceCount desc (only those with > 0 practices) */
+    List<VoiceLessonResponseDTO> getFeaturedLessons(int limit);
 }

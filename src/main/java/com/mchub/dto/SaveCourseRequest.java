@@ -1,6 +1,8 @@
 package com.mchub.dto;
 
 import com.mchub.enums.CourseType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
@@ -8,10 +10,13 @@ import java.util.List;
 /** Used for both create and update by Admin */
 @Data
 public class SaveCourseRequest {
+    @NotBlank
     private String title;
     private String shortDescription;
     private String description;
+    @NotBlank
     private String slug;
+    @NotNull
     private CourseType type;
     private String thumbnail;
     private String difficulty;
@@ -24,6 +29,7 @@ public class SaveCourseRequest {
 
     @Data
     public static class QuizQuestionRequest {
+        @NotBlank
         private String question;
         private List<String> options;  // 4 options
         private int correctIndex;      // 0–3

@@ -4,6 +4,7 @@ import com.mchub.dto.ApiResponse;
 import com.mchub.dto.SaveSocialPostRequest;
 import com.mchub.dto.SocialPostDTO;
 import com.mchub.services.SocialPostService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,7 +28,7 @@ public class AdminSocialPostController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<SocialPostDTO>> create(
-            @RequestBody SaveSocialPostRequest request) {
+            @Valid @RequestBody SaveSocialPostRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Social post created",
                 socialPostService.createPost(request)));
     }
@@ -35,7 +36,7 @@ public class AdminSocialPostController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SocialPostDTO>> update(
             @PathVariable String id,
-            @RequestBody SaveSocialPostRequest request) {
+            @Valid @RequestBody SaveSocialPostRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Social post updated",
                 socialPostService.updatePost(id, request)));
     }

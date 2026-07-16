@@ -7,6 +7,7 @@ import com.mchub.dto.MinigameResultDTO;
 import com.mchub.dto.MinigameSubmitRequest;
 import com.mchub.services.MinigameService;
 import com.mchub.util.SecurityUtils;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class MinigameController {
     /** POST /api/v1/minigames/speed-reader/submit — submit a finished run, awards XP */
     @PostMapping("/speed-reader/submit")
     public ResponseEntity<ApiResponse<MinigameResultDTO>> submitSpeedReaderRun(
-            @RequestBody MinigameSubmitRequest request) {
+            @Valid @RequestBody MinigameSubmitRequest request) {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Run recorded",
                 minigameService.submitSpeedReaderRun(userId, request)));

@@ -328,15 +328,15 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung.");
         }
 
-        // Mark used
-        otp.setUsed(true);
-        otpRepo.save(otp);
-
-        // Update password
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         if (newPassword.length() < 8)
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Mat khau phai co it nhat 8 ky tu.");
+
+        // Mark used only after all validation passes
+        otp.setUsed(true);
+        otpRepo.save(otp);
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordChangedAt(LocalDateTime.now());
         user.setFailedLoginAttempts(0);

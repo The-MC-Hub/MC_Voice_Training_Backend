@@ -3,8 +3,9 @@ package com.mchub.mapper;
 import com.mchub.dto.PracticeSessionResponseDTO;
 import com.mchub.models.PracticeSession;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingConstants;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface PracticeSessionMapper {
     PracticeSessionResponseDTO toResponseDTO(PracticeSession session);
 

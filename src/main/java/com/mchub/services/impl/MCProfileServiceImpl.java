@@ -23,26 +23,26 @@ public class MCProfileServiceImpl implements MCProfileService {
         CompletableFuture<Long> totalPracticesFuture = CompletableFuture.supplyAsync(
                 () -> practiceSessionRepository.countByUserId(userId));
 
-        CompletableFuture<Double> avgAccuracyFuture = CompletableFuture.supplyAsync(
-                () -> {
-                    // This would ideally be a custom aggregation in repository
-                    var sessions = practiceSessionRepository.findByUserId(userId);
-                    return sessions.stream().mapToDouble(s -> s.getAccuracyScore()).average().orElse(0.0);
-                });
-
-        CompletableFuture<Double> avgWpmFuture = CompletableFuture.supplyAsync(
+        // Single fetch reused for both averages — avoids a duplicate DB round-trip
+        CompletableFuture<Map<String, Double>> averagesFuture = CompletableFuture.supplyAsync(
                 () -> {
                     var sessions = practiceSessionRepository.findByUserId(userId);
-                    return sessions.stream().mapToDouble(s -> s.getSpeakingRateWpm()).average().orElse(0.0);
+                    double avgAccuracy = sessions.stream().mapToDouble(s -> s.getAccuracyScore()).average().orElse(0.0);
+                    double avgWpm = sessions.stream().mapToDouble(s -> s.getSpeakingRateWpm()).average().orElse(0.0);
+                    Map<String, Double> averages = new HashMap<>();
+                    averages.put("avgAccuracy", avgAccuracy);
+                    averages.put("avgWpm", avgWpm);
+                    return averages;
                 });
 
-        CompletableFuture.allOf(totalPracticesFuture, avgAccuracyFuture, avgWpmFuture).join();
+        CompletableFuture.allOf(totalPracticesFuture, averagesFuture).join();
 
         Map<String, Object> stats = new HashMap<>();
         try {
             stats.put("totalPractices", totalPracticesFuture.get());
-            stats.put("avgAccuracy", avgAccuracyFuture.get());
-            stats.put("avgWpm", avgWpmFuture.get());
+            Map<String, Double> averages = averagesFuture.get();
+            stats.put("avgAccuracy", averages.get("avgAccuracy"));
+            stats.put("avgWpm", averages.get("avgWpm"));
         } catch (Exception e) {
             throw new RuntimeException("Error aggregating statistics: " + e.getMessage());
         }

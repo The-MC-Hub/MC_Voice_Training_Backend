@@ -22,7 +22,7 @@ public class SwaggerConfig {
                         .version("v1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components().addSecuritySchemes(securitySchemeName,
-                        new io.swagger.v3.oas.models.security.SecurityScheme()
+                        new SecurityScheme()
                                 .name(securitySchemeName)
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")

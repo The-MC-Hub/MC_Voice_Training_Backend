@@ -1,30 +1,29 @@
 package com.mchub.exception;
 
+import lombok.Getter;
+
+@Getter
 public class AppException extends RuntimeException {
 
     private final ErrorCode errorCode;
 
-        public AppException(ErrorCode errorCode) {
+    public AppException(ErrorCode errorCode) {
         super(errorCode.getDefaultMessage());
         this.errorCode = errorCode;
     }
 
-        public AppException(ErrorCode errorCode, String customMessage) {
+    public AppException(ErrorCode errorCode, String customMessage) {
         super(customMessage);
         this.errorCode = errorCode;
     }
 
-        public AppException(ErrorCode errorCode, Throwable cause) {
+    public AppException(ErrorCode errorCode, Throwable cause) {
         super(errorCode.getDefaultMessage(), cause);
         this.errorCode = errorCode;
     }
 
-        public AppException(ErrorCode errorCode, String customMessage, Throwable cause) {
+    public AppException(ErrorCode errorCode, String customMessage, Throwable cause) {
         super(customMessage, cause);
         this.errorCode = errorCode;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
     }
 }

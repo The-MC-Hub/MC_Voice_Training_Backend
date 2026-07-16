@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
 @EnableAsync
 public class AsyncConfig {
 
-        @Bean
+    @Bean
     public TomcatProtocolHandlerCustomizer<?> protocolHandlerCustomizer() {
         return protocolHandler -> {
             protocolHandler.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
