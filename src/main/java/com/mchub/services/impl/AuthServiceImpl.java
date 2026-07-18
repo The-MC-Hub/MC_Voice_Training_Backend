@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -250,7 +251,7 @@ public class AuthServiceImpl implements AuthService {
     public void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword) {
         userRepository.findById(Objects.requireNonNull(userId)).ifPresent(user -> {
             user.setPassword(passwordEncoder.encode(plainPassword));
-            user.setPasswordChangedAt(LocalDateTime.now());
+            user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
             userRepository.save(Objects.requireNonNull(user));
         });
     }
@@ -338,7 +339,7 @@ public class AuthServiceImpl implements AuthService {
         otpRepo.save(otp);
 
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setPasswordChangedAt(LocalDateTime.now());
+        user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         userRepository.save(user);
@@ -361,7 +362,7 @@ public class AuthServiceImpl implements AuthService {
             user.setBio((String) settings.get("bio"));
         if (settings.containsKey("password")) {
             user.setPassword(passwordEncoder.encode((String) settings.get("password")));
-            user.setPasswordChangedAt(LocalDateTime.now());
+            user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         return userRepository.save(user);

@@ -51,8 +51,11 @@ Source: `AuthServiceImpl.java` dòng 253/341/364 — `LocalDateTime.now()` khôn
 
 ### Status
 
-**Open — mức độ Critical, chặn luồng nghiệp vụ chính, đề xuất ưu tiên fix khẩn cấp.** Đề xuất dev (không phải QA quyết định): thống nhất 1 trong 2 hướng xuyên suốt codebase:
-1. Đổi toàn bộ `LocalDateTime.now()` liên quan tới `passwordChangedAt` (và các field thời gian dùng để so sánh với JWT `iat`/`exp`) thành `LocalDateTime.now(ZoneOffset.UTC)` — đảm bảo giá trị lưu trong DB luôn là UTC thật.
-2. Hoặc đổi field `passwordChangedAt` sang kiểu `Instant`/lưu kèm timezone, tránh hoàn toàn việc phải đoán múi giờ khi đọc lại.
+**Fixed (2026-07-18).** Áp dụng hướng 1: đổi cả 3 call site trong `AuthServiceImpl.java` (`updatePasswordAsync`, `resetPassword`, `updateSettings`) từ `LocalDateTime.now()` sang `LocalDateTime.now(ZoneOffset.UTC)` — đảm bảo giá trị application-level luôn là UTC thật, khớp với cách `JwtAuthenticationFilter` diễn giải khi so sánh (`toInstant(ZoneOffset.UTC)`).
 
-Khuyến nghị dev rà soát toàn bộ codebase tìm các chỗ khác dùng `LocalDateTime.now()` kết hợp `toInstant(ZoneOffset.UTC)` hoặc so sánh trực tiếp với giá trị từ JWT/`Instant` — cùng pattern lỗi có khả năng lặp lại ở nơi khác (VD: `planExpiresAt`, `lockedUntil` nếu có logic so sánh tương tự với nguồn UTC khác).
+**Verify trực tiếp (live, port 5555, `mchub_test`):**
+1. Reset password lúc UTC thật `05:58:26` → login lại → gọi `GET /auth/me` bằng token mới → **HTTP 200** (trước fix: 500, token luôn bị coi là "issued before password change").
+2. Lặp lại lần 2 (reset lúc `06:00:06`) → cùng kết quả PASS.
+3. Regression check quan trọng: dùng lại token CŨ (phát hành trước lần reset thứ 2) gọi `/auth/me` → bị từ chối đúng như thiết kế (không làm mất tác dụng bảo vệ, vẫn chặn đúng token thật sự cũ).
+
+**Lưu ý kỹ thuật cho dev tương lai:** Khi xem trực tiếp qua `mongosh`, giá trị `passwordChangedAt` lưu trong BSON trông như lệch 7 tiếng so với đồng hồ UTC thật (VD: reset lúc UTC `06:00:06` nhưng Mongo hiển thị `ISODate('...T23:00:06Z')` — ngày hôm trước). Đây là hành vi của Spring Data MongoDB's `LocalDateTime`↔`Date` converter mặc định (áp dụng `ZoneId.systemDefault()` khi convert, máy chủ đang chạy múi giờ `Asia/Saigon` UTC+7) — **không phải bug mới**, và không ảnh hưởng logic vì cả chiều ghi (`AuthServiceImpl`) lẫn chiều đọc (`JwtAuthenticationFilter` đọc lại qua cùng entity/converter) đều đi qua cùng 1 lớp convert, nên đối xứng và cho kết quả so sánh đúng ở tầng application. Không nên "sửa" cách hiển thị BSON này — chỉ cần đảm bảo mọi so sánh xảy ra ở tầng Java (LocalDateTime/Instant), không tự parse trực tiếp giá trị BSON.
