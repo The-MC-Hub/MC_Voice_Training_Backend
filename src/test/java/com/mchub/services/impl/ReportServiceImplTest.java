@@ -21,11 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for ReportServiceImpl. Also documents a known style finding from
- * the audit (Remaining_Modules_Audit_Report.md 3.2): resolveReport() throws a
- * raw RuntimeException instead of AppException(RESOURCE_NOT_FOUND), which means
- * GlobalExceptionHandler maps it to HTTP 500 instead of 404. Not fixed here —
- * QA reports, does not fix production code.
+ * Unit tests for ReportServiceImpl.
  */
 @ExtendWith(MockitoExtension.class)
 class ReportServiceImplTest {
@@ -82,14 +78,13 @@ class ReportServiceImplTest {
         }
 
         @Test
-        @DisplayName("FINDING: throws raw RuntimeException (not AppException) for unknown id — see class javadoc")
-        void throwsRawRuntimeExceptionForUnknownId() {
+        @DisplayName("throws AppException(RESOURCE_NOT_FOUND) for unknown id")
+        void throwsAppExceptionForUnknownId() {
             when(reportRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.resolveReport("missing", "admin-1", ReportStatus.RESOLVED, "note"))
-                    .isInstanceOf(RuntimeException.class)
-                    .isNotInstanceOf(com.mchub.exception.AppException.class)
-                    .hasMessage("Report does not exist");
+                    .isInstanceOf(com.mchub.exception.AppException.class)
+                    .hasMessageContaining("missing");
         }
     }
 

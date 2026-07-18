@@ -2,6 +2,8 @@ package com.mchub.services.impl;
 
 import com.mchub.dto.CreateReportRequest;
 import com.mchub.enums.ReportStatus;
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.models.Report;
 import com.mchub.repositories.ReportRepository;
 import com.mchub.services.ReportService;
@@ -34,7 +36,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public Report resolveReport(String reportId, String adminId, ReportStatus status, String adminNote) {
         Report report = reportRepository.findById(Objects.requireNonNull(reportId))
-            .orElseThrow(() -> new RuntimeException("Report does not exist"));
+            .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Report not found: " + reportId));
         report.setStatus(status);
         report.setAdminNote(adminNote);
         report.setResolvedBy(adminId);

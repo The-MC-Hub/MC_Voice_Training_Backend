@@ -38,4 +38,13 @@ Source: `ReportServiceImpl.java` dòng 35-37.
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): đổi thành `throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Report not found: " + reportId)` — khớp đúng convention nhất quán với toàn bộ codebase còn lại.
+**Fixed (2026-07-18).** Đổi thành `throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Report not found: " + reportId)`, khớp convention chung của codebase.
+
+**Verify trực tiếp (live, port 5555, `mchub_test`):**
+```
+$ curl -X PUT ".../reports/000000000000000000000000/resolve" -H "Authorization: Bearer <ADMIN>" -d '{"status":"RESOLVED"}'
+HTTP 404 {"message":"Report not found: 000000000000000000000000","errorCode":"ERR_9003"}
+```
+Đúng như kỳ vọng (trước fix: HTTP 500).
+
+Cập nhật test hồi quy: `ReportServiceImplTest$ResolveReport` trước đây có test tên `throwsRawRuntimeExceptionForUnknownId` chủ đích pin cứng hành vi lỗi (kèm class javadoc mô tả finding) — đã đổi thành `throwsAppExceptionForUnknownId`, assert đúng `AppException`. Chạy `ReportServiceImplTest` + `ReportControllerTest` — 13/13 PASS.
