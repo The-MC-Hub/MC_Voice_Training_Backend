@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface MCProfileService {
 
-        @PreAuthorize("hasAuthority('ADMIN') or #userId == authentication.name")
+        @PreAuthorize("hasAuthority('ADMIN') or (hasAuthority('MC') and #userId == authentication.name)")
     Map<String, Object> getDashboardStats(String userId);
 
         @PreAuthorize("hasAuthority('MC')")

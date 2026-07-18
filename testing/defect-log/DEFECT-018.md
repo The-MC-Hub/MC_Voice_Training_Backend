@@ -47,4 +47,15 @@ Source: `MCProfileService.java` — `@PreAuthorize("hasAuthority('ADMIN') or #us
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): sửa điều kiện thành `hasAuthority('ADMIN') or (hasAuthority('MC') and #userId == authentication.name)` — vừa giữ được ý nghĩa ownership check (phòng trường hợp sau này endpoint được mở rộng nhận `userId` tham số từ client thay vì luôn tự lấy từ JWT), vừa bổ sung đúng điều kiện role MC còn thiếu.
+**Fixed (2026-07-18).** Đổi `@PreAuthorize` trong `MCProfileService.getDashboardStats()` thành:
+```java
+@PreAuthorize("hasAuthority('ADMIN') or (hasAuthority('MC') and #userId == authentication.name)")
+```
+Vừa giữ ownership check gốc, vừa bổ sung đúng điều kiện role MC còn thiếu.
+
+**Verify live (port 5555, `mchub_test`):**
+- CLIENT gọi `GET /mcs/dashboard` → **403** (trước fix: 200).
+- MC gọi dashboard của chính mình → vẫn 200 (không hồi quy).
+- ADMIN gọi dashboard → vẫn 200 (không hồi quy).
+
+`MCProfileServiceImplTest` + `MCControllerTest` — 10/10 PASS (các test unit hiện tại dùng Mockito, không exercise tầng `@PreAuthorize`/AOP nên không phát hiện lỗi này — đúng như phân tích trong `testing/01-unit/Unit_Test_Audit.md`, cần verify qua test tích hợp/live thật).
