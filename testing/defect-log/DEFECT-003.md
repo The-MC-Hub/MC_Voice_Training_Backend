@@ -41,10 +41,10 @@ public void migrateFromMcHub() {
 Trích trực tiếp source `DatabaseMigrationService.java` dòng 22-23, 42 (xem code block ở mục Root Cause).
 
 ### Status
-**Open — QA chủ động KHÔNG Execute TC-ADM-28 để tránh gây thiệt hại thật.** Đề xuất dev xử lý theo 1 trong các hướng (không phải QA quyết định, chỉ đề xuất để dev/PO cân nhắc):
-1. Đọc tên database từ `application.properties`/biến môi trường thay vì hardcode.
-2. Thêm safeguard `@Profile("dev")` hoặc feature flag chỉ cho phép chạy ở môi trường không phải production.
-3. Thêm dry-run mode hoặc xác nhận 2 bước trước khi `drop()` + ghi đè.
-4. Nếu tính năng này đã lỗi thời (tên gợi ý "migrate từ MC Hub" — có thể là script one-time đã dùng xong, không còn cần thiết cho vận hành hiện tại), cân nhắc gỡ bỏ hoàn toàn endpoint thay vì để treo rủi ro.
+**Fixed (2026-07-18).** `DatabaseMigrationService.migrateFromMcHub()` không còn hardcode tên database:
+1. Source/target DB đọc từ `mchub.migration.source-db`/`mchub.migration.target-db` (env `MIGRATION_SOURCE_DB`/`MIGRATION_TARGET_DB`), không có default hardcode — nếu chưa set, method từ chối chạy với `IllegalStateException` rõ ràng.
+2. Thêm feature flag `mchub.migration.enabled` (mặc định `false`) — phải bật tường minh mới chạy được.
+3. Thêm guard so sánh `targetDbName` với `spring.data.mongodb.database` (database instance đang chạy thật) — từ chối migrate nếu trùng, tránh tự ghi đè database đang dùng.
+4. Chưa gỡ endpoint (giữ nguyên theo yêu cầu, không tự ý xoá tính năng) — chỉ khoá an toàn bằng cấu hình.
 
-QA không tự sửa code, không tự gọi thử — đây là quyết định thuộc thẩm quyền dev/Product Owner do mức độ ảnh hưởng vượt quá phạm vi "chỉ test trong `mchub_test`".
+Đã chạy `mvn test -Dtest=AdminControllerTest,AdminServiceImplTest` — 41/41 PASS, không hồi quy.
