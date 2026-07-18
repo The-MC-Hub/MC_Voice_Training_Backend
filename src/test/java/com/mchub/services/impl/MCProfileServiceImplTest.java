@@ -126,11 +126,8 @@ class MCProfileServiceImplTest {
         }
 
         @Test
-        @DisplayName("FINDING: personality/hostingStyle are silently wiped by a partial update — see DEFECT report. " +
-                "MCProfile.personality/hostingStyle default to \"\" (not null), so the null-check guard in " +
-                "updateProfile() never skips them; any partial update payload built via `new MCProfile()` " +
-                "erases these fields even when the caller never intended to touch them.")
-        void partialUpdateSilentlyWipesPersonalityAndHostingStyle() {
+        @DisplayName("partial update preserves personality/hostingStyle when not supplied")
+        void partialUpdatePreservesPersonalityAndHostingStyle() {
             MCProfile existing = MCProfile.builder()
                     .user(USER_ID).biography("Old bio")
                     .personality("Cheerful").hostingStyle("Formal")
@@ -141,12 +138,12 @@ class MCProfileServiceImplTest {
 
             MCProfile update = new MCProfile();
             update.setBiography("Updated bio");
-            // caller never touches personality/hostingStyle — but they get wiped anyway
+            // caller never touches personality/hostingStyle — must not be wiped
 
             MCProfile result = service.updateProfile(USER_ID, update);
 
-            assertThat(result.getPersonality()).isEmpty();
-            assertThat(result.getHostingStyle()).isEmpty();
+            assertThat(result.getPersonality()).isEqualTo("Cheerful");
+            assertThat(result.getHostingStyle()).isEqualTo("Formal");
         }
 
         @Test

@@ -62,10 +62,10 @@ public class MCProfileServiceImpl implements MCProfileService {
         if (profileData.getBiography() != null) {
             existing.setBiography(profileData.getBiography());
         }
-        if (profileData.getPersonality() != null) {
+        if (profileData.getPersonality() != null && !profileData.getPersonality().isBlank()) {
             existing.setPersonality(profileData.getPersonality());
         }
-        if (profileData.getHostingStyle() != null) {
+        if (profileData.getHostingStyle() != null && !profileData.getHostingStyle().isBlank()) {
             existing.setHostingStyle(profileData.getHostingStyle());
         }
         if (profileData.getLanguages() != null && !profileData.getLanguages().isEmpty()) {

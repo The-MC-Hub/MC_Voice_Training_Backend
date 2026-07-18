@@ -44,6 +44,6 @@ Unit test `MCProfileServiceImplTest.UpdateProfile.partialUpdateSilentlyWipesPers
 
 ### Status
 
-**Open.** Đề xuất dev sửa 1 trong 2 hướng (không phải QA quyết định):
-1. Đổi guard thành `!= null && !isBlank()` cho cả `personality` và `hostingStyle`, đồng nhất với pattern đã dùng cho `languages`/`styles`.
-2. Nếu cố tình muốn cho phép "xóa về rỗng", cần đổi kiểu request DTO ở tầng Controller sang `Optional<String>` hoặc dùng field-presence map (ví dụ `Map<String,Object>` như `AuthServiceImpl.updateSettings()` đã làm) để phân biệt được "client không gửi field" và "client gửi rỗng có chủ đích".
+**Fixed (2026-07-18).** Áp dụng hướng 1: đổi guard thành `!= null && !isBlank()` cho cả `personality` và `hostingStyle`, đồng nhất với pattern `languages`/`styles` đã dùng đúng trong cùng method.
+
+Cập nhật test hồi quy: `MCProfileServiceImplTest$UpdateProfile` có test tên `partialUpdateSilentlyWipesPersonalityAndHostingStyle` chủ đích pin cứng hành vi lỗi (kèm `@DisplayName` mô tả finding) — đã đổi thành `partialUpdatePreservesPersonalityAndHostingStyle`, assert đúng dữ liệu cũ được giữ nguyên khi partial update không đụng tới field đó. Chạy `MCProfileServiceImplTest` — 8/8 PASS.
