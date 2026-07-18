@@ -72,6 +72,14 @@ public class GlobalExceptionHandler {
                         ErrorCode.ACCESS_DENIED.getDefaultMessage()));
     }
 
+    @ExceptionHandler(UnsupportedOperationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedOperation(UnsupportedOperationException ex) {
+        log.warn("🔵 [{}] {}", ErrorCode.FEATURE_DEPRECATED.getCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.GONE)
+                .body(buildErrorResponse(ErrorCode.FEATURE_DEPRECATED.getCode(), ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
         // Most common source: SecurityUtils.getCurrentUserId() called on an unauthenticated

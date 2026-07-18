@@ -32,8 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * CertificateService is deprecated (per its class javadoc) — addCertificate/
  * verifyCertificate/deleteCertificate always throw UnsupportedOperationException,
- * which is uncaught by GlobalExceptionHandler's specific handlers and falls
- * through to the generic Exception handler -> HTTP 500. Only the GET
+ * which GlobalExceptionHandler maps to HTTP 410 Gone. Only the GET
  * (getCertificatesByMCProfile, repurposed as a userId lookup) still works.
  */
 @WebMvcTest(controllers = CertificateController.class)
@@ -75,8 +74,8 @@ class CertificateControllerTest {
         }
 
         @Test
-        @DisplayName("500 when service throws UnsupportedOperationException (deprecated feature)")
-        void returns500ForDeprecatedFeature() throws Exception {
+        @DisplayName("410 Gone when service throws UnsupportedOperationException (deprecated feature)")
+        void returns410ForDeprecatedFeature() throws Exception {
             when(userRepository.findById(USER_ID))
                     .thenReturn(Optional.of(User.builder().id(USER_ID).mcProfile("mc-1").build()));
             when(certificateService.addCertificate(org.mockito.ArgumentMatchers.eq("mc-1"), any()))
@@ -85,7 +84,7 @@ class CertificateControllerTest {
             mockMvc.perform(post("/api/v1/certificates")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"name\":\"Cert\",\"issuer\":\"Issuer\"}"))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isGone());
         }
 
         @Test
@@ -116,13 +115,13 @@ class CertificateControllerTest {
     class Verify {
 
         @Test
-        @DisplayName("500 when service throws UnsupportedOperationException")
-        void returns500ForDeprecatedFeature() throws Exception {
+        @DisplayName("410 Gone when service throws UnsupportedOperationException")
+        void returns410ForDeprecatedFeature() throws Exception {
             when(certificateService.verifyCertificate(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
                     .thenThrow(new UnsupportedOperationException("deprecated"));
 
             mockMvc.perform(put("/api/v1/certificates/{id}/verify", "cert-1"))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isGone());
         }
     }
 

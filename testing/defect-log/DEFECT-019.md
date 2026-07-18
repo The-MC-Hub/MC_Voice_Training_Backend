@@ -41,6 +41,13 @@ Source: `CertificateServiceImpl.java` dòng 26-29/32-35/44-47; `CertificateContr
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): 1 trong 2 hướng
-1. Nếu route này vẫn cần giữ tạm thời cho backward-compat: thêm `@ExceptionHandler(UnsupportedOperationException.class)` trong `GlobalExceptionHandler` trả về HTTP 410 Gone (hoặc 400) kèm message rõ ràng "Tính năng này đã ngừng hỗ trợ, chứng chỉ được cấp tự động khi hoàn thành khoá học" — thay vì lọt xuống nhánh 500 generic.
-2. Nếu route này không còn ai gọi (frontend đã migrate xong sang luồng course completion): xoá hẳn `CertificateController`, `CertificateService`, `CertificateServiceImpl` và route liên quan khỏi codebase — tránh code chết gây nhầm lẫn, đúng nguyên tắc dọn dẹp sau migration.
+**Fixed (2026-07-18).** Áp dụng hướng 1 (giữ route, trả lỗi đúng ngữ nghĩa — không tự ý xoá tính năng khi chưa xác nhận frontend đã ngừng gọi): thêm `ErrorCode.FEATURE_DEPRECATED` (`HttpStatus.GONE`, `ERR_9007`) và `@ExceptionHandler(UnsupportedOperationException.class)` trong `GlobalExceptionHandler`, trả về message gốc từ exception (đã đủ rõ ràng, có sẵn "Certificates are issued automatically upon course completion").
+
+**Verify live (port 5555, `mchub_test`):**
+```
+$ curl -X POST ".../certificates" -H "Authorization: Bearer <MC-JWT>" -d '{"name":"Test",...}'
+HTTP 410 {"message":"Manual certificates are deprecated. Certificates are issued automatically upon course completion.","errorCode":"ERR_9007"}
+```
+Đúng như kỳ vọng (trước fix: HTTP 500 "System error"). Áp dụng đồng thời cho cả 3 route deprecated (`POST /certificates`, `PUT /certificates/{id}/verify`, `DELETE /certificates/{id}`) vì cùng dùng chung exception handler toàn cục.
+
+Cập nhật test hồi quy: `CertificateControllerTest` có 2 test tên `returns500ForDeprecatedFeature` chủ đích pin cứng hành vi cũ — đã đổi thành `returns410ForDeprecatedFeature`, assert `status().isGone()`. `CertificateServiceImplTest`/`CertificateControllerTest` — 11/11 PASS.

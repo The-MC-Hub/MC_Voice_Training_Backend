@@ -75,7 +75,8 @@ public enum ErrorCode {
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_9003", "Resource not found"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "ERR_9004", "HTTP method not supported"),
     TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "ERR_9005", "Too many failed attempts. Please request a new OTP."),
-    ADMIN_OTP_REQUIRED(HttpStatus.ACCEPTED, "ERR_9006", "ADMIN_OTP_REQUIRED");
+    ADMIN_OTP_REQUIRED(HttpStatus.ACCEPTED, "ERR_9006", "ADMIN_OTP_REQUIRED"),
+    FEATURE_DEPRECATED(HttpStatus.GONE, "ERR_9007", "This feature is no longer supported");
 
     private final HttpStatus httpStatus;
     private final String code;
