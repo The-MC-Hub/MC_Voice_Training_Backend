@@ -90,7 +90,13 @@ public class PublicServiceImpl implements PublicService {
     @Override
     public List<MCProfileResponseDTO> discoverMCs(String category) {
         List<MCProfile> profiles = mcProfileRepository.findAll();
-        
+
+        if (category != null && !category.isBlank()) {
+            profiles = profiles.stream()
+                    .filter(p -> p.getStyles() != null && p.getStyles().contains(category))
+                    .toList();
+        }
+
         List<String> userIds = profiles.stream()
                 .map(MCProfile::getUser)
                 .filter(Objects::nonNull)

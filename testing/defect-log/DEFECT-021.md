@@ -41,6 +41,8 @@ Người dùng công khai xem trang khám phá MC thấy badge "verified" (hoặ
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định):
-1. **Phần 1 (email):** loại bỏ field `email` khỏi `MCProfileResponseDTO` dùng cho public endpoint, hoặc tách riêng 1 DTO khác cho luồng public (không chứa email) — chỉ giữ email trong response cho chính chủ MC xem hồ sơ của mình (`/mcs/profile` — nếu có endpoint GET riêng) hoặc Admin.
-2. **Phần 2 (verified):** đổi nguồn field `verified` sang phản ánh đúng "hồ sơ MC đã được Admin xác minh/duyệt" (VD: dựa vào việc MC có ít nhất 1 certificate đã verify, hoặc thêm field `MCProfile.isVerifiedByAdmin` riêng) — không dùng chung với `User.isVerified` (email verification), tránh nhầm lẫn ngữ nghĩa giữa 2 khái niệm "verified" hoàn toàn khác nhau.
+**Phần 1 (email) — Fixed (2026-07-18).** Loại bỏ hoàn toàn field `email` khỏi `MCProfileResponseDTO` và mapping tương ứng trong `MCProfileMapper` — endpoint public (`/public/mcs`, `/public/mcs/{id}`) không còn trả email dưới bất kỳ hình thức nào. Đã kiểm tra `MCProfileResponseDTO` chỉ được dùng bởi `PublicController` (không có nơi nào khác trong codebase cần field email từ DTO này), nên việc xoá an toàn, không ảnh hưởng luồng khác.
+
+**Verify live:** `GET /public/mcs` → response object không còn key `email`. `PublicServiceImplTest`/`PublicControllerTest` — 18/18 PASS.
+
+**Phần 2 (verified) — Chưa fix, cần quyết định business trước khi code.** Đổi ngữ nghĩa field `verified` đòi hỏi định nghĩa rõ "MC đã được xác minh" nghĩa là gì theo góc nhìn sản phẩm (VD: có ít nhất 1 certificate hợp lệ? Admin duyệt thủ công qua cờ riêng?) — hiện tại luồng certificate thủ công đã bị deprecate (DEFECT-019, mọi certificate giờ tự động qua hoàn thành khoá học và luôn `isVerified:true` mặc định), nên "có certificate" không còn là tín hiệu phân biệt "MC đáng tin cậy hơn" như dự định ban đầu. Đây là quyết định cần Product Owner xác nhận field/nguồn dữ liệu đúng trước khi implement, không chỉ đơn thuần đổi 1 dòng mapping — để nguyên hiện trạng (`verified` = `user.isVerified`, tức email đã xác minh), giữ nguyên như findings đã ghi nhận ở trên.

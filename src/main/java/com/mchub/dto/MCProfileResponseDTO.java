@@ -11,7 +11,6 @@ public class MCProfileResponseDTO {
     private String id;
     private String userId;
     private String name;
-    private String email;
     private String avatar;
     private boolean isVerified;
     private int experience;

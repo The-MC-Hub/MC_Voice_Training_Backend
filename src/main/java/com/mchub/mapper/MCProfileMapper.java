@@ -17,7 +17,6 @@ public interface MCProfileMapper {
     @Mapping(target = "biography", source = "profile.biography")
 
     @Mapping(target = "name", source = "user.name", defaultValue = "Unknown MC")
-    @Mapping(target = "email", source = "user.email")
     @Mapping(target = "avatar", source = "user.avatar", defaultValue = "default-avatar.png")
     @Mapping(target = "verified", source = "user.verified")
     MCProfileResponseDTO toResponseDTO(MCProfile profile, User user);
