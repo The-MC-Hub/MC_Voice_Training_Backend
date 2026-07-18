@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -69,6 +70,28 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.FORBIDDEN)
                 .body(buildErrorResponse(ErrorCode.ACCESS_DENIED.getCode(),
                         ErrorCode.ACCESS_DENIED.getDefaultMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
+        // Most common source: SecurityUtils.getCurrentUserId() called on an unauthenticated
+        // request without @PreAuthorize guarding the endpoint first — treat as "not logged in".
+        log.warn("🟠 [{}] {}", ErrorCode.USER_NOT_AUTHENTICATED.getCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(buildErrorResponse(ErrorCode.USER_NOT_AUTHENTICATED.getCode(),
+                        ErrorCode.USER_NOT_AUTHENTICATED.getDefaultMessage()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        // Covers malformed JSON and invalid enum values in @RequestBody payloads
+        // (Jackson throws before @Valid ever runs, so this must be caught separately).
+        log.warn("🟡 [{}] Malformed request body: {}", ErrorCode.VALIDATION_FAILED.getCode(), ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(ErrorCode.VALIDATION_FAILED.getCode(),
+                        "Dữ liệu gửi lên không đúng định dạng"));
     }
 
     @ExceptionHandler(AuthenticationException.class)

@@ -278,19 +278,19 @@ class AuthControllerTest {
     class UpdateSettings {
 
         @Test
-        @DisplayName("delegates to authService.updateSettings without touching untouched keys")
+        @DisplayName("returns 401 when called without an authenticated SecurityContext")
         void delegatesToUpdateSettings() throws Exception {
             when(authService.updateSettings(anyString(), anyMap())).thenReturn(sampleUser());
             when(userMapper.toResponseDTO(any(User.class))).thenReturn(sampleUserDto());
 
             // SecurityUtils.getCurrentUserId() requires an authenticated SecurityContext;
-            // since addFilters=false skips JwtAuthenticationFilter, this will throw
-            // IllegalStateException -> uncaught -> 500. This documents actual behavior:
-            // /settings has no @PreAuthorize, relying entirely on the filter for auth context.
+            // since addFilters=false skips JwtAuthenticationFilter, this throws
+            // IllegalStateException, which GlobalExceptionHandler now maps to 401
+            // (fixed DEFECT-015 — previously fell through to a generic 500).
             mockMvc.perform(put("/api/v1/auth/settings")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"name\":\"New Name\"}"))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isUnauthorized());
         }
     }
 }
