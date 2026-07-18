@@ -36,12 +36,13 @@ Source: `GlobalExceptionHandler.java` — không có `@ExceptionHandler` riêng 
 
 ### Status
 
-**Open — đề xuất ưu tiên vì ảnh hưởng toàn hệ thống, không riêng 1 module.** Đề xuất dev (không phải QA quyết định): thêm handler trong `GlobalExceptionHandler`:
-```java
-@ExceptionHandler(HttpMessageNotReadableException.class)
-public ResponseEntity<ApiResponse<Void>> handleBadJson(HttpMessageNotReadableException ex) {
-    return ResponseEntity.badRequest()
-        .body(ApiResponse.fail("Dữ liệu gửi lên không đúng định dạng: " + safeMessage(ex)));
-}
+**Fixed (2026-07-18).** Thêm `@ExceptionHandler(HttpMessageNotReadableException.class)` trong `GlobalExceptionHandler.java` (cùng commit với fix DEFECT-015, do cả 2 handler được thêm trong cùng 1 lần sửa file), trả HTTP 400 với message chung "Dữ liệu gửi lên không đúng định dạng" thay vì rơi xuống 500 generic.
+
+**Verify trực tiếp (live, port 5555, `mchub_test`):**
 ```
-Cân nhắc trích riêng message thân thiện hơn khi nguyên nhân là `InvalidFormatException` liên quan enum (liệt kê rõ danh sách giá trị hợp lệ) thay vì lộ nguyên message kỹ thuật Jackson ra client.
+$ curl -X POST ".../reports" -d '{"reportedId":"x","reason":"INVALID_REASON","description":"test"}'
+HTTP 400 {"message":"Dữ liệu gửi lên không đúng định dạng","errorCode":"ERR_9002"}
+```
+Đúng như kỳ vọng (trước fix: HTTP 500).
+
+Vì đây là exception handler toàn cục, fix áp dụng cho MỌI endpoint nhận `@RequestBody` chứa enum sai giá trị trong toàn hệ thống, không chỉ riêng `ReportController` — đúng phạm vi ảnh hưởng đã ghi nhận. Chưa làm chi tiết hoá message theo từng loại enum (liệt kê giá trị hợp lệ) — để đơn giản, message chung đã đủ rõ ràng hơn nhiều so với "System error" trước đó; có thể cải thiện thêm sau nếu cần.
