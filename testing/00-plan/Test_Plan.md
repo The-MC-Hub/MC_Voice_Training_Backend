@@ -114,9 +114,9 @@ Phát hiện trong quá trình khảo sát: `API-Information.md` và `schema.dbm
 | Email | **Cần xác nhận** | Cần hộp thư test riêng, không gửi nhầm user thật |
 
 **Cập nhật blocker (2026-07-17):**
-- ✅ AI Voice Service — đã xác nhận sẵn sàng, hết blocker.
-- ⏳ MongoDB — chờ user tạo Atlas dev cluster; có phương án dự phòng Docker local nếu cần chạy ngay.
-- ⚠️ PayOS — có key thật, KHÔNG có sandbox. Chuyển từ "blocker thiếu credentials" sang "rủi ro cao khi thực thi" — xem Quy tắc an toàn Payment Testing (mục 6.1) trước khi chạm vào UC-06.
+- ✅ AI Voice Service — đã xác nhận sẵn sàng, hết blocker. Đã dùng thật để Execute UC-03 (analyze-voice, adaptive calibration).
+- ✅ MongoDB — dùng chung cluster Atlas `MainDatabase`, database riêng `mchub_test`, hết blocker. Đã dùng thật xuyên suốt UC-06/UC-09/UC-03.
+- ✅ PayOS — có key thật, KHÔNG có sandbox. Đã áp dụng Quy tắc an toàn Payment Testing (mục 6.1) khi Execute UC-06 — chỉ tạo link/validate, không thanh toán thật, hết blocker.
 
 ### 6.1. Quy tắc an toàn Payment Testing (PayOS dùng key thật)
 
@@ -167,6 +167,45 @@ Xem `testing/testing.md` mục 1-2 (Nhiệm vụ, Thẩm quyền & Ranh giới) 
 
 ## 9. Phê duyệt
 
-- [ ] User/Product Owner xác nhận phạm vi (mục 2)
-- [ ] User/Dev xác nhận môi trường test sẵn sàng (mục 6) — đặc biệt PayOS sandbox và MongoDB test instance
-- [ ] Bắt đầu Test Design cho P0 (UC-06 → UC-09 → UC-03) sau khi 2 mục trên được xác nhận
+- [x] User/Product Owner xác nhận phạm vi (mục 2)
+- [x] User/Dev xác nhận môi trường test sẵn sàng (mục 6) — PayOS (key thật, không sandbox, đã áp dụng Quy tắc an toàn mục 6.1), MongoDB `mchub_test`, AI Voice Service (HF Space)
+- [x] Bắt đầu Test Design cho P0 (UC-06 → UC-09 → UC-03) sau khi 2 mục trên được xác nhận
+
+### 9.1. Tiến độ thực thi theo UC (cập nhật 2026-07-17)
+
+| UC | Ưu tiên | Trạng thái | Kết quả |
+|---|---|---|---|
+| UC-06 Payment & Subscription | P0 | [x] Done | 47/52 PASS, 3 FAIL — xem `testing/03-system/UC-06-Payment-Subscription_TestCases.md` |
+| UC-09 Admin Dashboard | P0 | [x] Done | 42/44 PASS, 1 FAIL — xem `testing/03-system/UC-09-Admin-Dashboard_TestCases.md` |
+| UC-03 Voice Training (core) | P0 | [x] Done | 22/26 PASS, 4 FAIL — xem `testing/03-system/UC-03-Voice-Training_TestCases.md` |
+| UC-04 Courses & Learning | P1 | [x] Done | 36/39 PASS, 3 FAIL — xem `testing/03-system/UC-04-Courses-Learning_TestCases.md` |
+| UC-10 Marketing & Communication | P1 | [x] Done | 40/41 PASS, 1 FAIL — xem `testing/03-system/UC-10-Marketing-Communication_TestCases.md` |
+| UC-01 Authentication | P1 | [x] Done | 24/27 PASS, 3 FAIL — xem `testing/03-system/UC-01-Authentication_TestCases.md` |
+| UC-02 User/MC Profile | P2 | [x] Done | 12/18 PASS, 6 FAIL — xem `testing/03-system/UC-02-User-MC-Profile_TestCases.md` |
+| UC-05 Community & Leaderboard | P2 | [x] Done | 24/26 PASS, 2 FAIL — xem `testing/03-system/UC-05-Community-Leaderboard_TestCases.md` |
+| UC-07 Onboarding Quest | P2 | [x] Done | 13/13 PASS, 0 FAIL — xem `testing/03-system/UC-07-Onboarding-Quest_TestCases.md` |
+| UC-08 Public/Support | P3 | [x] Done | 23/25 PASS, 2 FAIL — xem `testing/03-system/UC-08-Public-Support_TestCases.md` |
+
+**24 defect đã file** (`DEFECT-001` → `DEFECT-024`, xem `testing/defect-log/`), chưa cái nào được dev fix — đúng thẩm quyền QA (không tự sửa code theo `testing/testing.md`). **DEFECT-016 mức Critical/P0** — lệch múi giờ khiến JWT hợp lệ bị từ chối sau đổi mật khẩu, chặn hoàn toàn luồng reset-password, đề xuất ưu tiên fix trước go-live. **DEFECT-001/010/013/022 cùng nhóm nguyên nhân** — thiếu SecurityConfig whitelist cho route Public, lặp lại ở 4 module khác nhau. **DEFECT-023 ảnh hưởng toàn hệ thống** — `GlobalExceptionHandler` thiếu handler cho `HttpMessageNotReadableException`, mọi endpoint nhận enum qua request body đều có nguy cơ trả 500 thay vì 400 khi client gửi sai giá trị.
+
+### 9.2. Toàn bộ 10 UC đã hoàn thành System Test (2026-07-18)
+
+Tất cả UC-01 → UC-10 đã được Execute qua system test thủ công (trừ UC-06/09/03 thực hiện ở phiên trước, còn lại UC-04/10/01/02/05/07/08 thực hiện tiếp trong các phiên sau). Tổng hợp:
+
+| UC | Test case | PASS | FAIL |
+|---|---|---|---|
+| UC-06 Payment & Subscription | 52 | 47 | 3 (+2 Not Executed, out of scope thanh toán thật) |
+| UC-09 Admin Dashboard | 44 | 42 | 1 (+1 Not Executed) |
+| UC-03 Voice Training | 26 | 22 | 4 |
+| UC-04 Courses & Learning | 39 | 36 | 3 |
+| UC-10 Marketing & Communication | 41 | 40 | 1 |
+| UC-01 Authentication | 27 | 24 | 3 |
+| UC-02 User/MC Profile | 18 | 12 | 6 |
+| UC-05 Community & Leaderboard | 26 | 24 | 2 |
+| UC-07 Onboarding Quest | 13 | 13 | 0 |
+| UC-08 Public/Support | 25 | 23 | 2 |
+| **Tổng** | **311** | **283** | **25** |
+
+**24 defect đã file, 0 đã fix.** Đáng chú ý nhất: DEFECT-016 (Critical/P0 — timezone bug chặn đăng nhập sau đổi mật khẩu), DEFECT-018 (Major — role check thiếu cho phép CLIENT truy cập endpoint MC-only), DEFECT-023 (Major — lỗ hổng exception handling ảnh hưởng toàn hệ thống). Nhóm lặp lại nhiều lần: thiếu SecurityConfig whitelist cho route Public (DEFECT-001/010/013/022 — 4 lần cùng 1 nguyên nhân qua 4 module khác nhau).
+
+**Unit/Controller test tự động:** 490 test (20 service class + 25 controller class), 100% PASS — bổ trợ cho system test, không thay thế.
