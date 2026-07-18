@@ -50,4 +50,12 @@ Source: `AnnouncementService.java` dòng 101-104 (`@Async` + guard throw không 
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): kiểm tra trạng thái `SENT` NGAY TRONG CONTROLLER (đồng bộ, trước khi gọi `@Async` method) để trả lỗi HTTP đúng ngay lập tức, thay vì để guard nằm trong method async. Hoặc đổi `approveAndSend` trả `CompletableFuture<Void>` và có cơ chế client poll trạng thái. Nên áp dụng sửa đồng thời cho cả 2 overload (`approveAndSend(id, recipientIds)` và `approveAndSend(id)`).
+**Fixed (2026-07-18).** Áp dụng đúng đề xuất: thêm kiểm tra trạng thái `SENT` đồng bộ TRONG CONTROLLER (`AnnouncementController.send()`), trước khi gọi `approveAndSend()` — dùng `announcementService.getById(id)` (đã có sẵn) để đọc status trước, ném `AppException(VALIDATION_FAILED, "Announcement already sent")` ngay nếu đã `SENT`, không chạm tới method `@Async` nữa trong trường hợp này.
+
+**Verify live (port 5555, `mchub_test`)** — tái hiện đúng kịch bản gốc:
+1. Tạo announcement mới → gửi lần 1 (scoped tới 1 QA recipient) → 200 "Đang gửi email hàng loạt..." → status chuyển `SENT`.
+2. Gửi lần 2 (đã `SENT`) → **HTTP 400 "Announcement already sent"** ngay lập tức (trước fix: vẫn 200 giả, lỗi thật bị nuốt trong `@Async`).
+
+Cập nhật test hồi quy: `AnnouncementControllerTest$Send` bổ sung 2 test mới cho việc stub `getById()` (test cũ chưa cần stub vì controller chưa gọi `getById` trước khi sửa) + 1 test mới `rejectsWhenAlreadySent` xác nhận guard đồng bộ hoạt động và `approveAndSend()` không hề được gọi khi bị chặn. `AnnouncementControllerTest`/`AnnouncementServiceTest` — 27/27 PASS.
+
+Chưa áp dụng riêng cho overload `approveAndSend(id)` (không tham số `recipientIds`) vì controller hiện tại chỉ dùng overload có `recipientIds` — guard mới ở tầng Controller áp dụng chung cho cả 2 overload vì được chặn trước khi gọi bất kỳ overload nào.

@@ -98,6 +98,14 @@ public class AnnouncementController {
     public ResponseEntity<ApiResponse<Void>> send(
             @PathVariable String id,
             @RequestBody(required = false) Map<String, Object> body) {
+        // Check status synchronously here — approveAndSend() is @Async, so any exception
+        // it throws (e.g. "Already sent") never reaches this HTTP response; it only gets
+        // logged server-side, and the client sees a false "success".
+        Announcement existing = announcementService.getById(id);
+        if (existing.getStatus() == Announcement.AnnouncementStatus.SENT) {
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Announcement already sent");
+        }
+
         @SuppressWarnings("unchecked")
         List<String> recipientIds = body != null ? (List<String>) body.get("recipientIds") : null;
         announcementService.approveAndSend(id, recipientIds);

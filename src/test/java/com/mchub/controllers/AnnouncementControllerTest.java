@@ -85,6 +85,9 @@ class AnnouncementControllerTest {
         @Test
         @DisplayName("passes null recipientIds when body is omitted")
         void passesNullRecipientIdsWhenBodyOmitted() throws Exception {
+            when(announcementService.getById("ann-1")).thenReturn(
+                    Announcement.builder().id("ann-1").status(Announcement.AnnouncementStatus.DRAFT).build());
+
             mockMvc.perform(post("/api/v1/admin/announcements/{id}/send", "ann-1"))
                     .andExpect(status().isOk());
 
@@ -94,12 +97,27 @@ class AnnouncementControllerTest {
         @Test
         @DisplayName("forwards recipientIds when present in body")
         void forwardsRecipientIdsWhenPresent() throws Exception {
+            when(announcementService.getById("ann-1")).thenReturn(
+                    Announcement.builder().id("ann-1").status(Announcement.AnnouncementStatus.DRAFT).build());
+
             mockMvc.perform(post("/api/v1/admin/announcements/{id}/send", "ann-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"recipientIds\":[\"u1\",\"u2\"]}"))
                     .andExpect(status().isOk());
 
             verify(announcementService).approveAndSend(eq("ann-1"), eq(java.util.List.of("u1", "u2")));
+        }
+
+        @Test
+        @DisplayName("rejects with 400 when announcement is already SENT, without calling approveAndSend")
+        void rejectsWhenAlreadySent() throws Exception {
+            when(announcementService.getById("ann-1")).thenReturn(
+                    Announcement.builder().id("ann-1").status(Announcement.AnnouncementStatus.SENT).build());
+
+            mockMvc.perform(post("/api/v1/admin/announcements/{id}/send", "ann-1"))
+                    .andExpect(status().isBadRequest());
+
+            verify(announcementService, org.mockito.Mockito.never()).approveAndSend(any(), any());
         }
     }
 
