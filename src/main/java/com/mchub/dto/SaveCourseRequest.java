@@ -1,5 +1,6 @@
 package com.mchub.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mchub.enums.CourseType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,7 @@ public class SaveCourseRequest {
     private List<String> readingIds;   // exactly 3
     private List<QuizQuestionRequest> quizQuestions;
     private int passingScore;
+    @JsonProperty("isActive")
     private boolean isActive;
 
     @Data

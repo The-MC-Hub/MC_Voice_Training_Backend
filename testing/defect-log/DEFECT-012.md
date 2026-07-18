@@ -45,4 +45,17 @@ Source: `CourseEnrollmentRepository.java` dòng 17 — `countByCourseIdAndIsComp
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): đổi tên method thành `countByCourseIdAndCompletedTrue` (khớp bean property name `completed` sau khi Lombok xử lý) — tương tự các method khác trong cùng file có thể đang dùng đúng convention (`existsByUserIdAndCourseId` không bị ảnh hưởng vì không liên quan tới boolean `is` field). Cần rà soát toàn bộ các derived query khác trong project có pattern `...IsXxxTrue`/`...IsXxxFalse` để tìm case tương tự (cùng gốc với DEFECT-011).
+**Fixed (2026-07-18).** Fix ban đầu chỉ đổi tên method repository thành `countByCourseIdAndCompletedTrue` — KHÔNG đủ, vẫn lỗi `InvalidPersistentPropertyPath: No property 'completed' found` khi test live, vì Spring Data MongoDB resolve derived query theo tên FIELD Java (`isCompleted`), không theo bean property Lombok suy ra (`completed`) — ngược lại hoàn toàn so với cách Jackson resolve ở DEFECT-011.
+
+**Fix đúng:** đổi tên field Java từ `isCompleted` sang `completed` (khớp Lombok getter `isCompleted()`/setter `setCompleted()` đã có sẵn — không đổi call site nào khác vì toàn bộ codebase đã gọi qua getter/setter, không đọc field trực tiếp), kèm `@Field("isCompleted")` để giữ nguyên tên field trong BSON đã lưu sẵn (tránh mất khả năng đọc dữ liệu enrollment cũ đã có trong DB thật).
+
+```java
+// CourseEnrollment.java
+@Field("isCompleted")
+private boolean completed = false;
+
+// CourseEnrollmentRepository.java
+long countByCourseIdAndCompletedTrue(String courseId);
+```
+
+**Verify live:** tạo course mới → gift-enroll → hoàn thành 100% (lesson+reading+quiz) → `GET /admin/courses` → `totalCompletions:1` (trước fix: luôn 0). Xác nhận thêm dữ liệu enrollment cũ (tạo trước khi fix) vẫn đọc đúng qua `db.course_enrollments.find({isCompleted:true})` → 2 documents, chứng minh `@Field` giữ tương thích ngược với BSON đã lưu. `CourseServiceImplTest`/`CourseControllerTest`/`AdminCourseControllerTest` — 32/32 PASS.

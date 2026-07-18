@@ -41,4 +41,8 @@ Source: `SaveCourseRequest.java` field `private boolean isActive;` — Lombok si
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): đổi tên field thành `active` (bỏ tiền tố `is`) để JSON contract nhất quán, hoặc thêm `@JsonProperty("isActive")` trên field để ép Jackson map đúng theo tên trực quan. Nên rà soát toàn bộ codebase tìm pattern tương tự (`boolean isXxx` field dùng Lombok `@Data`) — đã phát hiện **1 trường hợp liên quan khác cùng gốc** trong `CourseEnrollment.isCompleted` (xem DEFECT-012), khả năng còn nhiều chỗ khác chưa rà hết.
+**Fixed (2026-07-18).** Thêm `@JsonProperty("isActive")` trên field `SaveCourseRequest.isActive` — ép Jackson map đúng JSON key `"isActive"` (tên trực quan client sẽ dùng) vào setter Lombok sinh ra (`setActive`), bất kể tên bean property Lombok suy ra là gì.
+
+**Verify live (port 5555, `mchub_test`):** `POST /admin/courses` với `"isActive": true` trong body → response `"active": true`, DB `isActive: true` — đúng như kỳ vọng (trước fix: âm thầm lưu `false`). `CourseServiceImplTest`/`CourseControllerTest`/`AdminCourseControllerTest` — 32/32 PASS.
+
+Đã rà soát và fix thêm 1 trường hợp cùng gốc: `CourseEnrollment.isCompleted` (xem DEFECT-012, fix trong cùng đợt).

@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,7 +47,8 @@ public class CourseEnrollment {
     private double completionRate = 0.0; // 0–100
 
     @Builder.Default
-    private boolean isCompleted = false;
+    @Field("isCompleted")
+    private boolean completed = false;
 
     @CreatedDate
     private LocalDateTime enrolledAt;

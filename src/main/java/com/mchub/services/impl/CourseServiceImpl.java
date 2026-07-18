@@ -349,7 +349,7 @@ public class CourseServiceImpl implements CourseService {
                 .map(c -> {
                     CourseResponseDTO dto = toSummaryDTO(c, null);
                     dto.setTotalEnrollments(enrollmentRepository.countByCourseId(c.getId()));
-                    dto.setTotalCompletions(enrollmentRepository.countByCourseIdAndIsCompletedTrue(c.getId()));
+                    dto.setTotalCompletions(enrollmentRepository.countByCourseIdAndCompletedTrue(c.getId()));
                     return dto;
                 })
                 .collect(Collectors.toList());
