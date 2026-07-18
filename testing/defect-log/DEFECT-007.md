@@ -39,4 +39,6 @@ Xác nhận qua source `LogServiceImpl.java` dòng 110-119 — tham số `limit`
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): dùng `PageRequest.of(0, limit)` + Spring Data `Pageable`-based query method (ví dụ `findByLevelAndSourceOrderByTimestampDesc(level, source, Pageable)`) thay cho các method `findTop200By...` cố định, để `limit` thực sự động theo tham số client truyền vào — tương tự cách `MinigameServiceImpl.getLeaderboard()` đã cap `limit` động qua `Aggregation.limit(cappedLimit)`.
+**Fixed (2026-07-18).** Thay 4 method `findTop200By...` (hardcode) bằng 4 method `Pageable`-based tương ứng trong `SystemLogRepository`, dùng `PageRequest.of(0, cappedLimit)` trong `LogServiceImpl.getLogs()` — `limit` client truyền vào giờ thực sự áp dụng, cap tối đa ở 200 (giữ nguyên giới hạn an toàn cũ để tránh query quá lớn).
+
+**Verify live (port 5555, `mchub_test`):** `GET /admin/logs?limit=5` → đúng 5 bản ghi (trước fix: luôn 200). `GET /admin/logs` (mặc định) → 200 bản ghi, đúng như cũ. `LogServiceImplTest` — 10/10 PASS (đã bổ sung 1 test case mới xác nhận `limit` được áp dụng đúng và cap ở 200).

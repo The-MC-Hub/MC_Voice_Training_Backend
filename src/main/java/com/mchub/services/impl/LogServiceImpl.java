@@ -109,13 +109,16 @@ public class LogServiceImpl implements LogService {
 
     @Override
     public List<SystemLog> getLogs(String level, String source, int limit) {
+        int cappedLimit = limit > 0 ? Math.min(limit, 200) : 200;
+        org.springframework.data.domain.Pageable pageable =
+                org.springframework.data.domain.PageRequest.of(0, cappedLimit);
         if (level != null && source != null)
-            return logRepository.findTop200ByLevelAndSourceOrderByTimestampDesc(level.toUpperCase(), source.toUpperCase());
+            return logRepository.findByLevelAndSourceOrderByTimestampDesc(level.toUpperCase(), source.toUpperCase(), pageable);
         if (level != null)
-            return logRepository.findTop200ByLevelOrderByTimestampDesc(level.toUpperCase());
+            return logRepository.findByLevelOrderByTimestampDesc(level.toUpperCase(), pageable);
         if (source != null)
-            return logRepository.findTop200BySourceOrderByTimestampDesc(source.toUpperCase());
-        return logRepository.findTop200ByOrderByTimestampDesc();
+            return logRepository.findBySourceOrderByTimestampDesc(source.toUpperCase(), pageable);
+        return logRepository.findByOrderByTimestampDesc(pageable);
     }
 
     // ── TTL cleanup scheduler — belt-and-suspenders (MongoDB TTL index is primary) ─

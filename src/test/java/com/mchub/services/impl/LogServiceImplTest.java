@@ -15,6 +15,7 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -41,36 +42,54 @@ class LogServiceImplTest {
     class GetLogs {
 
         @Test
-        @DisplayName("both level and source present: uses findTop200ByLevelAndSourceOrderByTimestampDesc, uppercased")
+        @DisplayName("both level and source present: uses findByLevelAndSourceOrderByTimestampDesc, uppercased")
         void bothLevelAndSource() {
             service.getLogs("error", "java", 200);
 
-            verify(logRepository).findTop200ByLevelAndSourceOrderByTimestampDesc("ERROR", "JAVA");
+            verify(logRepository).findByLevelAndSourceOrderByTimestampDesc(
+                    eq("ERROR"), eq("JAVA"), any(org.springframework.data.domain.Pageable.class));
         }
 
         @Test
-        @DisplayName("only level present: uses findTop200ByLevelOrderByTimestampDesc")
+        @DisplayName("only level present: uses findByLevelOrderByTimestampDesc")
         void onlyLevel() {
             service.getLogs("warn", null, 200);
 
-            verify(logRepository).findTop200ByLevelOrderByTimestampDesc("WARN");
-            verify(logRepository, never()).findTop200BySourceOrderByTimestampDesc(any());
+            verify(logRepository).findByLevelOrderByTimestampDesc(
+                    eq("WARN"), any(org.springframework.data.domain.Pageable.class));
+            verify(logRepository, never()).findBySourceOrderByTimestampDesc(any(), any());
         }
 
         @Test
-        @DisplayName("only source present: uses findTop200BySourceOrderByTimestampDesc")
+        @DisplayName("only source present: uses findBySourceOrderByTimestampDesc")
         void onlySource() {
             service.getLogs(null, "ai", 200);
 
-            verify(logRepository).findTop200BySourceOrderByTimestampDesc("AI");
+            verify(logRepository).findBySourceOrderByTimestampDesc(
+                    eq("AI"), any(org.springframework.data.domain.Pageable.class));
         }
 
         @Test
-        @DisplayName("neither present: falls back to findTop200ByOrderByTimestampDesc")
+        @DisplayName("neither present: falls back to findByOrderByTimestampDesc")
         void neitherPresent() {
             service.getLogs(null, null, 200);
 
-            verify(logRepository).findTop200ByOrderByTimestampDesc();
+            verify(logRepository).findByOrderByTimestampDesc(any(org.springframework.data.domain.Pageable.class));
+        }
+
+        @Test
+        @DisplayName("limit is honored and capped at 200")
+        void limitHonoredAndCapped() {
+            ArgumentCaptor<org.springframework.data.domain.Pageable> captor =
+                    ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+
+            service.getLogs(null, null, 50);
+            verify(logRepository).findByOrderByTimestampDesc(captor.capture());
+            assertThat(captor.getValue().getPageSize()).isEqualTo(50);
+
+            service.getLogs(null, null, 9999);
+            verify(logRepository, org.mockito.Mockito.times(2)).findByOrderByTimestampDesc(captor.capture());
+            assertThat(captor.getValue().getPageSize()).isEqualTo(200);
         }
     }
 
