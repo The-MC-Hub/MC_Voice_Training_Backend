@@ -65,6 +65,9 @@ public class VoiceServiceImpl implements VoiceService {
     @Value("${ai.service.analyze-url:http://127.0.0.1:8001/analyze-voice}")
     private String aiServiceUrl;
 
+    @Value("${ai.service.tts-url:http://127.0.0.1:8001/tts/stream}")
+    private String ttsServiceUrl;
+
     @Override
     public VoiceLessonResponseDTO createLesson(String title, String content, VoiceLessonCategory category,
             String difficulty, String description, MultipartFile thumbnail, String videoUrl,
@@ -435,7 +438,7 @@ public class VoiceServiceImpl implements VoiceService {
 
         try {
             org.springframework.http.ResponseEntity<byte[]> response = restTemplate.exchange(
-                    "http://127.0.0.1:8001/tts/stream",
+                    ttsServiceUrl,
                     org.springframework.http.HttpMethod.POST,
                     requestEntity,
                     byte[].class
@@ -469,7 +472,11 @@ public class VoiceServiceImpl implements VoiceService {
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", audioFile.getResource());
-        body.add("script_origin", scriptOrigin != null ? scriptOrigin : "");
+        // The AI service (FastAPI/Pydantic) requires script_origin as a non-empty
+        // field — both omitting it and sending "" are rejected with 422 "missing".
+        // Send a neutral placeholder when the caller didn't supply one, instead of
+        // failing the whole request over an optional-by-design parameter.
+        body.add("script_origin", scriptOrigin != null && !scriptOrigin.isBlank() ? scriptOrigin : "N/A");
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
         try {

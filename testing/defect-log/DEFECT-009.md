@@ -49,4 +49,15 @@ Source: `VoiceServiceImpl.java` dòng 438 — string literal `"http://127.0.0.1:
 
 ### Status
 
-**Open — nghiêm trọng, đề xuất ưu tiên fix sớm.** Đề xuất dev (không phải QA quyết định): thêm field `@Value("${ai.service.tts-url:http://127.0.0.1:8001/tts/stream}") private String ttsServiceUrl;` (tương tự `aiServiceUrl` đã có), thay `"http://127.0.0.1:8001/tts/stream"` bằng biến này. Cần xác nhận thêm với team AI route chính xác trên HF Space là `/generate-mc-voice` hay `/tts/stream` (2 route khác nhau tồn tại trong `openapi.json` của HF Space: cả `/generate-mc-voice` và `/tts/stream` đều có — cần dev xác nhận route nào đúng cho luồng streaming này).
+**Fixed (2026-07-18).** Thêm đúng field `@Value("${ai.service.tts-url:http://127.0.0.1:8001/tts/stream}") private String ttsServiceUrl;` như đề xuất, thay `"http://127.0.0.1:8001/tts/stream"` hardcode bằng biến này trong `generateTTSAudio()`.
+
+**Verify live (port 5555, `mchub_test`, `AI_TTS_URL` trỏ HF Space thật):**
+```
+$ curl -X POST ".../voice/tts/generate?text=Xin+chao" -H "Authorization: Bearer <jwt>"
+HTTP 200 (Content-Type: audio/wav) — body: {"status":"error","message":"TTS model not loaded. Check ./models/mms-tts-vie"}
+```
+Request giờ ĐÃ ĐI ĐÚNG tới HF Space đã cấu hình (không còn kết nối nhầm sang `127.0.0.1:8001` của dự án khác — xác nhận qua log server không có exception route-not-found/connection-refused nào). Lỗi "TTS model not loaded" trong response body là hạn chế NỘI TẠI của chính AI service (đã ghi nhận từ trước: `tts_loaded:false` trên HF Space) — nằm ngoài phạm vi code backend, không phải lỗi của fix này.
+
+`VoiceServiceImplTest`/`VoiceControllerTest` — 40/40 PASS.
+
+**Chưa xác nhận với team AI:** route chính xác `/generate-mc-voice` hay `/tts/stream` cho luồng streaming — `application.properties` hiện đang trỏ `AI_TTS_URL` default là `/generate-mc-voice` trong khi code default fallback (khi biến môi trường không set) vẫn giữ `/tts/stream` (giữ nguyên giá trị hardcode cũ làm fallback, không tự ý đổi vì chưa có xác nhận route nào đúng — xem ghi chú gốc). Cả 2 route đều tồn tại trên HF Space theo `openapi.json` đã audit trước đó.

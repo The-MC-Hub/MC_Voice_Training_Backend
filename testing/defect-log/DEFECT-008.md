@@ -49,7 +49,21 @@ HTTP 422 {"detail":[{"type":"missing","loc":["body","script_origin"],"msg":"Fiel
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): 1 trong 2 hướng
-1. Khi `scriptOrigin` null/rỗng, KHÔNG add key `script_origin` vào multipart body (bỏ hẳn field thay vì gửi chuỗi rỗng) — nếu AI service coi field hoàn toàn vắng mặt là hợp lệ (cần verify riêng với AI service, hành vi FastAPI có thể khác nhau giữa "field vắng mặt" và "field rỗng").
-2. Hoặc gửi 1 placeholder non-empty mặc định (VD `" "` hoặc chuỗi rỗng đại diện đã biết AI service chấp nhận) nếu team AI xác nhận đó là cách dùng đúng.
-Trong mọi trường hợp, catch block nên phân biệt lỗi 4xx từ AI service (client-side, nên trả 400 kèm chi tiết) với lỗi kết nối/timeout thật (nên trả 500/502) — hiện tại gộp chung thành 500 "AI service unavailable" gây khó chẩn đoán.
+**Fixed (2026-07-18) — sau khi thử cả 2 hướng đã đề xuất, xác nhận thực nghiệm hướng nào đúng.**
+
+Lần fix đầu áp dụng hướng 1 (bỏ hẳn field khi rỗng) — test live cho thấy VẪN lỗi 422 y hệt ban đầu: AI service coi "field hoàn toàn vắng mặt" và "field rỗng" là CÙNG một lỗi "missing", không phân biệt như giả thuyết ban đầu. Xác nhận hướng 1 không khả thi với AI service thật.
+
+Chuyển sang hướng 2: gửi placeholder non-empty mặc định (`"N/A"`) khi `scriptOrigin` null/rỗng, thay vì bỏ field.
+
+```java
+body.add("script_origin", scriptOrigin != null && !scriptOrigin.isBlank() ? scriptOrigin : "N/A");
+```
+
+**Verify live (port 5555, `mchub_test`, AI service thật — HF Space):**
+```
+$ curl -X POST ".../voice/practice/analyze-guest" -F "audioFile=@test.wav;type=audio/wav"
+HTTP 200 {"status":"success", "data":{...phân tích đầy đủ...}}
+```
+Đúng như kỳ vọng (trước fix: 500 "AI service unavailable"). `VoiceServiceImplTest`/`VoiceControllerTest` — 40/40 PASS.
+
+Chưa xử lý phần còn lại của đề xuất gốc (phân biệt lỗi 4xx AI service với lỗi kết nối thật ở tầng catch block) — nằm ngoài phạm vi trực tiếp của lỗi đã báo, để lại làm cải tiến riêng nếu cần.
