@@ -57,9 +57,22 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Streak retrieved", dto));
     }
 
+    /**
+     * Freeze is consumed automatically in processLoginStreak() when a user logs in
+     * after skipping exactly one day (gap==2) — there is no separate action to take
+     * here. Both routes below just report the current freeze status so the client
+     * can display it; POST is kept for backward compatibility with existing callers,
+     * GET is the more semantically correct alias for a read-only status check.
+     */
     @PostMapping("/me/streak/freeze")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LoginStreakDTO>> useFreeze() {
+        return getFreezeStatus();
+    }
+
+    @GetMapping("/me/streak/freeze-status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<LoginStreakDTO>> getFreezeStatus() {
         String userId = SecurityUtils.getCurrentUserId();
         UserStats stats = gamificationService.getOrCreateUserStats(userId);
 
@@ -67,8 +80,6 @@ public class UserController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.fail("Không còn lượt freeze. Freeze được nạp lại vào đầu tháng."));
         }
-        // Freeze is consumed automatically in processLoginStreak when gap==2.
-        // This endpoint lets user manually see / confirm their freeze count.
         return getLoginStreak();
     }
 

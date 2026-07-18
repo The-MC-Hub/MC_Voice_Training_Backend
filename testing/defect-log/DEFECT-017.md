@@ -52,4 +52,10 @@ Source: `UserController.java` — `useFreeze()`; `GamificationServiceImpl.java` 
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định) xác nhận lại chủ đích thiết kế với Product Owner: nếu tính năng CHỦ ĐỘNG dùng freeze trước là mong muốn thật sự (khớp đặc tả UC-02 #2), cần bổ sung logic thực sự trong `useFreeze()` (VD: đánh dấu ngày hôm nay là "đã bảo vệ", trừ `freezesAvailable`, cập nhật cờ để lần login tiếp theo không tính là "gap" dù có bỏ lỡ). Nếu thiết kế chủ đích chỉ là cơ chế tự động bị động (đúng như code hiện tại), nên đổi tên endpoint (VD: `GET /users/me/streak/freeze-status`) và bỏ method `POST` gây hiểu lầm, đồng thời cập nhật lại mô tả đặc tả UC-02 #2 cho khớp hành vi thật.
+**Fixed (2026-07-18) — theo hướng đổi tên/làm rõ (không phải hướng thêm business logic mới).** Việc quyết định thêm tính năng CHỦ ĐỘNG dùng freeze trước (đổi hành vi nghiệp vụ, ảnh hưởng luồng tự động sẵn có trong `processLoginStreak()`) cần Product Owner xác nhận yêu cầu chính xác trước khi code — không tự ý suy đoán thêm business rule mới. Áp dụng hướng an toàn hơn: làm rõ đúng hành vi thật qua route.
+
+Thêm `GET /users/me/streak/freeze-status` — route mới, đúng ngữ nghĩa "xem trạng thái" (read-only, không có side-effect, khớp method GET chuẩn REST). Giữ nguyên `POST /users/me/streak/freeze` cho backward-compat (không đổi/xoá route cũ đột ngột, tránh phá vỡ client hiện tại đang gọi) — cả 2 route cùng dùng chung logic đọc trạng thái (`getFreezeStatus()`), không method nào ngầm tiêu freeze nữa (giữ đúng như hành vi thật hiện tại, chỉ minh bạch hoá thay vì để `POST` gây hiểu lầm là có side-effect).
+
+**Verify live (port 5555, `mchub_test`):** `POST /users/me/streak/freeze` → 200 (route cũ vẫn hoạt động). `GET /users/me/streak/freeze-status` → 200 (route mới hoạt động đúng, cùng dữ liệu). `UserControllerTest` — 5/5 PASS.
+
+**Chưa xử lý:** liệu tính năng "dùng freeze chủ động trước" có thực sự cần bổ sung logic mới hay không — vẫn cần Product Owner xác nhận trước khi bất kỳ ai (QA hay dev) thêm business logic mới vào `processLoginStreak()`.
