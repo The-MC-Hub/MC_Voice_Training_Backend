@@ -16,7 +16,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for JwtServiceImpl. No mocks needed — generates real tokens
@@ -125,21 +124,11 @@ class JwtServiceImplTest {
         }
 
         @Test
-        @DisplayName("FINDING: an expired token throws ExpiredJwtException from isTokenValid() instead of returning false")
-        void expiredTokenThrowsInsteadOfReturningFalse() {
+        @DisplayName("an expired token returns false from isTokenValid() instead of throwing")
+        void expiredTokenReturnsFalse() {
             // JJWT's parseSignedClaims() throws ExpiredJwtException the moment it parses an
-            // expired token — this happens inside extractUserId() (called first in
-            // isTokenValid()), before isTokenExpired()'s manual date comparison is ever
-            // reached. So isTokenValid() cannot return false for an expired token the way
-            // its code reads like it should — it always throws for that case instead.
-            //
-            // This is NOT exploitable in production: isTokenValid() is dead code (grep
-            // confirms nothing in src/main/java calls it). The real request-auth path,
-            // JwtAuthenticationFilter, calls extractUserId()/extractRole()/extractIssuedAt()
-            // directly inside its own try/catch(Exception), so an expired token there is
-            // still handled safely (logged, request proceeds unauthenticated). Documented
-            // here so nobody starts calling isTokenValid() on a hot path assuming it
-            // degrades gracefully for expired tokens — it does not.
+            // expired token, inside extractUserId() (called first in isTokenValid()). The
+            // method now catches JwtException and returns false, matching its name/contract.
             Map<String, Object> claims = new HashMap<>();
             claims.put("id", "user-1");
             claims.put("role", "CLIENT");
@@ -151,8 +140,9 @@ class JwtServiceImplTest {
                     .signWith(signingKey())
                     .compact();
 
-            assertThatThrownBy(() -> jwtService.isTokenValid(expiredToken, "user-1"))
-                    .isInstanceOf(io.jsonwebtoken.ExpiredJwtException.class);
+            assertThatCode(() -> jwtService.isTokenValid(expiredToken, "user-1"))
+                    .doesNotThrowAnyException();
+            assertThat(jwtService.isTokenValid(expiredToken, "user-1")).isFalse();
         }
     }
 }

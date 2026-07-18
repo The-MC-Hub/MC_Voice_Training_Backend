@@ -25,6 +25,6 @@ Hiện tại: không có, vì không dùng. Rủi ro tiềm ẩn: nếu tương 
 Unit test `JwtServiceImplTest.IsTokenValid.expiredTokenThrowsInsteadOfReturningFalse` xác nhận bằng cách generate token đã hết hạn và gọi `isTokenValid()` — ném `ExpiredJwtException` thay vì trả `false`. Test đã lưu vào `src/test/java/com/mchub/services/impl/JwtServiceImplTest.java`, chạy pass (test này PASS nghĩa là xác nhận đúng hành vi thật, không phải bug được fix).
 
 ### Status
-**Open — mức độ ưu tiên thấp.** Đề xuất dev cân nhắc 1 trong 2 hướng (không phải QA quyết định):
-1. Nếu `isTokenValid()` thực sự không dùng và không có kế hoạch dùng, xoá khỏi interface `JwtService` (dead code cleanup, đã note ở `Remaining_Modules_Audit_Report.md` mục 4 dạng chung — bổ sung method cụ thể này vào danh sách).
-2. Nếu muốn giữ lại cho tương lai, bọc `try/catch (JwtException e) { return false; }` bên trong `isTokenValid()` để hành vi khớp đúng tên method và tránh bẫy cho dev sau này.
+**Fixed (2026-07-18).** Áp dụng hướng 2 (giữ method, sửa hành vi khớp tên): bọc thân method trong `try/catch (JwtException e) { return false; }`, để `isTokenValid()` trả `false` đúng như tên gợi ý cho mọi loại token không hợp lệ (hết hạn, sai định dạng, sai chữ ký), thay vì ném exception không nhất quán.
+
+Cập nhật test hồi quy: `JwtServiceImplTest$IsTokenValid` có test tên `expiredTokenThrowsInsteadOfReturningFalse` chủ đích pin cứng hành vi cũ — đã đổi thành `expiredTokenReturnsFalse`, assert đúng `isTokenValid()` không ném exception và trả `false`. Chạy `JwtServiceImplTest` — 7/7 PASS.
