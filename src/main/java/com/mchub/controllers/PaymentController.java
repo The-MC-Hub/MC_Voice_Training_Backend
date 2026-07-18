@@ -263,7 +263,8 @@ public class PaymentController {
     private void applyPlanUpgrade(User user, SubscriptionPlan newPlan) {
         boolean currentPlanActive = user.getPlanExpiresAt() != null
                 && user.getPlanExpiresAt().isAfter(LocalDateTime.now());
-        boolean isDowngrade = currentPlanActive && user.getPlan() != null
+        boolean isDowngrade = newPlan != SubscriptionPlan.DAILY
+                && currentPlanActive && user.getPlan() != null
                 && newPlan.ordinal() < user.getPlan().ordinal();
 
         if (isDowngrade) {
