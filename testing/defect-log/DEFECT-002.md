@@ -28,7 +28,17 @@ Trong thực tế: user thanh toán BASIC, chưa kịp nhận xác nhận (webho
 Trace lại từ 2 lần gọi API (giữ log terminal): `simulate-success plan=FULL` lúc 10:49:57 trả `plan:"FULL"`; `admin/complete` transaction BASIC (tạo lúc 10:45:58, trước đó) lúc 10:50:30 trả `plan:"BASIC"`; truy vấn DB sau đó xác nhận user ở trạng thái `plan:"BASIC"`.
 
 ### Status
-**Open** — đề xuất dev xem xét thêm điều kiện bảo vệ (không ghi đè xuống plan/thời hạn thấp hơn hiện tại, hoặc so sánh thời điểm) tại cả `handlePaymentWebhook` và `adminCompleteTransaction`. QA không tự sửa.
+**Fixed (2026-07-18).** Thêm helper `applyPlanUpgrade(User user, SubscriptionPlan newPlan)` dùng chung cho cả `handlePaymentWebhook` và `adminCompleteTransaction` (2 nơi từng ghi đè plan độc lập, dễ lệch logic nếu sửa riêng lẻ). Guard: nếu user đang có plan còn hiệu lực (`planExpiresAt` chưa qua) VÀ plan mới thấp hơn plan hiện tại (so theo thứ tự khai báo enum `SubscriptionPlan`: `FREE < DAILY < BASIC < FULL < ANNUAL`), bỏ qua việc áp dụng — chỉ log cảnh báo, KHÔNG ghi đè `plan`/`planExpiresAt`. Giao dịch vẫn được đánh dấu `COMPLETED` đúng (không mất dấu vết kế toán), chỉ riêng phần cập nhật plan bị chặn có kiểm soát.
+
+**Verify live (port 5555, `mchub_test`)** — tái hiện đúng kịch bản gốc:
+1. Tạo order BASIC (transaction A, `PENDING`).
+2. `simulate-success` FULL cho cùng user → `plan:FULL`, `planExpiresAt` = +30 ngày.
+3. `admin/complete/{transactionA}` (BASIC, giao dịch cũ) → response vẫn trả thành công (giao dịch được đánh dấu hoàn tất đúng), nhưng verify DB: `db.users.findOne(...)` → **`plan` vẫn là `FULL`, `planExpiresAt` không đổi** — không bị ghi đè xuống BASIC như trước.
+4. Log server xác nhận guard hoạt động: `PLAN UPGRADE SKIPPED (would downgrade): user=... currentPlan=FULL (expires ...) — incoming plan=BASIC ignored`.
+
+`PaymentControllerTest` — 24/24 PASS, không hồi quy.
+
+**Lưu ý nhỏ chưa xử lý:** response message của `adminCompleteTransaction` khi bị guard chặn vẫn ghi "Plan activated" dù thực tế không đổi gì — hơi gây hiểu lầm cho admin đọc response, nhưng không sai về mặt dữ liệu (chỉ là UX message, có thể cải thiện thêm sau nếu cần).
 
 ### Ghi chú
 Đây không nằm trong 52 test case thiết kế ban đầu — phát sinh tự nhiên từ thứ tự Execute thật (đúng giá trị của integration/system test thật so với chỉ trace logic tĩnh). Đề xuất bổ sung test case chính thức cho race condition này vào bộ regression sau khi fix.

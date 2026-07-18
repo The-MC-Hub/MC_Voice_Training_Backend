@@ -253,6 +253,33 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("Course payment link created", data));
     }
 
+    /**
+     * Applies a completed subscription-plan transaction to the user, guarding against
+     * a late/out-of-order transaction downgrading a plan the user already upgraded to
+     * via a more recent transaction. A transaction is only applied if the target plan
+     * is the same tier or higher than the user's current plan, OR the user's current
+     * plan has already expired (in which case any completed transaction should apply).
+     */
+    private void applyPlanUpgrade(User user, SubscriptionPlan newPlan) {
+        boolean currentPlanActive = user.getPlanExpiresAt() != null
+                && user.getPlanExpiresAt().isAfter(LocalDateTime.now());
+        boolean isDowngrade = currentPlanActive && user.getPlan() != null
+                && newPlan.ordinal() < user.getPlan().ordinal();
+
+        if (isDowngrade) {
+            log.warn(">>> PLAN UPGRADE SKIPPED (would downgrade): user={} currentPlan={} (expires {}) — incoming plan={} ignored",
+                    user.getEmail(), user.getPlan(), user.getPlanExpiresAt(), newPlan);
+            return;
+        }
+
+        user.setPremium(true);
+        user.setPlan(newPlan);
+        user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(newPlan)));
+        user.setAiSessionsUsed(0);
+        userRepository.save(user);
+        log.info(">>> USER PLAN APPLIED: {} → plan={}", user.getEmail(), newPlan);
+    }
+
     /** Grant course access + auto-enroll after a completed course purchase */
     private void grantCoursePurchase(PaymentTransaction tx) {
         userRepository.findById(tx.getUserId()).ifPresent(user -> {
@@ -309,14 +336,7 @@ public class PaymentController {
                             grantCoursePurchase(tx);
                         } else {
                             // subscription plan upgrade
-                            userRepository.findById(tx.getUserId()).ifPresent(user -> {
-                                user.setPremium(true);
-                                user.setPlan(tx.getPlan());
-                                user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
-                                user.setAiSessionsUsed(0);
-                                userRepository.save(user);
-                                log.info(">>> USER UPGRADED: {} → plan={}", user.getEmail(), tx.getPlan());
-                            });
+                            userRepository.findById(tx.getUserId()).ifPresent(user -> applyPlanUpgrade(user, tx.getPlan()));
                         }
                     }
                 });
@@ -443,11 +463,7 @@ public class PaymentController {
             return ResponseEntity.ok(ApiResponse.success("Transaction completed manually. Course unlocked.", data));
         }
 
-        user.setPremium(true);
-        user.setPlan(tx.getPlan());
-        user.setPlanExpiresAt(LocalDateTime.now().plusDays(PlanConfig.daysFor(tx.getPlan())));
-        user.setAiSessionsUsed(0);
-        userRepository.save(user);
+        applyPlanUpgrade(user, tx.getPlan());
 
         log.info(">>> ADMIN MANUAL COMPLETE: txId={} user={} plan={}", transactionId, user.getEmail(), tx.getPlan());
 
