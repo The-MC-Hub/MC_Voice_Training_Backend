@@ -35,4 +35,8 @@ Course fixture: `priceVnd=0`, `discountPercent=0` → `effectiveAmount = 0`, xá
 
 ### Status
 
-**Open.** Đề xuất dev (không phải QA quyết định): thêm nhánh `if (effectiveAmount <= 0)` trong `createCourseOrder()` tương tự `createPremiumOrder()` — tạo `PaymentTransaction` với `status=COMPLETED`, gọi `grantCoursePurchase()` ngay, bỏ qua PayOS. Đồng thời cân nhắc thêm test case cho trường hợp `discountPercent=100` (không chỉ `priceVnd=0`) vì cả hai đều dẫn tới `effectiveAmount=0`.
+**Fixed (2026-07-18).** Thêm nhánh `if (effectiveAmount <= 0)` trong `createCourseOrder()`, giống pattern `createPremiumOrder()` — tạo `PaymentTransaction` với `status=COMPLETED`, gọi `grantCoursePurchase(tx)` ngay (helper đã có sẵn, tái sử dụng), bỏ qua hoàn toàn PayOS.
+
+**Verify live (port 5555, `mchub_test`):** tạo course mới, set `priceVnd=0` qua `PATCH /admin/courses/{id}/pricing` → `POST /payment/course-order?courseId=...` → HTTP 200 "Course granted automatically with 100% discount" (trước fix: 500 "Payment service unavailable"). Xác nhận `GET /courses/my/enrolled` sau đó trả đúng 1 course — enrollment thật sự được tạo, không chỉ response giả. `PaymentControllerTest` — 24/24 PASS.
+
+Trường hợp `discountPercent=100` dùng chung code path với `priceVnd=0` (cả hai đều rút gọn về `effectiveAmount<=0` qua cùng công thức `Math.round(priceVnd*(100-pct)/100.0)`), nên đã được fix đồng thời — không cần nhánh riêng.

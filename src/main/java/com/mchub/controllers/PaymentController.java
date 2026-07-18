@@ -201,6 +201,28 @@ public class PaymentController {
 
         long orderCode = System.currentTimeMillis() % 1_000_000_000L * 100 + ThreadLocalRandom.current().nextInt(100);
 
+        if (effectiveAmount <= 0) {
+            PaymentTransaction freeTx = PaymentTransaction.builder()
+                    .userId(userId)
+                    .courseId(courseId)
+                    .amount(0)
+                    .status(TransactionStatus.COMPLETED)
+                    .orderCode(orderCode)
+                    .memo("MCHUB COURSE " + course.getSlug() + " " + userId + " (100% OFF)")
+                    .completedAt(LocalDateTime.now())
+                    .build();
+            transactionRepository.save(freeTx);
+            grantCoursePurchase(freeTx);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", userId);
+            data.put("courseId", courseId);
+            data.put("amount", 0);
+            data.put("orderCode", orderCode);
+
+            return ResponseEntity.ok(ApiResponse.success("Course granted automatically with 100% discount", data));
+        }
+
         Map<String, Object> checkout;
         try {
             checkout = payOSService.createCoursePaymentLink(userId, course.getTitle(), orderCode, effectiveAmount);
