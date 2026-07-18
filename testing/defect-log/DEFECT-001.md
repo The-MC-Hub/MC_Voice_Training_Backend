@@ -58,7 +58,13 @@ Content-Length: 0
 **Điều chỉnh Severity:** hạ từ Blocker → **Critical** (không phải Blocker vì không chặn hoàn toàn mọi actor, chỉ chặn đúng nhóm Guest — nhưng vẫn nghiêm trọng vì đây chính xác là nhóm actor mà 3 endpoint này được thiết kế để phục vụ ưu tiên: xem giá TRƯỚC KHI đăng nhập).
 
 ### Status
-**Open** — chờ dev xác nhận và bổ sung whitelist cho `SecurityConfig.java` (thêm rule `.requestMatchers(HttpMethod.GET, "/api/v1/payment/plans").permitAll()`, tương tự cho `flash-deals` và `apply-discount` — QA không tự sửa theo đúng phạm vi thẩm quyền).
+**Fixed (2026-07-18).** Thêm 3 rule vào `SecurityConfig.java`:
+```java
+.requestMatchers(HttpMethod.GET, "/api/v1/payment/plans").permitAll()
+.requestMatchers(HttpMethod.GET, "/api/v1/payment/flash-deals").permitAll()
+.requestMatchers(HttpMethod.POST, "/api/v1/payment/apply-discount").permitAll()
+```
+**Verify live (port 5555, `mchub_test`, không JWT):** `plans` → 200, `flash-deals` → 200, `apply-discount` (mã giả) → 404 "Mã giảm giá không tồn tại" (lỗi nghiệp vụ hợp lệ, không còn bị chặn 403 ở tầng bảo mật). `PaymentControllerTest` 22/22 PASS, không hồi quy.
 
 ### Ghi chú cho Retest
 Sau khi dev fix, retest lại đúng 3 case TC-PAY-01/05/08 **ở cả 2 điều kiện: có JWT và không có JWT** + quét toàn bộ endpoint còn lại trong `PaymentController` không có `@PreAuthorize` để xác nhận không còn endpoint public nào khác bị lọt vào tình trạng tương tự.

@@ -34,8 +34,10 @@ $ curl -v "http://localhost:5555/api/v1/courses/reading-guides/6a5a4c65fe9893c6e
 
 ### Status
 
-**Open.** Đề xuất dev: thêm dòng whitelist trong `SecurityConfig.java`, gộp chung đợt fix với DEFECT-001/DEFECT-010:
+**Fixed (2026-07-18).** Thêm rule vào `SecurityConfig.java` (cùng commit với DEFECT-001/010/022):
 ```java
 .requestMatchers(HttpMethod.GET, "/api/v1/courses/reading-guides/**").permitAll()
 ```
-Khuyến nghị thêm: rà soát toàn bộ method có comment `// Public` trong các Controller còn lại, đối chiếu 1-1 với `SecurityConfig.java` để đảm bảo không còn route Public nào bị thiếu whitelist (đã phát hiện 3 trường hợp riêng lẻ qua 3 module khác nhau: Payment, Voice, Courses — khả năng cao còn sót ở module khác chưa test tới).
+**Verify live (không JWT):** `GET /courses/reading-guides/{fake-id}` → 404 "Reading Guide not found" (lỗi nghiệp vụ hợp lệ, không còn 403). `CourseControllerTest` 9/9 PASS, không hồi quy.
+
+Đã rà soát thêm 1 route cùng pattern trong phiên fix này (`/social-posts/*/click`, DEFECT-022) — tổng cộng 4 route Public bị thiếu whitelist đã tìm và fix trong 1 lần sửa `SecurityConfig.java`.

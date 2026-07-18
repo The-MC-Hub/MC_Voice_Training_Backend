@@ -31,7 +31,10 @@ Content-Length: 0
 
 ### Status
 
-**Open.** Đề xuất dev: thêm dòng whitelist trong `SecurityConfig.java`, gộp chung đợt fix với DEFECT-001/010/013 (đã tích luỹ 4 trường hợp cùng nguyên nhân qua 4 module khác nhau — Payment, Voice, Courses, Community — đề xuất dev rà soát TOÀN BỘ Controller có comment/chủ đích "Public" 1 lần duy nhất thay vì fix từng cái riêng lẻ mỗi khi QA phát hiện):
+**Fixed (2026-07-18).** Thêm rule vào `SecurityConfig.java` (cùng commit với DEFECT-001/010/013):
 ```java
 .requestMatchers(HttpMethod.POST, "/api/v1/social-posts/*/click").permitAll()
 ```
+**Verify live (không JWT, dùng post ID thật):** `POST /social-posts/{id}/click` → 200 "Click recorded" (trước fix: 403). `SocialPostControllerTest` 2/2 PASS, không hồi quy.
+
+Lưu ý phụ phát hiện khi verify: gọi với ID KHÔNG tồn tại trả 500 thay vì 404 (`SocialPostServiceImpl` cũng dùng `RuntimeException` trần, cùng pattern với DEFECT-024 nhưng ở service khác) — đây là defect MỚI chưa nằm trong 24 defect gốc, không thuộc phạm vi fix của DEFECT-022 (vốn chỉ về whitelist/403). Ghi nhận riêng, không tự ý mở rộng fix ngoài phạm vi đã yêu cầu.

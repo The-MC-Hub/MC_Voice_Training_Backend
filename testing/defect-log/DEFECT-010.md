@@ -33,7 +33,8 @@ HTTP 403 (Content-Length: 0)
 
 ### Status
 
-**Open.** Đề xuất dev: thêm dòng whitelist trong `SecurityConfig.java` cùng đợt fix DEFECT-001:
+**Fixed (2026-07-18).** Thêm rule vào `SecurityConfig.java` (cùng commit với DEFECT-001/013/022):
 ```java
 .requestMatchers(HttpMethod.GET, "/api/v1/voice/guest-cooldown-hours").permitAll()
 ```
+**Verify live (không JWT):** `GET /voice/guest-cooldown-hours` → 200 `{"hours":3}`. `VoiceControllerTest` 17/17 PASS, không hồi quy.
