@@ -6,7 +6,7 @@ Bản hướng dẫn này hợp nhất các quy tắc từ GitNexus, Caveman Mod
 
 ## PHẦN 1: 🧠 Code Intelligence (GitNexus)
 
-Dự án được index bởi GitNexus dưới tên **The-MC-Hub-Java-Backend**. Sử dụng các công cụ MCP để hiểu mã nguồn và đánh giá tác động an toàn.
+Dự án được index bởi GitNexus dưới tên **MC_Voice_Training_Backend**. Sử dụng các công cụ MCP để hiểu mã nguồn và đánh giá tác động an toàn.
 
 ### 1. Quy trình bắt buộc (Always Do)
 - **Impact Analysis**: LUÔN LUÔN chạy `gitnexus_impact` trước khi sửa bất kỳ symbol nào. Báo cáo Blast Radius (risk level) cho người dùng.
