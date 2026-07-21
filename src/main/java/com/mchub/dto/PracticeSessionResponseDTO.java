@@ -33,6 +33,8 @@ public class PracticeSessionResponseDTO {
     private double rhythmScore;
     @JsonProperty("speaking_rate_wpm")
     private double speakingRateWpm;
+    @JsonProperty("duration_seconds")
+    private double durationSeconds;
     @JsonProperty("feedback_vi")
     private String feedbackVi;
     @JsonProperty("feedback_en")

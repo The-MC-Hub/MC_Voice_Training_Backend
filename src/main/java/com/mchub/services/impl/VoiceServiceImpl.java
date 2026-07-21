@@ -302,6 +302,12 @@ public class VoiceServiceImpl implements VoiceService {
             double werRate = response.get("wer_rate") != null ? ((Number) response.get("wer_rate")).doubleValue() : 0.0;
 
             @SuppressWarnings("unchecked")
+            Map<String, Object> analysisMeta = (Map<String, Object>) response.get("analysis_meta");
+            double durationSeconds = analysisMeta != null && analysisMeta.get("duration_total_sec") != null
+                    ? ((Number) analysisMeta.get("duration_total_sec")).doubleValue()
+                    : 0.0;
+
+            @SuppressWarnings("unchecked")
             Map<String, Object> spectralFeatures = (Map<String, Object>) response.get("spectral_features");
             @SuppressWarnings("unchecked")
             Map<String, Object> pitchContour = (Map<String, Object>) response.get("pitch_contour");
@@ -334,6 +340,7 @@ public class VoiceServiceImpl implements VoiceService {
                     .overallScore(overallScore)
                     .cerRate(cerRate)
                     .werRate(werRate)
+                    .durationSeconds(durationSeconds)
                     .spectralFeatures(spectralFeatures)
                     .pitchContour(pitchContour)
                     .fillerWords(fillerWords)
@@ -348,7 +355,7 @@ public class VoiceServiceImpl implements VoiceService {
 
             try {
                 gamificationService.processPracticeSession(userId, lessonId, session.getAccuracyScore(),
-                        session.getRhythmScore(), session.getOverallScore());
+                        session.getRhythmScore(), session.getOverallScore(), session.getDurationSeconds());
             } catch (Exception e) {
                 log.error("Failed to process gamification stats for user: {}", userId, e);
             }

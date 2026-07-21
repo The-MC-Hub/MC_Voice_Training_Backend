@@ -101,7 +101,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 60.0, 75.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 60.0, 75.0, 0.0);
 
             assertThat(stats.getCumulativeXP()).isEqualTo(70.0); // (80+60)*0.5
             assertThat(stats.getWeeklyXP()).isEqualTo(70.0);
@@ -114,7 +114,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 80.0, 75.0); // +80 XP -> 530
+            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 80.0, 75.0, 0.0); // +80 XP -> 530
 
             assertThat(stats.getCurrentTier()).isEqualTo("SILVER");
         }
@@ -126,7 +126,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 0.0, 0.0, 0.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 0.0, 0.0, 0.0, 0.0);
 
             assertThat(stats.getCurrentTier()).isEqualTo("ELITE_LEGEND");
         }
@@ -143,7 +143,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0);
 
             assertThat(stats.getCurrentStreak()).isEqualTo(1);
         }
@@ -155,7 +155,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0);
 
             assertThat(stats.getCurrentStreak()).isEqualTo(3);
         }
@@ -168,7 +168,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0);
 
             assertThat(stats.getCurrentStreak()).isEqualTo(4);
         }
@@ -181,7 +181,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0);
 
             assertThat(stats.getCurrentStreak()).isEqualTo(1);
         }
@@ -194,7 +194,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0); // resets currentStreak to 1
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0); // resets currentStreak to 1
 
             assertThat(stats.getCurrentStreak()).isEqualTo(1);
             assertThat(stats.getLongestStreak()).isEqualTo(10); // preserved
@@ -212,7 +212,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 92.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 92.0, 0.0);
 
             assertThat(stats.getHighScoreStreak()).isEqualTo(3);
         }
@@ -224,7 +224,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 89.9);
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 89.9, 0.0);
 
             assertThat(stats.getHighScoreStreak()).isZero();
         }
@@ -241,10 +241,10 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0); // totalSessions -> 10
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0); // totalSessions -> 10
             assertThat(stats.getEarnedBadges()).containsExactlyInAnyOrder("SESSIONS_10");
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0); // totalSessions -> 11
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0); // totalSessions -> 11
             assertThat(stats.getEarnedBadges()).containsExactlyInAnyOrder("SESSIONS_10"); // not duplicated
         }
 
@@ -255,7 +255,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0); // streak becomes 1
+            service.processPracticeSession(USER_ID, "lesson-1", 50.0, 50.0, 50.0, 0.0); // streak becomes 1
 
             assertThat(stats.getEarnedBadges()).doesNotContain("STREAK_7");
         }
@@ -401,7 +401,7 @@ class GamificationServiceImplTest {
             when(competitionRecordRepository.findByCompetitionIdAndUserId("comp-1", USER_ID)).thenReturn(Optional.empty());
             when(competitionRecordRepository.save(any(CompetitionRecord.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0, 0.0);
 
             verify(competitionRecordRepository).save(any(CompetitionRecord.class));
         }
@@ -416,7 +416,7 @@ class GamificationServiceImplTest {
             Competition comp = Competition.builder().id("comp-1").active(true).challengeScriptId("other-lesson").build();
             when(competitionRepository.findByActive(true)).thenReturn(List.of(comp));
 
-            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0);
+            service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0, 0.0);
 
             verify(competitionRecordRepository, never()).save(any(CompetitionRecord.class));
         }
@@ -429,7 +429,7 @@ class GamificationServiceImplTest {
             when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
             when(competitionRepository.findByActive(true)).thenThrow(new RuntimeException("DB down"));
 
-            UserStats result = service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0);
+            UserStats result = service.processPracticeSession(USER_ID, "lesson-1", 80.0, 70.0, 75.0, 0.0);
 
             assertThat(result.getCumulativeXP()).isEqualTo(75.0);
             verify(userStatsRepository).save(stats);

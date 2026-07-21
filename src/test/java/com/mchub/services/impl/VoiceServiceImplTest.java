@@ -380,7 +380,7 @@ class VoiceServiceImplTest {
 
             voiceService.analyzePractice(LESSON_ID, USER_ID, audio);
 
-            verify(gamificationService).processPracticeSession(eq(USER_ID), eq(LESSON_ID), eq(85.0), eq(75.0), eq(80.0));
+            verify(gamificationService).processPracticeSession(eq(USER_ID), eq(LESSON_ID), eq(85.0), eq(75.0), eq(80.0), eq(0.0));
         }
 
         @Test
@@ -452,7 +452,7 @@ class VoiceServiceImplTest {
             when(lessonRepository.save(any(VoiceLesson.class))).thenReturn(lesson);
             when(sessionMapper.toResponseDTO(any(PracticeSession.class))).thenReturn(new PracticeSessionResponseDTO());
 
-            when(gamificationService.processPracticeSession(anyString(), anyString(), anyDouble(), anyDouble(), anyDouble()))
+            when(gamificationService.processPracticeSession(anyString(), anyString(), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                     .thenThrow(new RuntimeException("Gamification service down"));
 
             // Should not propagate — just log

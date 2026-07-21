@@ -30,7 +30,7 @@ public class GamificationServiceImpl implements GamificationService {
     private final CompetitionRepository competitionRepository;
     private final CompetitionRecordRepository competitionRecordRepository;
 
-    private static final double PRACTICE_SESSION_ESTIMATED_HOURS = 0.05; // 3 minutes per session
+    private static final double PRACTICE_SESSION_ESTIMATED_HOURS = 0.05; // 3 minutes per session — fallback only when AI didn't report a duration
 
     @Override
     public UserStats getOrCreateUserStats(String userId) {
@@ -51,7 +51,7 @@ public class GamificationServiceImpl implements GamificationService {
     }
 
     @Override
-    public UserStats processPracticeSession(String userId, String lessonId, double accuracy, double rhythm, double overallScore) {
+    public UserStats processPracticeSession(String userId, String lessonId, double accuracy, double rhythm, double overallScore, double durationSeconds) {
         log.info("Processing gamification for user: {} with accuracy: {} and rhythm: {}", userId, accuracy, rhythm);
 
         UserStats stats = getOrCreateUserStats(userId);
@@ -79,9 +79,11 @@ public class GamificationServiceImpl implements GamificationService {
         stats.setLongestStreak(Math.max(stats.getLongestStreak(), stats.getCurrentStreak()));
         stats.setLastPracticeTime(now);
         
-        // 3. Increment practice hours & sessions
+        // 3. Increment practice hours & sessions — use AI-reported audio duration when available,
+        // fall back to the flat estimate only if the AI service didn't report one (e.g. old sessions, proxy path).
+        double hoursToAdd = durationSeconds > 0 ? durationSeconds / 3600.0 : PRACTICE_SESSION_ESTIMATED_HOURS;
         stats.setTotalSessions(stats.getTotalSessions() + 1);
-        stats.setTotalPracticeHours(stats.getTotalPracticeHours() + PRACTICE_SESSION_ESTIMATED_HOURS);
+        stats.setTotalPracticeHours(stats.getTotalPracticeHours() + hoursToAdd);
         
         // 4. Update XP
         stats.setCumulativeXP(stats.getCumulativeXP() + xpEarned);

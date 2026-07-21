@@ -47,6 +47,9 @@ public class PracticeSession {
     private double accuracyScore;
     private double rhythmScore;
     private double speakingRateWpm;
+
+    /** Total audio duration in seconds, from AI service's analysis_meta.duration_total_sec */
+    private double durationSeconds;
     private String feedbackVi;
     private String feedbackEn;
     private String reportVi;
