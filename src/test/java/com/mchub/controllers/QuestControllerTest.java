@@ -74,7 +74,7 @@ class QuestControllerTest {
             mockMvc.perform(get("/api/v1/quests/progress"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.doneCount").value(2))
-                    .andExpect(jsonPath("$.data.totalQuests").value(4))
+                    .andExpect(jsonPath("$.data.totalQuests").value(5))
                     .andExpect(jsonPath("$.data.allDone").value(false));
         }
     }
@@ -105,9 +105,9 @@ class QuestControllerTest {
         }
 
         @Test
-        @DisplayName("allDone=true once all 4 quests are completed")
+        @DisplayName("allDone=true once all 5 quests are completed")
         void reportsAllDoneWhenComplete() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses"))).build();
+            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "reading"))).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -144,7 +144,7 @@ class QuestControllerTest {
         @Test
         @DisplayName("generates and saves a new voucher when all quests done and not yet claimed")
         void generatesVoucherWhenEligible() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard"))).build();
+            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard", "reading"))).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(discountCodeRepository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
             when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(false);
@@ -161,7 +161,7 @@ class QuestControllerTest {
         @Test
         @DisplayName("does not duplicate DiscountCode when it already exists (retry-safe)")
         void doesNotDuplicateExistingCode() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard"))).build();
+            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard", "reading"))).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(discountCodeRepository.findByCodeIgnoreCase(any()))
                     .thenReturn(Optional.of(DiscountCode.builder().id("existing").build()));
