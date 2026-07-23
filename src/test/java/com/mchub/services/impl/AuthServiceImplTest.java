@@ -12,6 +12,7 @@ import com.mchub.repositories.ReferralRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
+import com.mchub.services.GoogleTokenVerifierService;
 import com.mchub.services.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +53,7 @@ class AuthServiceImplTest {
     @Mock private EmailService emailService;
     @Mock private OtpVerificationRepository otpRepo;
     @Mock private ReferralRepository referralRepository;
+    @Mock private GoogleTokenVerifierService googleTokenVerifierService;
 
     private AuthServiceImpl authService;
 
@@ -62,7 +64,7 @@ class AuthServiceImplTest {
     void setUp() {
         authService = new AuthServiceImpl(
                 userRepository, passwordEncoder, jwtService, mcProfileRepository,
-                emailService, otpRepo, referralRepository);
+                emailService, otpRepo, referralRepository, googleTokenVerifierService);
         ReflectionTestUtils.setField(authService, "adminOtpEmail1", "");
         ReflectionTestUtils.setField(authService, "adminOtpEmail2", "");
         ReflectionTestUtils.setField(authService, "adminOtpEmail3", "");
@@ -178,18 +180,18 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("plain-text legacy password matches and triggers async bcrypt upgrade")
-        void plainTextPasswordMatchesAndUpgrades() {
+        @DisplayName("plain-text legacy password is rejected — no plaintext fallback")
+        void plainTextPasswordIsRejected() {
             User user = verifiedActiveUser().password("plaintext123").build();
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-            when(jwtService.generateToken(USER_ID, "CLIENT")).thenReturn("jwt-token");
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
-            AuthService.LoginResponse response = authService.login(EMAIL, "plaintext123");
+            assertThatThrownBy(() -> authService.login(EMAIL, "plaintext123"))
+                    .isInstanceOf(AppException.class)
+                    .extracting(ex -> ((AppException) ex).getErrorCode())
+                    .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
 
-            assertThat(response.token()).isEqualTo("jwt-token");
-            // updatePasswordAsync is @Async but since we invoke the real object directly
-            // (not a Spring proxy) it runs synchronously in this unit test
-            verify(userRepository).findById(USER_ID);
+            verify(jwtService, never()).generateToken(anyString(), anyString());
         }
 
         @Test

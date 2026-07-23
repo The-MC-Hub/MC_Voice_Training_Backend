@@ -14,6 +14,7 @@ import com.mchub.repositories.ReferralRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
+import com.mchub.services.GoogleTokenVerifierService;
 import com.mchub.services.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final OtpVerificationRepository otpRepo;
     private final ReferralRepository referralRepository;
+    private final GoogleTokenVerifierService googleTokenVerifierService;
 
     @Value("${mchub.admin.otp.email.1:}") private String adminOtpEmail1;
     @Value("${mchub.admin.otp.email.2:}") private String adminOtpEmail2;
@@ -166,15 +168,7 @@ public class AuthServiceImpl implements AuthService {
                     "Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Thử lại sau " + LOCKOUT_MINUTES + " phút.");
         }
 
-        boolean isMatch;
-        if (user.getPassword().startsWith("$2a$") || user.getPassword().startsWith("$2b$")) {
-            isMatch = passwordEncoder.matches(password, user.getPassword());
-        } else {
-            isMatch = password.equals(user.getPassword());
-            if (isMatch && user.getId() != null) {
-                updatePasswordAsync(Objects.requireNonNull(user.getId()), password);
-            }
-        }
+        boolean isMatch = passwordEncoder.matches(password, user.getPassword());
 
         if (!isMatch) {
             int attempts = user.getFailedLoginAttempts() + 1;
@@ -245,6 +239,115 @@ public class AuthServiceImpl implements AuthService {
     }
 
 
+
+    @Override
+    public GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken) {
+        var identity = googleTokenVerifierService.verify(googleIdToken);
+
+        User existing = userRepository.findByGoogleId(identity.googleId())
+                .or(() -> userRepository.findByEmail(identity.email()))
+                .orElse(null);
+
+        if (existing != null) {
+            if (!existing.isActive()) {
+                throw new AppException(ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
+            }
+            // Auto-link: account exists (password-based or already Google-linked) — trust it,
+            // since Google already verified this email.
+            boolean changed = false;
+            if (existing.getGoogleId() == null) {
+                existing.setGoogleId(identity.googleId());
+                changed = true;
+            }
+            if (!existing.isVerified()) {
+                existing.setVerified(true);
+                changed = true;
+            }
+            if (changed) userRepository.save(existing);
+
+            if (existing.getRole() == UserRole.ADMIN) {
+                // Keep admin 2FA guarantee intact — Google login does not bypass it.
+                String otpDestination = buildAdminOtpEmails().get(existing.getEmail().toLowerCase());
+                if (otpDestination == null || otpDestination.isBlank()) otpDestination = existing.getEmail();
+                sendAdminLoginOtp(existing.getEmail(), otpDestination);
+                throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + existing.getEmail());
+            }
+
+            String token = jwtService.generateToken(existing.getId(), existing.getRole().name());
+            return new GoogleAuthResult.LoggedIn(new LoginResponse(existing, token));
+        }
+
+        String pendingToken = jwtService.generatePendingGoogleToken(identity.googleId(), identity.email(), identity.name());
+        return new GoogleAuthResult.PendingRegistration(pendingToken, identity.email(), identity.name());
+    }
+
+    @Override
+    public LoginResponse completeGoogleRegistration(@NonNull String pendingToken, @NonNull String role, String referralCode) {
+        var pending = jwtService.extractPendingGoogleIdentity(pendingToken);
+
+        // Re-check in case the account was created by another request in the meantime
+        // (e.g. user double-clicked "continue", or registered via password in another tab).
+        if (userRepository.findByGoogleId(pending.googleId()).isPresent()
+                || userRepository.findByEmail(pending.email()).isPresent()) {
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email này đã được sử dụng. Vui lòng đăng nhập.");
+        }
+
+        UserRole parsedRole = UserRole.CLIENT;
+        try {
+            UserRole candidate = UserRole.valueOf(role.toUpperCase());
+            if (candidate == UserRole.MC) parsedRole = UserRole.MC;
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        // Random unguessable password — Google-linked accounts never log in via password unless
+        // the user later sets one explicitly through account settings.
+        byte[] randomBytes = new byte[32];
+        RNG.nextBytes(randomBytes);
+        String unusablePassword = passwordEncoder.encode(java.util.Base64.getEncoder().encodeToString(randomBytes));
+
+        User user = User.builder()
+                .name(pending.name() != null && !pending.name().isBlank() ? pending.name() : "MC Hub User")
+                .email(pending.email())
+                .password(unusablePassword)
+                .googleId(pending.googleId())
+                .role(parsedRole)
+                .isVerified(true) // Google already verified this email
+                .isActive(true)
+                .build();
+
+        User savedUser = userRepository.save(Objects.requireNonNull(user));
+
+        String generatedCode = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            String candidate = generateReferralCode();
+            if (userRepository.findByReferralCode(candidate).isEmpty()) {
+                generatedCode = candidate;
+                break;
+            }
+        }
+        if (generatedCode != null) savedUser.setReferralCode(generatedCode);
+
+        if (referralCode != null && !referralCode.isBlank()) {
+            userRepository.findByReferralCode(referralCode.toUpperCase().trim()).ifPresent(referrer -> {
+                referralRepository.save(Referral.builder()
+                        .referrerId(referrer.getId())
+                        .referredUserId(savedUser.getId())
+                        .build());
+                referrer.setReferralCount(referrer.getReferralCount() + 1);
+                userRepository.save(referrer);
+                savedUser.setReferralCount(savedUser.getReferralCount() + 1);
+            });
+        }
+
+        userRepository.save(savedUser);
+
+        if (parsedRole == UserRole.MC) {
+            initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
+        }
+
+        String token = jwtService.generateToken(savedUser.getId(), savedUser.getRole().name());
+        return new LoginResponse(savedUser, token);
+    }
 
     @Override
     @Async

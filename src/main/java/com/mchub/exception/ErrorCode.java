@@ -14,6 +14,8 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "ERR_1005", "This email is already registered"),
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "ERR_1006", "Your account is disabled"),
     USER_LOCKED(HttpStatus.FORBIDDEN, "ERR_1007", "Your account is locked"),
+    GOOGLE_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "ERR_1008", "Invalid Google sign-in token"),
+    GOOGLE_REGISTRATION_PENDING(HttpStatus.ACCEPTED, "ERR_1009", "GOOGLE_REGISTRATION_PENDING"),
 
     // Profile (2xxx)
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_2001", "User not found"),

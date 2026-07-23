@@ -30,6 +30,24 @@ public interface AuthService {
 
     LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code);
 
+    /**
+     * Handles a verified Google ID token: if the email already has an account (password-based
+     * or previously Google-linked), links/logs in immediately. If not, returns a pending
+     * registration result carrying a short-lived token the client must send back to
+     * completeGoogleRegistration along with the chosen role.
+     */
+    GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken);
+
+    LoginResponse completeGoogleRegistration(@NonNull String pendingToken, @NonNull String role, String referralCode);
+
+    sealed interface GoogleAuthResult permits GoogleAuthResult.LoggedIn, GoogleAuthResult.PendingRegistration {
+        record LoggedIn(LoginResponse response) implements GoogleAuthResult {
+        }
+
+        record PendingRegistration(String pendingToken, String email, String name) implements GoogleAuthResult {
+        }
+    }
+
     @PreAuthorize("isAuthenticated()")
     User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
 

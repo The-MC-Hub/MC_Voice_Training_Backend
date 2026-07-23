@@ -118,6 +118,49 @@ public class AuthController {
 
 
 
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> loginWithGoogle(
+            @RequestBody @Valid GoogleLoginRequest req,
+            HttpServletRequest request) {
+        try {
+            var result = authService.loginWithGoogle(req.getIdToken());
+            if (result instanceof AuthService.GoogleAuthResult.LoggedIn loggedIn) {
+                var resp = loggedIn.response();
+                auditLogService.log(resp.user().getId(), AuditAction.AUTH_LOGIN, "User", resp.user().getId(),
+                        "{\"method\":\"google\"}", request);
+                try { gamificationService.processLoginStreak(resp.user().getId()); } catch (Exception ignored) {}
+                return ResponseEntity.ok(ApiResponse.success("Login successful",
+                        Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
+            }
+            var pending = (AuthService.GoogleAuthResult.PendingRegistration) result;
+            return ResponseEntity.status(202).body(ApiResponse.success("Choose a role to finish signing up",
+                    Map.of("requiresRoleSelection", true,
+                            "pendingToken", pending.pendingToken(),
+                            "email", pending.email(),
+                            "name", pending.name() != null ? pending.name() : "")));
+        } catch (AppException ex) {
+            if (ex.getErrorCode() == ErrorCode.ADMIN_OTP_REQUIRED) {
+                String adminEmail = ex.getMessage().replace("ADMIN_OTP_REQUIRED:", "");
+                return ResponseEntity.status(202).body(ApiResponse.success("ADMIN_OTP_REQUIRED",
+                        Map.of("requiresAdminOtp", true, "email", adminEmail)));
+            }
+            auditLogService.logError(null, AuditAction.AUTH_LOGIN_FAILED, "User", SecurityUtils.safeMessage(ex), request);
+            throw ex;
+        }
+    }
+
+    @PostMapping("/google/complete-registration")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> completeGoogleRegistration(
+            @RequestBody @Valid CompleteGoogleRegistrationRequest req,
+            HttpServletRequest request) {
+        AuthService.LoginResponse resp = authService.completeGoogleRegistration(
+                req.getPendingToken(), req.getRole(), req.getReferralCode());
+        auditLogService.log(resp.user().getId(), AuditAction.AUTH_REGISTER, "User", resp.user().getId(),
+                "{\"method\":\"google\"}", request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Registration successful",
+                Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
+    }
+
     @PostMapping("/verify-admin-login-otp")
     public ResponseEntity<ApiResponse<Map<String, Object>>> verifyAdminLoginOtp(
             @RequestBody Map<String, String> body,

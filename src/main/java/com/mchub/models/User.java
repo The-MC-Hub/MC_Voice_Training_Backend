@@ -37,6 +37,11 @@ public class User {
     @JsonIgnore
     private String password;
 
+    // Google account id ("sub" claim) — set when this account was created via or linked to
+    // Google Sign-In. Null for password-only accounts.
+    @Indexed(unique = true, sparse = true)
+    private String googleId;
+
     @Builder.Default
     private UserRole role = UserRole.CLIENT;
 

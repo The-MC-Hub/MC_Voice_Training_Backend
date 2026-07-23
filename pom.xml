@@ -132,6 +132,13 @@
 			<version>8.10.1</version>
 		</dependency>
 
+		<!-- Google Sign-In ID token verification (needs guava at runtime — do not exclude) -->
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>2.7.0</version>
+		</dependency>
+
 		<!-- =================== TEST DEPENDENCIES =================== -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

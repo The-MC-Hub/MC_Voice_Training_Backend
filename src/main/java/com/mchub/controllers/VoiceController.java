@@ -14,6 +14,7 @@ import com.mchub.repositories.GuestVoiceUsageRepository;
 import com.mchub.repositories.SystemSettingRepository;
 import com.mchub.services.VoiceService;
 import com.mchub.util.AudioMagicBytesValidator;
+import com.mchub.util.ClientIpResolver;
 import com.mchub.util.SecurityUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -209,7 +210,7 @@ public class VoiceController {
             @RequestParam(required = false) String scriptOrigin,
             HttpServletRequest request) {
 
-        String ip = request.getRemoteAddr();
+        String ip = ClientIpResolver.resolve(request);
         GuestVoiceUsage usage = guestUsageRepo.findById(ip).orElse(null);
         
         int cooldownHours = 3;

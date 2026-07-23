@@ -19,4 +19,17 @@ public interface JwtService {
     String generateToken(String userId);
 
     boolean isTokenValid(String token, String userId);
+
+    /**
+     * Short-lived (10 min) token carrying an unverified-account Google identity, used only
+     * between POST /auth/google (new email) and POST /auth/google/complete-registration.
+     * Distinct from a normal auth token: JwtAuthenticationFilter rejects it outright because
+     * it carries no "id" claim, only "pendingGoogleId"/"pendingGoogleEmail".
+     */
+    String generatePendingGoogleToken(String googleId, String email, String name);
+
+    PendingGoogleIdentity extractPendingGoogleIdentity(String pendingToken);
+
+    record PendingGoogleIdentity(String googleId, String email, String name) {
+    }
 }

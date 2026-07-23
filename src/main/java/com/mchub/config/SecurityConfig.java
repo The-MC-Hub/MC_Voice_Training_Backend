@@ -35,6 +35,12 @@ public class SecurityConfig {
     @Value("${mchub.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsRaw;
 
+    // Comma-separated Vercel *preview* domain patterns for this project only, e.g.
+    // "https://mc-voice-training-*.vercel.app". Left empty by default — do NOT set this to
+    // "https://*.vercel.app", which would trust every Vercel project on the platform.
+    @Value("${mchub.cors.vercel-preview-patterns:}")
+    private String vercelPreviewPatternsRaw;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -93,7 +99,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         List<String> origins = new ArrayList<>(Arrays.asList(allowedOriginsRaw.split(",")));
-        origins.add("https://*.vercel.app");
+        if (vercelPreviewPatternsRaw != null && !vercelPreviewPatternsRaw.isBlank()) {
+            for (String pattern : vercelPreviewPatternsRaw.split(",")) {
+                String trimmed = pattern.trim();
+                if (!trimmed.isBlank()) origins.add(trimmed);
+            }
+        }
         configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
