@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,4 +23,9 @@ public interface UserStatsRepository extends MongoRepository<UserStats, String> 
     long countByTotalPracticeHoursGreaterThan(double value);
     long countByCumulativeXPGreaterThan(double value);
     long countByCurrentStreakGreaterThan(int value);
+
+    // Streak-reminder scheduler: users who still have an active streak but haven't
+    // practiced yet today (practiced sometime yesterday, not since).
+    List<UserStats> findByCurrentStreakGreaterThanAndLastPracticeTimeBetween(
+            int streak, Instant from, Instant to);
 }

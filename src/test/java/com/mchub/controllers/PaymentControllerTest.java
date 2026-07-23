@@ -66,6 +66,7 @@ class PaymentControllerTest {
     @MockBean private PlanService planService;
     @MockBean private CourseRepository courseRepository;
     @MockBean private CourseEnrollmentRepository courseEnrollmentRepository;
+    @MockBean private com.mchub.services.NotificationService notificationService;
 
     private static final String USER_ID = "user-pay-001";
 

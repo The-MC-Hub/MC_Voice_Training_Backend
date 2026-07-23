@@ -9,8 +9,10 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.models.PaymentTransaction;
 import com.mchub.models.PlanDefinition;
 import com.mchub.models.User;
+import com.mchub.enums.NotificationType;
 import com.mchub.repositories.PaymentTransactionRepository;
 import com.mchub.repositories.UserRepository;
+import com.mchub.services.NotificationService;
 import com.mchub.services.PayOSService;
 import com.mchub.services.PlanService;
 import com.mchub.util.SecurityUtils;
@@ -37,6 +39,7 @@ public class PaymentController {
     private final PlanService planService;
     private final com.mchub.repositories.CourseRepository courseRepository;
     private final com.mchub.repositories.CourseEnrollmentRepository courseEnrollmentRepository;
+    private final NotificationService notificationService;
 
     // ================================================================
     //  GET /api/v1/payment/plans  (public — frontend fetches pricing)
@@ -279,6 +282,11 @@ public class PaymentController {
         user.setAiSessionsUsed(0);
         userRepository.save(user);
         log.info(">>> USER PLAN APPLIED: {} → plan={}", user.getEmail(), newPlan);
+
+        notificationService.notify(user.getId(), NotificationType.PAYMENT_SUCCESS,
+                "Nâng cấp gói thành công",
+                "Gói " + newPlan.name() + " của bạn đã được kích hoạt, có hiệu lực đến " + user.getPlanExpiresAt() + ".",
+                "/m/payment", true);
     }
 
     /** Grant course access + auto-enroll after a completed course purchase */
@@ -298,6 +306,11 @@ public class PaymentController {
                         .build());
             }
             log.info(">>> COURSE PURCHASED: user={} course={}", user.getEmail(), tx.getCourseId());
+
+            notificationService.notify(user.getId(), NotificationType.PAYMENT_SUCCESS,
+                    "Mua khóa học thành công",
+                    "Bạn đã có quyền truy cập khóa học mới. Bắt đầu học ngay!",
+                    "/m/courses/" + tx.getCourseId(), true);
         });
     }
 

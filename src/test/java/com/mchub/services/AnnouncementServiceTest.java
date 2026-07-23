@@ -46,6 +46,7 @@ class AnnouncementServiceTest {
     @Mock private AnnouncementRepository announcementRepo;
     @Mock private UserRepository userRepository;
     @Mock private EmailService emailService;
+    @Mock private NotificationService notificationService;
 
     private AnnouncementService service;
 
@@ -54,7 +55,7 @@ class AnnouncementServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AnnouncementService(announcementRepo, userRepository, emailService);
+        service = new AnnouncementService(announcementRepo, userRepository, emailService, notificationService);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(ADMIN_ID, null, List.of()));
     }

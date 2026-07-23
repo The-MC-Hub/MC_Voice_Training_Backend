@@ -36,6 +36,7 @@ class ReportControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockBean private ReportService reportService;
     @MockBean private ReportMapper reportMapper;
+    @MockBean private com.mchub.services.NotificationService notificationService;
 
     private static final String USER_ID = "user-report-001";
 

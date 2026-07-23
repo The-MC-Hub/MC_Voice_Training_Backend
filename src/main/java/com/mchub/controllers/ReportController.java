@@ -3,8 +3,10 @@ package com.mchub.controllers;
 import com.mchub.dto.*;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
+import com.mchub.enums.NotificationType;
 import com.mchub.enums.ReportStatus;
 import com.mchub.models.Report;
+import com.mchub.services.NotificationService;
 import com.mchub.services.ReportService;
 import com.mchub.mapper.ReportMapper;
 import com.mchub.util.SecurityUtils;
@@ -26,6 +28,7 @@ public class ReportController {
 
     private final ReportService reportService;
     private final ReportMapper reportMapper;
+    private final NotificationService notificationService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<ReportResponseDTO>> createReport(
@@ -73,6 +76,12 @@ public class ReportController {
         }
         String adminNote = body.getOrDefault("adminNote", "");
         Report resolved = reportService.resolveReport(Objects.requireNonNull(id), adminId, reportStatus, adminNote);
+
+        notificationService.notify(resolved.getReporterId(), NotificationType.REPORT_RESOLVED,
+                "Báo cáo của bạn đã được xử lý",
+                "Trạng thái: " + reportStatus.name() + (adminNote.isBlank() ? "" : " — " + adminNote),
+                "/m/reports", false);
+
         return ResponseEntity.ok(ApiResponse.success("Processed successfully", reportMapper.toResponseDTO(resolved)));
     }
 }

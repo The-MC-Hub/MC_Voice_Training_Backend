@@ -1,6 +1,7 @@
 package com.mchub.services;
 
 import com.mchub.dto.UserResponseDTO;
+import com.mchub.enums.NotificationType;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.Announcement;
@@ -29,6 +30,7 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepo;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     public List<Announcement> getAll() {
         return announcementRepo.findAllByOrderByCreatedAtDesc();
@@ -139,6 +141,9 @@ public class AnnouncementService {
             } catch (Exception e) {
                 log.warn("Failed to send announcement {} to {}: {}", id, user.getEmail(), SecurityUtils.safeMessage(e));
             }
+            // sendEmail=false — bulk email above already covers this recipient, avoid double-emailing
+            notificationService.notify(user.getId(), NotificationType.ANNOUNCEMENT,
+                    subject, ann.getContent(), "/m/dashboard", false);
         }
         log.info("Announcement {} sent to {}/{} recipients", id, sent, recipients.size());
     }
@@ -174,6 +179,9 @@ public class AnnouncementService {
             } catch (Exception e) {
                 log.warn("Failed to send announcement {} to {}: {}", id, user.getEmail(), SecurityUtils.safeMessage(e));
             }
+            // sendEmail=false — bulk email above already covers this recipient, avoid double-emailing
+            notificationService.notify(user.getId(), NotificationType.ANNOUNCEMENT,
+                    subject, ann.getContent(), "/m/dashboard", false);
         }
         log.info("Announcement {} sent to {}/{} recipients", id, sent, recipients.size());
     }
