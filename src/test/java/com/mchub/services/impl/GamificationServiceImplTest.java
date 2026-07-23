@@ -6,8 +6,10 @@ import com.mchub.models.User;
 import com.mchub.models.UserStats;
 import com.mchub.repositories.CompetitionRecordRepository;
 import com.mchub.repositories.CompetitionRepository;
+import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.repositories.UserStatsRepository;
+import com.mchub.repositories.UserVoucherRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,6 +44,8 @@ class GamificationServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private CompetitionRepository competitionRepository;
     @Mock private CompetitionRecordRepository competitionRecordRepository;
+    @Mock private DiscountCodeRepository discountCodeRepository;
+    @Mock private UserVoucherRepository userVoucherRepository;
 
     private GamificationServiceImpl service;
 
@@ -50,7 +54,8 @@ class GamificationServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new GamificationServiceImpl(
-                userStatsRepository, userRepository, competitionRepository, competitionRecordRepository);
+                userStatsRepository, userRepository, competitionRepository, competitionRecordRepository,
+                discountCodeRepository, userVoucherRepository);
         // Most tests don't exercise the competition path — default to no active competitions.
         org.mockito.Mockito.lenient().when(competitionRepository.findByActive(true)).thenReturn(List.of());
     }
@@ -433,6 +438,75 @@ class GamificationServiceImplTest {
 
             assertThat(result.getCumulativeXP()).isEqualTo(75.0);
             verify(userStatsRepository).save(stats);
+        }
+    }
+
+    @Nested
+    @DisplayName("processCourseCompletion")
+    class ProcessCourseCompletion {
+
+        private static final String COURSE_ID = "course-1";
+
+        @Test
+        @DisplayName("awards 200 XP and recalculates tier")
+        void awardsXpAndTier() {
+            UserStats stats = baseStats().cumulativeXP(400.0).weeklyXP(0.0).build();
+            when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
+            when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(discountCodeRepository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
+            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(false);
+
+            service.processCourseCompletion(USER_ID, COURSE_ID, 90);
+
+            assertThat(stats.getCumulativeXP()).isEqualTo(600.0);
+            assertThat(stats.getWeeklyXP()).isEqualTo(200.0);
+            assertThat(stats.getCurrentTier()).isEqualTo("SILVER");
+        }
+
+        @Test
+        @DisplayName("awards COURSE_GRADUATE badge idempotently")
+        void awardsGraduateBadgeOnce() {
+            UserStats stats = baseStats().earnedBadges(new java.util.ArrayList<>(List.of("COURSE_GRADUATE"))).build();
+            when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
+            when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(discountCodeRepository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
+            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(false);
+
+            service.processCourseCompletion(USER_ID, COURSE_ID, 90);
+
+            assertThat(stats.getEarnedBadges()).containsOnlyOnce("COURSE_GRADUATE");
+        }
+
+        @Test
+        @DisplayName("creates a new DiscountCode + UserVoucher when none exists yet")
+        void createsVoucherWhenNotExisting() {
+            UserStats stats = baseStats().build();
+            when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
+            when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(discountCodeRepository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
+            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(false);
+
+            String code = service.processCourseCompletion(USER_ID, COURSE_ID, 90);
+
+            assertThat(code).startsWith("COURSE30-");
+            verify(discountCodeRepository).save(any(com.mchub.models.DiscountCode.class));
+            verify(userVoucherRepository).save(any(com.mchub.models.UserVoucher.class));
+        }
+
+        @Test
+        @DisplayName("does not duplicate DiscountCode/UserVoucher when already issued (retry-safe)")
+        void doesNotDuplicateExistingVoucher() {
+            UserStats stats = baseStats().build();
+            when(userStatsRepository.findByUserId(USER_ID)).thenReturn(Optional.of(stats));
+            when(userStatsRepository.save(any(UserStats.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(discountCodeRepository.findByCodeIgnoreCase(any()))
+                    .thenReturn(Optional.of(com.mchub.models.DiscountCode.builder().id("existing").build()));
+            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(true);
+
+            service.processCourseCompletion(USER_ID, COURSE_ID, 90);
+
+            verify(discountCodeRepository, never()).save(any(com.mchub.models.DiscountCode.class));
+            verify(userVoucherRepository, never()).save(any(com.mchub.models.UserVoucher.class));
         }
     }
 }

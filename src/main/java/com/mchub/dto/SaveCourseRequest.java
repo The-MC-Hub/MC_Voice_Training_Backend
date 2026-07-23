@@ -2,6 +2,7 @@ package com.mchub.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mchub.enums.CourseType;
+import com.mchub.enums.ExerciseType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -25,6 +26,9 @@ public class SaveCourseRequest {
     private List<String> lessonIds;    // exactly 10
     private List<String> readingIds;   // exactly 3
     private List<QuizQuestionRequest> quizQuestions;
+    private List<ExerciseRequest> exercises;
+    private List<String> caseStudyIds;
+    private List<String> outcomes;
     private int passingScore;
     @JsonProperty("isActive")
     private boolean isActive;
@@ -37,5 +41,16 @@ public class SaveCourseRequest {
         private int correctIndex;      // 0–3
         private String explanation;
         private String category;
+    }
+
+    @Data
+    public static class ExerciseRequest {
+        private String id;
+        @NotNull
+        private ExerciseType type;
+        private String prompt;
+        private List<String> items;
+        private List<String> distractors;
+        private String explanation;
     }
 }

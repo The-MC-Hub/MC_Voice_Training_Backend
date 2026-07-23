@@ -2,12 +2,16 @@ package com.mchub.services.impl;
 
 import com.mchub.models.Competition;
 import com.mchub.models.CompetitionRecord;
+import com.mchub.models.DiscountCode;
 import com.mchub.models.User;
 import com.mchub.models.UserStats;
+import com.mchub.models.UserVoucher;
 import com.mchub.repositories.CompetitionRecordRepository;
 import com.mchub.repositories.CompetitionRepository;
+import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.repositories.UserStatsRepository;
+import com.mchub.repositories.UserVoucherRepository;
 import com.mchub.services.GamificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -29,6 +34,10 @@ public class GamificationServiceImpl implements GamificationService {
     private final UserRepository userRepository;
     private final CompetitionRepository competitionRepository;
     private final CompetitionRecordRepository competitionRecordRepository;
+    private final DiscountCodeRepository discountCodeRepository;
+    private final UserVoucherRepository userVoucherRepository;
+
+    private static final double COURSE_COMPLETION_XP = 200.0;
 
     private static final double PRACTICE_SESSION_ESTIMATED_HOURS = 0.05; // 3 minutes per session — fallback only when AI didn't report a duration
 
@@ -165,6 +174,56 @@ public class GamificationServiceImpl implements GamificationService {
         stats.setWeeklyXP(stats.getWeeklyXP() + xpEarned);
         stats.setCurrentTier(calculateTier(stats.getCumulativeXP()));
         return userStatsRepository.save(stats);
+    }
+
+    @Override
+    public String processCourseCompletion(String userId, String courseId, int quizScore) {
+        UserStats stats = getOrCreateUserStats(userId);
+
+        stats.setCumulativeXP(stats.getCumulativeXP() + COURSE_COMPLETION_XP);
+        stats.setWeeklyXP(stats.getWeeklyXP() + COURSE_COMPLETION_XP);
+        stats.setCurrentTier(calculateTier(stats.getCumulativeXP()));
+        awardBadgeIfEligible(stats, "COURSE_GRADUATE", true);
+        userStatsRepository.save(stats);
+
+        return issueCourseCompletionVoucher(userId, courseId);
+    }
+
+    private String issueCourseCompletionVoucher(String userId, String courseId) {
+        String code = "COURSE30-" + courseId.substring(Math.max(0, courseId.length() - 6)).toUpperCase()
+                + "-" + userId.substring(Math.max(0, userId.length() - 6)).toUpperCase();
+
+        DiscountCode existing = discountCodeRepository.findByCodeIgnoreCase(code).orElse(null);
+        if (existing == null) {
+            DiscountCode voucher = DiscountCode.builder()
+                    .code(code)
+                    .type(DiscountCode.DiscountType.PERCENT)
+                    .discountValue(30)
+                    .applicablePlans(List.of(com.mchub.enums.SubscriptionPlan.BASIC))
+                    .maxUses(1)
+                    .usedCount(0)
+                    .active(true)
+                    .showInSidebar(false)
+                    .description("Course completion voucher for user " + userId)
+                    .expiresAt(LocalDateTime.now().plusDays(30))
+                    .build();
+            discountCodeRepository.save(voucher);
+        }
+
+        if (!userVoucherRepository.existsByUserIdAndCode(userId, code)) {
+            UserVoucher userVoucher = UserVoucher.builder()
+                    .userId(userId)
+                    .code(code)
+                    .discountPercent(30)
+                    .description("Phần thưởng hoàn thành khóa học")
+                    .source("COURSE_COMPLETION")
+                    .active(true)
+                    .expiresAt(LocalDateTime.now().plusDays(30))
+                    .build();
+            userVoucherRepository.save(userVoucher);
+        }
+
+        return code;
     }
 
     private void awardBadgeIfEligible(UserStats stats, String badgeSlug, boolean eligible) {

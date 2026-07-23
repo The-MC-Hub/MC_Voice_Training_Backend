@@ -1,6 +1,7 @@
 package com.mchub.dto;
 
 import com.mchub.enums.CourseType;
+import com.mchub.enums.ExerciseType;
 import com.mchub.enums.LearningPathType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +31,8 @@ public class CourseResponseDTO {
     private int totalLessons;
     private int totalReadings;
     private int totalQuizQuestions;
+    private int totalExercises;
+    private List<String> outcomes;
     private int passingScore;
     private boolean isActive;
     private LocalDateTime createdAt;
@@ -45,6 +48,8 @@ public class CourseResponseDTO {
     private List<VoiceLessonResponseDTO> lessons;
     private List<ReadingGuideDTO> readings;
     private List<QuizQuestionDTO> quizQuestions;
+    private List<ExerciseDTO> exercises;
+    private List<CaseStudySummaryDTO> caseStudies;
 
     // User-specific (null when not authenticated / not enrolled)
     private EnrollmentProgressDTO myProgress;
@@ -71,10 +76,27 @@ public class CourseResponseDTO {
     }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class ExerciseDTO {
+        private String id;
+        private ExerciseType type;
+        private String prompt;
+        // Shuffled items + distractors combined for display; correct order/mapping not exposed
+        private List<String> displayOptions;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class CaseStudySummaryDTO {
+        private String id;
+        private String title;
+        private String videoUrl;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class EnrollmentProgressDTO {
         private String enrollmentId;
         private List<String> completedLessonIds;
         private List<String> completedReadingIds;
+        private List<String> completedExerciseIds;
         private Integer quizScore;
         private int quizAttempts;
         private double completionRate;

@@ -38,6 +38,9 @@ public class CourseEnrollment {
     @Builder.Default
     private List<String> completedReadingIds = new ArrayList<>();
 
+    @Builder.Default
+    private List<String> completedExerciseIds = new ArrayList<>();
+
     private Integer quizScore;    // null = not attempted
 
     @Builder.Default
