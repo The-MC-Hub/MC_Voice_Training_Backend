@@ -282,6 +282,47 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken) {
+        var identity = googleTokenVerifierService.verify(googleIdToken);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+
+        if (!identity.email().equalsIgnoreCase(user.getEmail())) {
+            throw new AppException(ErrorCode.GOOGLE_EMAIL_MISMATCH,
+                    "Email tài khoản Google (" + identity.email() + ") không khớp với email tài khoản hiện tại.");
+        }
+
+        userRepository.findByGoogleId(identity.googleId()).ifPresent(other -> {
+            if (!other.getId().equals(user.getId())) {
+                throw new AppException(ErrorCode.GOOGLE_ACCOUNT_ALREADY_LINKED,
+                        "Tài khoản Google này đã được liên kết với một tài khoản khác.");
+            }
+        });
+
+        user.setGoogleId(identity.googleId());
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User unlinkGoogleAccount(@NonNull String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+
+        // A user whose password was never explicitly set (Google-only registration, random
+        // unusable password) would be permanently locked out if we removed their only sign-in
+        // method. passwordChangedAt is set by updateSettings/resetPassword — never by
+        // completeGoogleRegistration — so its absence means "no real password exists".
+        if (user.getPasswordChangedAt() == null) {
+            throw new AppException(ErrorCode.GOOGLE_UNLINK_BLOCKED_NO_PASSWORD,
+                    "Vui lòng đặt mật khẩu trước khi hủy liên kết Google, nếu không bạn sẽ không thể đăng nhập.");
+        }
+
+        user.setGoogleId(null);
+        return userRepository.save(user);
+    }
+
+    @Override
     public LoginResponse completeGoogleRegistration(@NonNull String pendingToken, @NonNull String role, String referralCode) {
         var pending = jwtService.extractPendingGoogleIdentity(pendingToken);
 

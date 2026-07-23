@@ -48,6 +48,17 @@ public interface AuthService {
         }
     }
 
+    /**
+     * Links a Google account to the currently authenticated (password-login) user. Requires the
+     * Google token's email to match the account's email exactly — this is not a way to change
+     * an account's email, only to attach an already-matching Google identity to it.
+     */
+    @PreAuthorize("isAuthenticated()")
+    User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken);
+
+    @PreAuthorize("isAuthenticated()")
+    User unlinkGoogleAccount(@NonNull String userId);
+
     @PreAuthorize("isAuthenticated()")
     User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
 

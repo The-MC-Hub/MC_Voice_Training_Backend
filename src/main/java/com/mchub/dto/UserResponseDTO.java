@@ -34,4 +34,7 @@ public class UserResponseDTO {
     private String referralCode;
     private int referralCount;
 
+    @JsonProperty("isGoogleLinked")
+    private boolean isGoogleLinked;
+
 }

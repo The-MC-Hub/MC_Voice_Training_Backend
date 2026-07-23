@@ -187,6 +187,28 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
     }
 
+    @PostMapping("/google/link")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> linkGoogleAccount(
+            @RequestBody @Valid GoogleLoginRequest req,
+            HttpServletRequest request) {
+        String userId = SecurityUtils.getCurrentUserId();
+        User user = authService.linkGoogleAccount(userId, req.getIdToken());
+        auditLogService.log(userId, AuditAction.AUTH_LOGIN, "User", userId, "{\"method\":\"google-link\"}", request);
+        return ResponseEntity.ok(ApiResponse.success("Google account linked",
+                Map.of("user", userMapper.toResponseDTO(user))));
+    }
+
+    @PostMapping("/google/unlink")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> unlinkGoogleAccount(HttpServletRequest request) {
+        String userId = SecurityUtils.getCurrentUserId();
+        User user = authService.unlinkGoogleAccount(userId);
+        auditLogService.log(userId, AuditAction.AUTH_LOGIN, "User", userId, "{\"method\":\"google-unlink\"}", request);
+        return ResponseEntity.ok(ApiResponse.success("Google account unlinked",
+                Map.of("user", userMapper.toResponseDTO(user))));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMe() {
         String userId = SecurityUtils.getCurrentUserId();

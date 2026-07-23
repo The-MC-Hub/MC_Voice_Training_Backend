@@ -10,5 +10,6 @@ import org.mapstruct.MappingConstants;
 public interface UserMapper {
     @Mapping(target = "name", source = "name", defaultValue = "Unknown")
     @Mapping(target = "email", source = "email", defaultValue = "")
+    @Mapping(target = "googleLinked", expression = "java(user.getGoogleId() != null)")
     UserResponseDTO toResponseDTO(User user);
 }
