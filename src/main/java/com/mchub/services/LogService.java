@@ -15,4 +15,7 @@ public interface LogService {
 
     /** Query persisted logs with optional filters. */
     List<SystemLog> getLogs(String level, String source, int limit);
+
+    /** Scheduled cleanup of old persisted logs. */
+    void cleanOldLogs();
 }
