@@ -110,11 +110,22 @@ public class MCProfileServiceImpl implements MCProfileService {
         if (profileData.getPreferredContact() != null && !profileData.getPreferredContact().isBlank()) {
             existing.setPreferredContact(profileData.getPreferredContact());
         }
+        if (profileData.getVisibleFields() != null) {
+            existing.setVisibleFields(profileData.getVisibleFields());
+        }
+        if (profileData.getEvents() != null) {
+            existing.setEvents(profileData.getEvents());
+        }
         existing.setLastActive(LocalDateTime.now());
 
         MCProfile saved = mcProfileRepository.save(existing);
         recommendationService.notifyMatchingClients(saved);
         return saved;
+    }
+
+    @Override
+    public MCProfile getOwnProfile(String userId) {
+        return mcProfileRepository.findByUser(userId).orElse(new MCProfile());
     }
 
 }

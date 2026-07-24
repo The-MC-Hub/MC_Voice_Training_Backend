@@ -13,4 +13,7 @@ public interface MCProfileService {
         @PreAuthorize("hasAuthority('MC')")
     MCProfile updateProfile(String userId, MCProfile profileData);
 
+        @PreAuthorize("hasAuthority('MC')")
+    MCProfile getOwnProfile(String userId);
+
 }

@@ -129,7 +129,32 @@ public class PublicServiceImpl implements PublicService {
             return null;
 
         User user = userRepository.findById(Objects.requireNonNull(profile.getUser())).orElse(null);
-        return mcProfileMapper.toResponseDTO(profile, user);
+        MCProfileResponseDTO dto = mcProfileMapper.toResponseDTO(profile, user);
+        applyFieldVisibility(dto);
+        return dto;
+    }
+
+    // Nulls out any content field the MC has toggled off in Settings before it
+    // reaches a public viewer. Missing map entry = visible (opt-out model, not
+    // opt-in, so existing profiles created before this feature keep showing
+    // everything). Core identity fields (name/avatar/verified) are never
+    // gated — a hidden profile isn't useful to a recruiter.
+    private void applyFieldVisibility(MCProfileResponseDTO dto) {
+        Map<String, Boolean> visibility = dto.getVisibleFields();
+        if (visibility == null || visibility.isEmpty()) return;
+
+        if (Boolean.FALSE.equals(visibility.get("biography"))) dto.setBiography(null);
+        if (Boolean.FALSE.equals(visibility.get("personality"))) dto.setPersonality(null);
+        if (Boolean.FALSE.equals(visibility.get("hostingStyle"))) dto.setHostingStyle(null);
+        if (Boolean.FALSE.equals(visibility.get("experience"))) dto.setExperience(0);
+        if (Boolean.FALSE.equals(visibility.get("styles"))) dto.setStyles(null);
+        if (Boolean.FALSE.equals(visibility.get("languages"))) dto.setLanguages(null);
+        if (Boolean.FALSE.equals(visibility.get("regions"))) dto.setRegions(null);
+        if (Boolean.FALSE.equals(visibility.get("rates"))) { dto.setRatesMin(null); dto.setRatesMax(null); }
+        if (Boolean.FALSE.equals(visibility.get("portfolio"))) dto.setPortfolio(null);
+        if (Boolean.FALSE.equals(visibility.get("notableEvents"))) dto.setNotableEvents(null);
+        if (Boolean.FALSE.equals(visibility.get("achievements"))) dto.setAchievements(null);
+        if (Boolean.FALSE.equals(visibility.get("events"))) dto.setEvents(null);
     }
 
 
