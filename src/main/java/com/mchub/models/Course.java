@@ -1,6 +1,7 @@
 package com.mchub.models;
 
 import com.mchub.enums.CourseType;
+import com.mchub.enums.ExerciseType;
 import com.mchub.enums.LearningPathType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,6 +57,15 @@ public class Course {
     private List<QuizQuestion> quizQuestions = new ArrayList<>(); // 8–10 questions
 
     @Builder.Default
+    private List<Exercise> exercises = new ArrayList<>(); // mid-course interactive exercises
+
+    @Builder.Default
+    private List<String> caseStudyIds = new ArrayList<>(); // refs to CaseStudy documents
+
+    @Builder.Default
+    private List<String> outcomes = new ArrayList<>(); // learning outcome bullet points shown on course page
+
+    @Builder.Default
     private int passingScore = 70; // % required to pass quiz
 
     // ── Pricing: course included with BASIC+ plans, or buy individually ──
@@ -92,5 +102,34 @@ public class Course {
         private String explanation;
 
         private String category; // THEORY, PRONUNCIATION, TECHNIQUE, ETIQUETTE
+    }
+
+    // ----------------------------------------------------------------
+    //  Embedded mid-course interactive exercise
+    // ----------------------------------------------------------------
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Exercise {
+        private String id;
+
+        private ExerciseType type;
+
+        private String prompt;
+
+        /**
+         * MATCHING: pairs flattened as ["left1","right1","left2","right2",...]
+         * FILL_BLANK: correct words in blank order
+         * SENTENCE_ORDER: sentence fragments in correct order
+         */
+        @Builder.Default
+        private List<String> items = new ArrayList<>();
+
+        /** Extra decoy options shown alongside the correct items (MATCHING / SENTENCE_ORDER) */
+        @Builder.Default
+        private List<String> distractors = new ArrayList<>();
+
+        private String explanation;
     }
 }

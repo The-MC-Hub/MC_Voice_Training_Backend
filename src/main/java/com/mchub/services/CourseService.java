@@ -21,11 +21,15 @@ public interface CourseService {
     CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId);
     CourseResponseDTO.EnrollmentProgressDTO completeReading(String courseId, String readingId, String userId);
+    ExerciseResultDTO completeExercise(String courseId, String exerciseId, String userId, ExerciseSubmitRequest request);
     QuizResultDTO submitQuiz(String courseId, String userId, QuizSubmitRequest request);
     List<CourseResponseDTO> getMyEnrolledCourses(String userId);
 
     // ── Certificates ─────────────────────────────────────────────────
     List<CertificateResponseDTO> getMyCertificates(String userId);
+
+    // ── Progress analytics ──────────────────────────────────────────
+    CourseProgressStatsDTO getCourseProgressStats(String courseId, String userId);
 
     // ── Admin CRUD ───────────────────────────────────────────────────
     CourseResponseDTO createCourse(SaveCourseRequest request);
@@ -33,4 +37,5 @@ public interface CourseService {
     void deleteCourse(String courseId);
     List<CourseResponseDTO> getAllCoursesAdmin();
     CourseResponseDTO updatePricing(String courseId, Integer priceVnd, Integer discountPercent);
+    CourseResponseDTO updateOutcomes(String courseId, List<String> outcomes);
 }

@@ -9,6 +9,7 @@ import com.mchub.models.PracticeSession;
 import com.mchub.models.User;
 import com.mchub.repositories.MCProfileRepository;
 import com.mchub.repositories.PracticeSessionRepository;
+import com.mchub.repositories.SearchInterestRepository;
 import com.mchub.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,12 +41,13 @@ class PublicServiceImplTest {
     @Mock private MCProfileRepository mcProfileRepository;
     @Mock private MCProfileMapper mcProfileMapper;
     @Mock private PracticeSessionRepository practiceSessionRepository;
+    @Mock private SearchInterestRepository searchInterestRepository;
 
     private PublicServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new PublicServiceImpl(userRepository, mcProfileRepository, mcProfileMapper, practiceSessionRepository);
+        service = new PublicServiceImpl(userRepository, mcProfileRepository, mcProfileMapper, practiceSessionRepository, searchInterestRepository);
     }
 
     @Nested

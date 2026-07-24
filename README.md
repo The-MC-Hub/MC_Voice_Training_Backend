@@ -1,6 +1,6 @@
 # MC Voice Training — Backend
 
-> Java 21 + Spring Boot 3.3 REST API for the MC Voice Training platform: voice practice/AI feedback, course/academy content, community leaderboards & competitions, gamification (quests/vouchers/minigames), admin tooling, and marketing (email campaigns, announcements). Forked from `The-MC-Hub-Java-Backend` but does **not** include the MC-booking domain (no bookings/chat/notifications/favorites/schedules).
+> Java 21 + Spring Boot 3.3 REST API for the MC Voice Training platform: voice practice/AI feedback, course/academy content (with video/exercise/case-study lesson types, peer review, and progress stats), MC discovery search, MC booking (lifecycle, scheduling, payment), in-app chat, reviews/favorites, community leaderboards & competitions, gamification (quests/vouchers/minigames), admin tooling, and marketing (email campaigns, announcements). Forked from `The-MC-Hub-Java-Backend`.
 
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.10-6DB33F?logo=springboot) ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb) ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -40,7 +40,19 @@ All endpoints return the standard envelope:
 { "status": "fail",    "message": "...", "data": null }
 ```
 
-25 controllers, ~130 endpoints, 30 MongoDB collections + 1 Elasticsearch index. Full endpoint table lives in [CLAUDE.md](./CLAUDE.md) — grep `src/main/java/com/mchub/controllers/` directly if you need exact, current signatures.
+40+ controllers, ~160 endpoints, 40+ MongoDB collections + 1 Elasticsearch index. Full endpoint table lives in [CLAUDE.md](./CLAUDE.md) — grep `src/main/java/com/mchub/controllers/` directly if you need exact, current signatures.
+
+## Feature areas
+
+- **Voice training** — lesson library, AI-scored practice sessions, adaptive difficulty, guest trial with cooldown
+- **Courses / Academy** — catalog, enrollment, reading guides, quizzes, video lessons, interactive exercises (matching / fill-blank / sentence-order), case-study video annotations, per-course progress stats (`CourseProgressStatsDTO`), MC peer review of practice sessions (`PeerReviewController`), quest/XP/voucher rewards on course completion
+- **MC discovery** — `PublicController`'s `/public/mcs/search` filters MC profiles by criteria (`SearchMCRequest`/`MCSearchResultDTO`); `SearchInterest` persists queries per user to power `RecommendationService`
+- **Booking** — `Booking`/`BookingDetail`/`Schedule`/`Transaction` models, full status lifecycle (`BookingController`, `BookingDetailController`, `AvailabilityController`, `BookingPaymentController`), PayOS payment integration for deposits/refunds
+- **Chat** — `Conversation`/`Message` models, `ChatController`, real-time delivery over the existing `/ws-chat` STOMP endpoint
+- **Reviews & favorites** — `ReviewController` (MC rating/comments) and `FavoriteController` (client-saved MCs)
+- **Community / gamification** — leaderboards, competitions/arenas, minigames, quests, vouchers, login-streak-freeze
+- **Admin** — dashboard stats, user management, booking management, transaction/revenue views, analytics, DB migration tool, audit logs, live SSE log stream
+- **Marketing** — email campaigns, trigger-based announcements, social post feed
 
 ## Testing
 

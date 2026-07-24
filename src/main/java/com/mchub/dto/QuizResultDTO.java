@@ -21,6 +21,11 @@ public class QuizResultDTO {
     private String certificateId;
     private List<QuestionFeedback> feedback;
 
+    // Populated only when the course was completed for the very first time by this submission
+    private boolean courseCompletedNow;
+    private Double xpEarned;
+    private String voucherCode;
+
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class QuestionFeedback {
         private int questionIndex;

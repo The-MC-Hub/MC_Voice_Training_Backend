@@ -43,6 +43,9 @@ public interface VoiceService {
 
     List<PracticeSessionResponseDTO> getUserPracticeHistory(String userId);
 
+    /** Sessions for one user + lesson, oldest → newest, for progress-over-time comparison */
+    List<PracticeSessionResponseDTO> getUserLessonHistory(String userId, String lessonId);
+
     PracticeSessionResponseDTO getPracticeSessionById(String id);
 
     /** Calls Python AI /generate-mc-voice and returns raw WAV bytes */

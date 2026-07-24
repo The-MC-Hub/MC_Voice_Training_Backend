@@ -193,6 +193,20 @@ public class VoiceController {
         return ResponseEntity.ok(ApiResponse.success(voiceService.getUserPracticeHistory(userId)));
     }
 
+    /** GET /api/v1/voice/practice/history/{userId}/lesson/{lessonId} — sessions for one lesson, oldest first */
+    @GetMapping("/practice/history/{userId}/lesson/{lessonId}")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
+    public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getLessonHistory(
+            @PathVariable String userId, @PathVariable String lessonId) {
+        String callerId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"));
+        if (!isAdmin && !callerId.equals(userId)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
+        }
+        return ResponseEntity.ok(ApiResponse.success(voiceService.getUserLessonHistory(userId, lessonId)));
+    }
+
     @PostMapping("/proxy/analyze-voice")
     @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")
     public ResponseEntity<?> proxyAnalyzeVoice(

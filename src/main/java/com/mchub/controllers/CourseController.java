@@ -101,6 +101,17 @@ public class CourseController {
                 courseService.completeReading(id, readingId, userId)));
     }
 
+    /** POST /api/v1/courses/{id}/exercises/{exerciseId}/complete */
+    @PostMapping("/{id}/exercises/{exerciseId}/complete")
+    public ResponseEntity<ApiResponse<ExerciseResultDTO>> completeExercise(
+            @PathVariable String id,
+            @PathVariable String exerciseId,
+            @RequestBody ExerciseSubmitRequest request) {
+        String userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success("Exercise submitted",
+                courseService.completeExercise(id, exerciseId, userId, request)));
+    }
+
     /** POST /api/v1/courses/{id}/quiz/submit */
     @PostMapping("/{id}/quiz/submit")
     public ResponseEntity<ApiResponse<QuizResultDTO>> submitQuiz(
@@ -117,6 +128,14 @@ public class CourseController {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Enrolled courses retrieved",
                 courseService.getMyEnrolledCourses(userId)));
+    }
+
+    /** GET /api/v1/courses/{id}/progress-stats */
+    @GetMapping("/{id}/progress-stats")
+    public ResponseEntity<ApiResponse<CourseProgressStatsDTO>> progressStats(@PathVariable String id) {
+        String userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success("Progress stats retrieved",
+                courseService.getCourseProgressStats(id, userId)));
     }
 
     /** GET /api/v1/courses/my/certificates */

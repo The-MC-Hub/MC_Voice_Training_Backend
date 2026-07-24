@@ -4,9 +4,11 @@ import com.mchub.models.MCProfile;
 import com.mchub.repositories.MCProfileRepository;
 import com.mchub.repositories.PracticeSessionRepository;
 import com.mchub.services.MCProfileService;
+import com.mchub.services.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +19,7 @@ public class MCProfileServiceImpl implements MCProfileService {
 
     private final MCProfileRepository mcProfileRepository;
     private final PracticeSessionRepository practiceSessionRepository;
+    private final RecommendationService recommendationService;
 
     @Override
     public Map<String, Object> getDashboardStats(String userId) {
@@ -74,8 +77,44 @@ public class MCProfileServiceImpl implements MCProfileService {
         if (profileData.getStyles() != null && !profileData.getStyles().isEmpty()) {
             existing.setStyles(profileData.getStyles());
         }
+        if (profileData.getRegions() != null && !profileData.getRegions().isEmpty()) {
+            existing.setRegions(profileData.getRegions());
+        }
+        if (profileData.getEventTypes() != null && !profileData.getEventTypes().isEmpty()) {
+            existing.setEventTypes(profileData.getEventTypes());
+        }
+        if (profileData.getRates() != null) {
+            existing.setRates(profileData.getRates());
+        }
+        if (profileData.getStatus() != null) {
+            existing.setStatus(profileData.getStatus());
+        }
+        if (profileData.getNotableEvents() != null && !profileData.getNotableEvents().isEmpty()) {
+            existing.setNotableEvents(profileData.getNotableEvents());
+        }
+        if (profileData.getSocialLinks() != null) {
+            existing.setSocialLinks(profileData.getSocialLinks());
+        }
+        if (profileData.getPortfolio() != null && !profileData.getPortfolio().isEmpty()) {
+            existing.setPortfolio(profileData.getPortfolio());
+        }
+        if (profileData.getResponseTime() > 0) {
+            existing.setResponseTime(profileData.getResponseTime());
+        }
+        if (profileData.getTotalEvents() > 0) {
+            existing.setTotalEvents(profileData.getTotalEvents());
+        }
+        if (profileData.getAchievements() != null && !profileData.getAchievements().isEmpty()) {
+            existing.setAchievements(profileData.getAchievements());
+        }
+        if (profileData.getPreferredContact() != null && !profileData.getPreferredContact().isBlank()) {
+            existing.setPreferredContact(profileData.getPreferredContact());
+        }
+        existing.setLastActive(LocalDateTime.now());
 
-        return mcProfileRepository.save(existing);
+        MCProfile saved = mcProfileRepository.save(existing);
+        recommendationService.notifyMatchingClients(saved);
+        return saved;
     }
 
 }

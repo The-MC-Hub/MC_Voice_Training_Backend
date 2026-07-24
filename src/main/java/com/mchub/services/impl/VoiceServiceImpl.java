@@ -39,6 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.PageRequest;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -418,6 +419,14 @@ public class VoiceServiceImpl implements VoiceService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PracticeSessionResponseDTO> getUserLessonHistory(String userId, String lessonId) {
+        List<PracticeSession> sessions = sessionRepository.findByUserIdAndLessonId(userId, lessonId).stream()
+                .sorted(Comparator.comparing(PracticeSession::getCreatedAt))
+                .collect(Collectors.toList());
+        return sessions.stream().map(sessionMapper::toResponseDTO).collect(Collectors.toList());
     }
 
     @Override

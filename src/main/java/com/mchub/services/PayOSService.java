@@ -49,6 +49,12 @@ public class PayOSService {
         return createGenericPaymentLink(orderCode, amount, description, "MC Hub " + plan.name());
     }
 
+    /** Payment link for a booking transaction */
+    public Map<String, Object> createBookingPaymentLink(String bookingId, long orderCode, int amount) throws Exception {
+        String description = truncate("MCHUB BOOK " + bookingId, 25);
+        return createGenericPaymentLink(orderCode, amount, description, "MC Hub Booking #" + bookingId);
+    }
+
     /** Payment link for a single-course purchase (one-off, not a subscription) */
     public Map<String, Object> createCoursePaymentLink(String userId, String courseTitle, long orderCode, int amount) throws Exception {
         String description = truncate("MCHUB COURSE " + userId, 25);

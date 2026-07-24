@@ -26,7 +26,7 @@ import java.util.Set;
 public class QuestController {
 
     private static final List<String> ALL_QUEST_IDS = List.of(
-            "profile", "practice", "courses", "leaderboard"
+            "profile", "practice", "courses", "leaderboard", "reading"
     );
 
     private final UserRepository userRepository;

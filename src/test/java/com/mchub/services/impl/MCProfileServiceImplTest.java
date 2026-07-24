@@ -4,6 +4,7 @@ import com.mchub.models.MCProfile;
 import com.mchub.models.PracticeSession;
 import com.mchub.repositories.MCProfileRepository;
 import com.mchub.repositories.PracticeSessionRepository;
+import com.mchub.services.RecommendationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -30,6 +31,7 @@ class MCProfileServiceImplTest {
 
     @Mock private MCProfileRepository mcProfileRepository;
     @Mock private PracticeSessionRepository practiceSessionRepository;
+    @Mock private RecommendationService recommendationService;
 
     private MCProfileServiceImpl service;
 
@@ -37,7 +39,7 @@ class MCProfileServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new MCProfileServiceImpl(mcProfileRepository, practiceSessionRepository);
+        service = new MCProfileServiceImpl(mcProfileRepository, practiceSessionRepository, recommendationService);
     }
 
     @Nested

@@ -35,6 +35,15 @@ public enum ErrorCode {
     INVALID_SERVICE_DATA(HttpStatus.BAD_REQUEST, "ERR_3006", "Invalid service data"),
     SERVICE_DETAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_3007", "Service details not found"),
 
+    // Booking specific (3xxx extended)
+    BOOKING_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_3011", "Booking not found"),
+    BOOKING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ERR_3012", "You do not have permission to access this booking"),
+    BOOKING_ALREADY_DECIDED(HttpStatus.CONFLICT, "ERR_3013", "This booking has already been processed"),
+    CANNOT_CANCEL_COMPLETED(HttpStatus.BAD_REQUEST, "ERR_3014", "Cannot cancel a completed booking"),
+    CANNOT_CANCEL_PAID(HttpStatus.BAD_REQUEST, "ERR_3015", "Cannot cancel a paid booking — request refund instead"),
+    INVALID_BOOKING_STATUS_TRANSITION(HttpStatus.BAD_REQUEST, "ERR_3015", "Invalid booking status transition"),
+    BOOKING_DETAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_3016", "Booking details not found"),
+
     // Payment (4xxx)
     PAYMENT_INIT_FAILED(HttpStatus.BAD_GATEWAY, "ERR_4001", "Payment initialization failed, please try again"),
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ERR_4002", "Payment not found"),

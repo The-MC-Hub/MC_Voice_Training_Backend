@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/api/v1/scripts/**").permitAll()
                         .requestMatchers("/api/v1/payment/webhook").permitAll()
+                        .requestMatchers("/api/v1/payment/booking/webhook").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payment/status/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payment/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payment/flash-deals").permitAll()

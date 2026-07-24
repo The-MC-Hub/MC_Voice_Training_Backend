@@ -3,7 +3,9 @@ package com.mchub.controllers;
 import com.mchub.dto.ApiResponse;
 import com.mchub.dto.EnumOptionDTO;
 import com.mchub.dto.MCProfileResponseDTO;
+import com.mchub.dto.MCSearchResultDTO;
 import com.mchub.dto.MCTrainingStatsDTO;
+import com.mchub.dto.SearchMCRequest;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.services.PublicService;
@@ -50,6 +52,12 @@ public class PublicController {
             throw new AppException(ErrorCode.MC_PROFILE_NOT_FOUND);
         }
         return ResponseEntity.ok(ApiResponse.success(Map.of("profile", profile)));
+    }
+
+        @PostMapping("/mcs/search")
+    public ResponseEntity<ApiResponse<List<MCSearchResultDTO>>> searchMCs(@RequestBody SearchMCRequest req) {
+        List<MCSearchResultDTO> results = publicService.searchMCs(req);
+        return ResponseEntity.ok(ApiResponse.success(results));
     }
 
     
