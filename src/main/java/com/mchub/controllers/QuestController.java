@@ -38,7 +38,7 @@ public class QuestController {
     //  Returns which quests the current user has completed
     // ================================================================
     @GetMapping("/progress")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProgress() {
         String userId = SecurityUtils.getCurrentUserId();
         User user = userRepository.findById(userId)
@@ -62,7 +62,7 @@ public class QuestController {
     //  Mark a quest as completed. Idempotent — safe to call multiple times.
     // ================================================================
     @PostMapping("/complete/{questId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> completeQuest(@PathVariable String questId) {
         if (!ALL_QUEST_IDS.contains(questId)) {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Unknown quest: " + questId);
@@ -94,7 +94,7 @@ public class QuestController {
     //  Requires all 5 quests done, FREE plan, not yet claimed.
     // ================================================================
     @PostMapping("/claim-voucher")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> claimVoucher() {
         String userId = SecurityUtils.getCurrentUserId();
         User user = userRepository.findById(userId)

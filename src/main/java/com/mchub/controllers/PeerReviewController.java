@@ -34,9 +34,9 @@ public class PeerReviewController {
     private final VoiceLessonRepository lessonRepository;
     private final UserRepository userRepository;
 
-    /** POST /api/v1/peer-review/request/{practiceSessionId} — learner opts in to have an MC review their practice */
+    /** POST /api/v1/peer-review/request/{practiceSessionId} — MC opts in to have a fellow MC review their practice */
     @PostMapping("/request/{practiceSessionId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<PracticeReviewDTO>> requestReview(@PathVariable String practiceSessionId) {
         String userId = SecurityUtils.getCurrentUserId();
         PracticeSession session = practiceSessionRepository.findById(practiceSessionId)
@@ -85,9 +85,9 @@ public class PeerReviewController {
                 toDTO(practiceReviewRepository.save(review))));
     }
 
-    /** GET /api/v1/peer-review/my — learner's own review requests (any status) */
+    /** GET /api/v1/peer-review/my — MC's own review requests (any status) */
     @GetMapping("/my")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<List<PracticeReviewDTO>>> myReviews() {
         String userId = SecurityUtils.getCurrentUserId();
         List<PracticeReview> reviews = practiceReviewRepository.findByRevieweeId(userId);
@@ -97,7 +97,7 @@ public class PeerReviewController {
 
     /** GET /api/v1/peer-review/session/{practiceSessionId} — review for a specific session, if any */
     @GetMapping("/session/{practiceSessionId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<PracticeReviewDTO>> forSession(@PathVariable String practiceSessionId) {
         PracticeReview review = practiceReviewRepository.findByPracticeSessionId(practiceSessionId).orElse(null);
         return ResponseEntity.ok(ApiResponse.success("Review retrieved", review != null ? toDTO(review) : null));

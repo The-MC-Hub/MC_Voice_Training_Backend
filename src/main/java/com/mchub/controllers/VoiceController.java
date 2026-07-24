@@ -169,7 +169,7 @@ public class VoiceController {
 
     // --- MC Practice Endpoints ---
     @PostMapping("/practice/analyze-voice")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<PracticeSessionResponseDTO>> analyzePractice(
             @RequestParam String lessonId,
             @RequestParam MultipartFile audioFile) {
@@ -182,7 +182,7 @@ public class VoiceController {
     }
 
     @GetMapping("/practice/history/{userId}")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getHistory(@PathVariable String userId) {
         String callerId = SecurityUtils.getCurrentUserId();
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
@@ -195,7 +195,7 @@ public class VoiceController {
 
     /** GET /api/v1/voice/practice/history/{userId}/lesson/{lessonId} — sessions for one lesson, oldest first */
     @GetMapping("/practice/history/{userId}/lesson/{lessonId}")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getLessonHistory(
             @PathVariable String userId, @PathVariable String lessonId) {
         String callerId = SecurityUtils.getCurrentUserId();
@@ -208,7 +208,7 @@ public class VoiceController {
     }
 
     @PostMapping("/proxy/analyze-voice")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT')")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<?> proxyAnalyzeVoice(
             @RequestParam MultipartFile audioFile,
             @RequestParam(required = false) String scriptOrigin) {
@@ -251,7 +251,7 @@ public class VoiceController {
     }
 
     @GetMapping("/practice/{id}")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN') or hasAuthority('CLIENT')")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<PracticeSessionResponseDTO>> getPracticeById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(voiceService.getPracticeSessionById(id)));
     }
@@ -268,7 +268,7 @@ public class VoiceController {
 
     // --- TTS Endpoint ---
     @PostMapping("/tts/generate")
-    @PreAuthorize("hasAuthority('MC') or hasAuthority('CLIENT') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN')")
     public ResponseEntity<byte[]> generateTTS(
             @RequestParam String text,
             @RequestParam(required = false, defaultValue = "F1") String voice) {
