@@ -36,6 +36,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    // Kept in sync with Register.jsx's AVATARS list (same emoji set, so a
+    // server-side random pick still looks like something the user could
+    // have chosen themselves in the picker).
+    private static final String[] DEFAULT_AVATAR_EMOJIS = {
+            "🎤", "⭐", "👑", "🔥", "💎", "🚀", "🎵", "🏆", "✨", "⚡"
+    };
+    private static final SecureRandom AVATAR_RANDOM = new SecureRandom();
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -87,6 +95,10 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
+        String avatar = (req.getAvatar() != null && !req.getAvatar().isBlank())
+                ? req.getAvatar()
+                : DEFAULT_AVATAR_EMOJIS[AVATAR_RANDOM.nextInt(DEFAULT_AVATAR_EMOJIS.length)];
+
         User user = User.builder()
                 .name(req.getName())
                 .email(req.getEmail())
@@ -94,6 +106,7 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .phoneNumber(req.getPhoneNumber())
                 .bio(req.getBio() != null ? req.getBio() : "")
+                .avatar(avatar)
                 .isVerified(false)
 
                 .isActive(true)

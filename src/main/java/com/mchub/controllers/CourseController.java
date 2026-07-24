@@ -7,6 +7,7 @@ import com.mchub.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -65,6 +66,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/enroll */
     @PostMapping("/{id}/enroll")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> enroll(
             @PathVariable String id) {
         String userId = SecurityUtils.getCurrentUserId();
@@ -74,6 +76,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/gift-enroll — bypass plan check (used for welcome gift) */
     @PostMapping("/{id}/gift-enroll")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> giftEnroll(
             @PathVariable String id) {
         String userId = SecurityUtils.getCurrentUserId();
@@ -83,6 +86,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/lessons/{lessonId}/complete */
     @PostMapping("/{id}/lessons/{lessonId}/complete")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> completeLesson(
             @PathVariable String id,
             @PathVariable String lessonId) {
@@ -93,6 +97,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/readings/{readingId}/complete */
     @PostMapping("/{id}/readings/{readingId}/complete")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<CourseResponseDTO.EnrollmentProgressDTO>> completeReading(
             @PathVariable String id,
             @PathVariable String readingId) {
@@ -103,6 +108,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/exercises/{exerciseId}/complete */
     @PostMapping("/{id}/exercises/{exerciseId}/complete")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<ExerciseResultDTO>> completeExercise(
             @PathVariable String id,
             @PathVariable String exerciseId,
@@ -114,6 +120,7 @@ public class CourseController {
 
     /** POST /api/v1/courses/{id}/quiz/submit */
     @PostMapping("/{id}/quiz/submit")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<QuizResultDTO>> submitQuiz(
             @PathVariable String id,
             @Valid @RequestBody QuizSubmitRequest request) {
@@ -124,6 +131,7 @@ public class CourseController {
 
     /** GET /api/v1/courses/my/enrolled */
     @GetMapping("/my/enrolled")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<List<CourseResponseDTO>>> myEnrolled() {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Enrolled courses retrieved",
@@ -132,6 +140,7 @@ public class CourseController {
 
     /** GET /api/v1/courses/{id}/progress-stats */
     @GetMapping("/{id}/progress-stats")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<CourseProgressStatsDTO>> progressStats(@PathVariable String id) {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Progress stats retrieved",
@@ -140,6 +149,7 @@ public class CourseController {
 
     /** GET /api/v1/courses/my/certificates */
     @GetMapping("/my/certificates")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<List<CertificateResponseDTO>>> myCertificates() {
         String userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success("Certificates retrieved",

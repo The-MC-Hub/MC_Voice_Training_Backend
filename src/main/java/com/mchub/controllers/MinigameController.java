@@ -10,6 +10,7 @@ import com.mchub.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class MinigameController {
 
     /** POST /api/v1/minigames/speed-reader/submit — submit a finished run, awards XP */
     @PostMapping("/speed-reader/submit")
+    @PreAuthorize("hasAuthority('MC')")
     public ResponseEntity<ApiResponse<MinigameResultDTO>> submitSpeedReaderRun(
             @Valid @RequestBody MinigameSubmitRequest request) {
         String userId = SecurityUtils.getCurrentUserId();
