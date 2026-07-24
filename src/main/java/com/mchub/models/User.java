@@ -61,6 +61,8 @@ public class User {
 
     private String mcProfile;
 
+    private String clientProfile;
+
     @Builder.Default
     private boolean isPremium = false;
 
