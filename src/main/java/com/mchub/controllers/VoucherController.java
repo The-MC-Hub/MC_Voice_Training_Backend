@@ -2,14 +2,13 @@ package com.mchub.controllers;
 
 import com.mchub.dto.ApiResponse;
 import com.mchub.models.UserVoucher;
-import com.mchub.repositories.UserVoucherRepository;
+import com.mchub.services.VoucherService;
 import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -17,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherController {
 
-    private final UserVoucherRepository userVoucherRepository;
+    private final VoucherService voucherService;
 
     // ================================================================
     //  GET /api/v1/vouchers/my  — all vouchers (active + used)
@@ -26,7 +25,7 @@ public class VoucherController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<UserVoucher>>> getMyVouchers() {
         String userId = SecurityUtils.getCurrentUserId();
-        List<UserVoucher> vouchers = userVoucherRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<UserVoucher> vouchers = voucherService.getMyVouchers(userId);
         return ResponseEntity.ok(ApiResponse.success("Vouchers retrieved", vouchers));
     }
 
@@ -37,11 +36,8 @@ public class VoucherController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<UserVoucher>>> getAvailableVouchers() {
         String userId = SecurityUtils.getCurrentUserId();
-        List<UserVoucher> vouchers = userVoucherRepository
-                .findByUserIdAndUsedAtIsNullAndActiveTrue(userId)
-                .stream()
-                .filter(v -> v.getExpiresAt() == null || v.getExpiresAt().isAfter(LocalDateTime.now()))
-                .toList();
+        List<UserVoucher> vouchers = voucherService.getAvailableVouchers(userId);
         return ResponseEntity.ok(ApiResponse.success("Available vouchers retrieved", vouchers));
     }
 }
+

@@ -31,11 +31,9 @@ import java.util.Objects;
 public class AdminController {
 
     private final AdminService adminService;
-    private final BookingService bookingService;
     private final DatabaseMigrationService migrationService;
     private final AuditLogService auditLogService;
     private final SystemSettingRepository systemSettingRepo;
-    private final UserRepository userRepository;
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboard() {
@@ -183,44 +181,7 @@ public class AdminController {
 
     @GetMapping("/bookings")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAllBookings() {
-        List<Booking> bookings = bookingService.getAllBookings();
-        List<Map<String, Object>> enriched = bookings.stream()
-                .map(b -> {
-                    Map<String, Object> m = new java.util.HashMap<>();
-                    m.put("_id", b.getId());
-                    m.put("client", b.getClient());
-                    m.put("mc", b.getMc());
-                    m.put("eventName", b.getEventName());
-                    m.put("eventDate", b.getEventDate());
-                    m.put("startTime", b.getStartTime());
-                    m.put("endTime", b.getEndTime());
-                    m.put("location", b.getLocation());
-                    m.put("eventType", b.getEventType());
-                    m.put("description", b.getDescription());
-                    m.put("audienceSize", b.getAudienceSize());
-                    m.put("budget", b.getBudget());
-                    m.put("price", b.getPrice());
-                    m.put("status", b.getStatus());
-                    m.put("paymentStatus", b.getPaymentStatus());
-                    m.put("rejectionReason", b.getRejectionReason());
-                    m.put("couponCode", b.getCouponCode());
-                    m.put("createdAt", b.getCreatedAt());
-                    m.put("decidedAt", b.getDecidedAt());
-
-                    // Enrich with user names
-                    userRepository.findById(b.getClient()).ifPresent(u -> {
-                        m.put("clientName", u.getName());
-                        m.put("clientAvatar", u.getAvatar());
-                    });
-                    userRepository.findById(b.getMc()).ifPresent(u -> {
-                        m.put("mcName", u.getName());
-                        m.put("mcAvatar", u.getAvatar());
-                    });
-
-                    return m;
-                })
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(enriched));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getAllBookings()));
     }
 
     @GetMapping("/settings/guest-cooldown")
