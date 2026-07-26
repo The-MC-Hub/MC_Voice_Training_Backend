@@ -2,9 +2,12 @@ package com.mchub.services.impl;
 
 import com.mchub.dto.SaveSocialPostRequest;
 import com.mchub.dto.SocialPostDTO;
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.models.SocialPost;
 import com.mchub.repositories.SocialPostRepository;
 import com.mchub.services.SocialPostService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -43,8 +46,7 @@ public class SocialPostServiceImpl implements SocialPostService {
 
     @Override
     public SocialPostDTO updatePost(String id, SaveSocialPostRequest request) {
-        SocialPost post = socialPostRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Social post not found: " + id));
+        SocialPost post = EntityUtils.getOrThrow(socialPostRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Social post not found: " + id);
         post.setImage(request.getImage());
         post.setDescription(request.getDescription());
         post.setFbLink(request.getFbLink());
@@ -56,23 +58,21 @@ public class SocialPostServiceImpl implements SocialPostService {
     @Override
     public void deletePost(String id) {
         if (!socialPostRepository.existsById(id)) {
-            throw new RuntimeException("Social post not found: " + id);
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Social post not found: " + id);
         }
         socialPostRepository.deleteById(id);
     }
 
     @Override
     public SocialPostDTO toggleActive(String id) {
-        SocialPost post = socialPostRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Social post not found: " + id));
+        SocialPost post = EntityUtils.getOrThrow(socialPostRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Social post not found: " + id);
         post.setActive(!post.isActive());
         return toDTO(socialPostRepository.save(post));
     }
 
     @Override
     public SocialPostDTO recordClick(String id) {
-        SocialPost post = socialPostRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Social post not found: " + id));
+        SocialPost post = EntityUtils.getOrThrow(socialPostRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Social post not found: " + id);
         post.setClickCount(post.getClickCount() + 1);
         return toDTO(socialPostRepository.save(post));
     }
