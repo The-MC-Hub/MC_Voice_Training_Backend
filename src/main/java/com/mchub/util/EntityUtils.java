@@ -20,4 +20,10 @@ public final class EntityUtils {
     public static <T> T getOrThrow(Optional<T> optional, ErrorCode errorCode, String message) {
         return optional.orElseThrow(() -> new AppException(errorCode, message));
     }
+
+    public static void verifyOwnership(String ownerId, String currentUserId) {
+        if (!SecurityUtils.isAdmin() && (ownerId == null || !ownerId.equals(currentUserId))) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
+        }
+    }
 }

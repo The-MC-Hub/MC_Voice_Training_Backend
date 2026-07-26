@@ -21,6 +21,19 @@ public final class SecurityUtils {
         return principal.toString();
     }
 
+    public static boolean isAdmin() {
+        return hasRole("ROLE_ADMIN") || hasRole("ADMIN");
+    }
+
+    public static boolean hasRole(String role) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equalsIgnoreCase(role));
+    }
+
     public static String safeMessage(Exception e) {
         return (Objects.requireNonNull(e).getMessage() != null && !e.getMessage().isBlank())
             ? e.getMessage()

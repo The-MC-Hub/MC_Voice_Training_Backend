@@ -1,10 +1,10 @@
 package com.mchub.services.impl;
 
-import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.UserHighlight;
 import com.mchub.repositories.UserHighlightRepository;
 import com.mchub.services.UserHighlightService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,11 +32,9 @@ public class UserHighlightServiceImpl implements UserHighlightService {
 
     @Override
     public UserHighlight updateHighlight(String userId, String id, UserHighlight request) {
-        UserHighlight highlight = highlightRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Highlight not found: " + id));
-        if (!userId.equals(highlight.getUserId())) {
-            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
-        }
+        UserHighlight highlight = EntityUtils.getOrThrow(highlightRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Highlight not found: " + id);
+        EntityUtils.verifyOwnership(highlight.getUserId(), userId);
+
         if (request.getColorHex() != null) highlight.setColorHex(request.getColorHex());
         if (request.getNoteContent() != null) highlight.setNoteContent(request.getNoteContent());
         highlight.setUpdatedAt(new Date());
@@ -45,11 +43,8 @@ public class UserHighlightServiceImpl implements UserHighlightService {
 
     @Override
     public void deleteHighlight(String userId, String id) {
-        UserHighlight highlight = highlightRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Highlight not found: " + id));
-        if (!userId.equals(highlight.getUserId())) {
-            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
-        }
+        UserHighlight highlight = EntityUtils.getOrThrow(highlightRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Highlight not found: " + id);
+        EntityUtils.verifyOwnership(highlight.getUserId(), userId);
         highlightRepository.deleteById(id);
     }
 }
