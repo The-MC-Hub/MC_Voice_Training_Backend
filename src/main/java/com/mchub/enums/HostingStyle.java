@@ -1,0 +1,17 @@
+package com.mchub.enums;
+
+public enum HostingStyle {
+    FORMAL,
+    SEMI_FORMAL,
+    CASUAL,
+    HUMOROUS,
+    ENERGETIC,
+    ELEGANT,
+    CHARISMATIC,
+    INTERACTIVE,
+    STORYTELLING,
+    MOTIVATIONAL,
+    PROFESSIONAL,
+    LUXURY,
+    OTHER
+}

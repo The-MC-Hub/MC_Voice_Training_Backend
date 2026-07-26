@@ -60,4 +60,7 @@ public interface AdminService {
     @PreAuthorize("hasAuthority('ADMIN')")
     void sendNotificationEmail(@NonNull String userId, @NonNull String subject, @NonNull String content);
 
+    @PreAuthorize("hasAuthority('ADMIN')")
+    List<Map<String, Object>> getAllBookings();
 }
+

@@ -1,0 +1,24 @@
+package com.mchub.enums;
+
+public enum Language {
+    VIETNAMESE,
+    ENGLISH,
+    JAPANESE,
+    KOREAN,
+    CHINESE,
+    FRENCH,
+    GERMAN,
+    SPANISH,
+    RUSSIAN,
+    THAI,
+    ITALIAN,
+    PORTUGUESE,
+    DUTCH,
+    ARABIC,
+    HINDI,
+    INDONESIAN,
+    MALAY,
+    KHMER,
+    LAO,
+    OTHER
+}

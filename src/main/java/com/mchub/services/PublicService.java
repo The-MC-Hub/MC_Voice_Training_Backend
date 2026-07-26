@@ -23,6 +23,9 @@ public interface PublicService {
 
 
     List<EnumOptionDTO> getReportReasons();
+
+    Map<String, List<EnumOptionDTO>> getMCAttributes();
+
     List<MCTrainingStatsDTO> getFeaturedMCTrainingStats();
 
     List<MCSearchResultDTO> searchMCs(SearchMCRequest req);

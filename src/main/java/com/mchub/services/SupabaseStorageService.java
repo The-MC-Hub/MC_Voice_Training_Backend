@@ -29,7 +29,10 @@ public class SupabaseStorageService {
     private String cvBucket;
 
     public String uploadCV(MultipartFile file, String userId) throws IOException {
-        String safeName = UUID.randomUUID() + "-" + file.getOriginalFilename();
+        String orig = file.getOriginalFilename() != null ? file.getOriginalFilename() : "cv.pdf";
+        // Remove diacritics, replace spaces/special chars with underscores
+        String clean = orig.replaceAll("[^a-zA-Z0-9.]", "_").replaceAll("_+", "_");
+        String safeName = UUID.randomUUID() + "-" + clean;
         String path = userId + "/" + safeName;
         String uploadUrl = supabaseUrl + "/storage/v1/object/" + cvBucket + "/" + path;
 

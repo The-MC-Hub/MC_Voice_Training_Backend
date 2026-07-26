@@ -1,5 +1,7 @@
 package com.mchub.models;
 
+import com.mchub.enums.SubscriptionPlan;
+import com.mchub.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,6 +47,44 @@ public class Announcement {
         SENT,     // email dispatched
         CANCELLED
     }
+
+    public enum ChannelType {
+        IN_APP,
+        EMAIL,
+        BOTH
+    }
+
+    @Builder.Default
+    private ChannelType channel = ChannelType.BOTH;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TargetCriteria {
+        private UserRole role;
+        private SubscriptionPlan plan;
+        private LocalDateTime registeredAfter;
+        private LocalDateTime registeredBefore;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EmailDesignData {
+        private String logoUrl;
+        private String bannerUrl;
+        private String title;
+        private String description;
+        private String buttonText;
+        private String buttonLink;
+    }
+
+    private TargetCriteria targetCriteria;
+    private EmailDesignData emailDesign;
+    private String actionUrl;
+    private String triggerEvent;
 
     // Audience filter — empty = all active users
     private List<String> targetPlans;   // e.g. ["FREE","BASIC"] — empty = everyone
