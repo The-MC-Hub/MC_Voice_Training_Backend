@@ -24,6 +24,8 @@ public interface AuthService {
 
     void verifyOtp(@NonNull String email, @NonNull String code);
 
+    LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code);
+
     LoginResponse verifyEmailByToken(@NonNull String token);
 
     void resendOtp(@NonNull String email);
@@ -58,6 +60,12 @@ public interface AuthService {
 
     @PreAuthorize("isAuthenticated()")
     User unlinkGoogleAccount(@NonNull String userId);
+
+    @PreAuthorize("isAuthenticated()")
+    User getUserById(@NonNull String userId);
+
+    @PreAuthorize("isAuthenticated()")
+    String getOrGenerateReferralCode(@NonNull String userId);
 
     @PreAuthorize("isAuthenticated()")
     User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);

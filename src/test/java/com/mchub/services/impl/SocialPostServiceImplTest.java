@@ -122,8 +122,7 @@ class SocialPostServiceImplTest {
             when(socialPostRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.updatePost("missing", request()))
-                    .isInstanceOf(RuntimeException.class)
-                    .isNotInstanceOf(AppException.class);
+                    .isInstanceOf(AppException.class);
         }
     }
 

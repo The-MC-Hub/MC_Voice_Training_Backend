@@ -4,10 +4,13 @@ import com.mchub.dto.UserResponseDTO;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
+import com.mchub.mapper.UserMapper;
 import com.mchub.models.Announcement;
 import com.mchub.models.User;
 import com.mchub.repositories.AnnouncementRepository;
 import com.mchub.repositories.UserRepository;
+import com.mchub.services.impl.AnnouncementServiceImpl;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +50,8 @@ class AnnouncementServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private EmailService emailService;
     @Mock private NotificationService notificationService;
+    @Mock private UserMapper userMapper;
+    @Mock private MongoTemplate mongoTemplate;
 
     private AnnouncementService service;
 
@@ -55,7 +60,7 @@ class AnnouncementServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AnnouncementService(announcementRepo, userRepository, emailService, notificationService);
+        service = new AnnouncementServiceImpl(announcementRepo, userRepository, emailService, notificationService, userMapper, mongoTemplate);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(ADMIN_ID, null, List.of()));
     }
@@ -172,6 +177,12 @@ class AnnouncementServiceTest {
                     User.builder().id("u1").email("a@test.local").isActive(true).build(),
                     User.builder().id("u2").email(null).isActive(true).build(),
                     User.builder().id("u3").email("c@test.local").isActive(false).build()));
+            when(userMapper.toResponseDTO(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> {
+                User u = inv.getArgument(0);
+                UserResponseDTO dto = new UserResponseDTO();
+                dto.setId(u.getId());
+                return dto;
+            });
 
             List<UserResponseDTO> result = service.getUsersByPlan(null);
 
@@ -185,6 +196,12 @@ class AnnouncementServiceTest {
             when(userRepository.findAll()).thenReturn(List.of(
                     User.builder().id("u1").email("a@test.local").isActive(true).plan(SubscriptionPlan.BASIC).build(),
                     User.builder().id("u2").email("b@test.local").isActive(true).plan(SubscriptionPlan.FULL).build()));
+            when(userMapper.toResponseDTO(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> {
+                User u = inv.getArgument(0);
+                UserResponseDTO dto = new UserResponseDTO();
+                dto.setId(u.getId());
+                return dto;
+            });
 
             List<UserResponseDTO> result = service.getUsersByPlan("basic");
 

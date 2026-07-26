@@ -77,4 +77,9 @@ public class PublicController {
     public ResponseEntity<ApiResponse<List<EnumOptionDTO>>> getReportReasons() {
         return ResponseEntity.ok(ApiResponse.success(publicService.getReportReasons()));
     }
+
+    @GetMapping("/enums/mc-attributes")
+    public ResponseEntity<ApiResponse<Map<String, List<EnumOptionDTO>>>> getMCAttributes() {
+        return ResponseEntity.ok(ApiResponse.success(publicService.getMCAttributes()));
+    }
 }

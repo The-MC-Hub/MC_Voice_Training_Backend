@@ -1,16 +1,16 @@
 package com.mchub.services.impl;
 
 import com.mchub.dto.ClientProfileDTO;
+import com.mchub.exception.ErrorCode;
 import com.mchub.mapper.ClientProfileMapper;
 import com.mchub.models.ClientProfile;
 import com.mchub.models.User;
 import com.mchub.repositories.ClientProfileRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.services.ClientProfileService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-
 
 @Service
 @RequiredArgsConstructor
@@ -67,8 +67,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
         ClientProfile saved = clientProfileRepository.save(profile);
 
         // Link profile to user
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        User user = EntityUtils.getOrThrow(userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found with id: " + userId);
         user.setClientProfile(saved.getId());
         userRepository.save(user);
 

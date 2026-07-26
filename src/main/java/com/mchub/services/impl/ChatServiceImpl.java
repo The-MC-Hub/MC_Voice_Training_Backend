@@ -1,11 +1,14 @@
 package com.mchub.services.impl;
 
 import com.mchub.enums.MessageType;
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.models.Conversation;
 import com.mchub.models.Message;
 import com.mchub.repositories.ConversationRepository;
 import com.mchub.repositories.MessageRepository;
 import com.mchub.services.ChatService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,11 +28,10 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Message sendMessage(@NonNull String conversationId, @NonNull String senderId, @NonNull String content, String type) {
-        Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        Conversation conversation = EntityUtils.getOrThrow(conversationRepository, conversationId, ErrorCode.RESOURCE_NOT_FOUND, "Conversation not found: " + conversationId);
 
         if (!conversation.isActive()) {
-            throw new RuntimeException("Conversation is locked");
+            throw new AppException(ErrorCode.VALIDATION_FAILED, "Conversation is locked");
         }
 
         MessageType msgType;
@@ -83,8 +85,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Conversation getConversationById(@NonNull String id) {
-        return conversationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        return EntityUtils.getOrThrow(conversationRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Conversation not found: " + id);
     }
 
     @Override

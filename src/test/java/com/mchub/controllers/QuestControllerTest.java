@@ -1,11 +1,9 @@
 package com.mchub.controllers;
 
+import com.mchub.exception.AppException;
+import com.mchub.exception.ErrorCode;
 import com.mchub.exception.GlobalExceptionHandler;
-import com.mchub.models.DiscountCode;
-import com.mchub.models.User;
-import com.mchub.repositories.DiscountCodeRepository;
-import com.mchub.repositories.UserRepository;
-import com.mchub.repositories.UserVoucherRepository;
+import com.mchub.services.QuestService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,14 +18,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,9 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class QuestControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserRepository userRepository;
-    @MockBean private DiscountCodeRepository discountCodeRepository;
-    @MockBean private UserVoucherRepository userVoucherRepository;
+    @MockBean private QuestService questService;
 
     private static final String USER_ID = "user-quest-001";
 
@@ -57,10 +48,6 @@ class QuestControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    private User.UserBuilder baseUser() {
-        return User.builder().id(USER_ID).completedQuests(new HashSet<>()).newbieVoucherClaimed(false);
-    }
-
     @Nested
     @DisplayName("GET /api/v1/quests/progress")
     class GetProgress {
@@ -68,12 +55,18 @@ class QuestControllerTest {
         @Test
         @DisplayName("reports doneCount/allDone correctly for partial completion")
         void reportsPartialCompletion() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            Map<String, Object> progress = Map.of(
+                    "quests", List.of(),
+                    "doneCount", 1,
+                    "totalQuests", 5,
+                    "allDone", false,
+                    "claimedVoucher", false
+            );
+            when(questService.getProgress(USER_ID)).thenReturn(progress);
 
             mockMvc.perform(get("/api/v1/quests/progress"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.doneCount").value(2))
+                    .andExpect(jsonPath("$.data.doneCount").value(1))
                     .andExpect(jsonPath("$.data.totalQuests").value(5))
                     .andExpect(jsonPath("$.data.allDone").value(false));
         }
@@ -86,18 +79,24 @@ class QuestControllerTest {
         @Test
         @DisplayName("400 VALIDATION_FAILED for an unknown quest id")
         void rejectsUnknownQuestId() throws Exception {
+            when(questService.completeQuest(USER_ID, "bogus-quest"))
+                    .thenThrow(new AppException(ErrorCode.VALIDATION_FAILED, "Nhiệm vụ không hợp lệ: bogus-quest"));
+
             mockMvc.perform(post("/api/v1/quests/complete/{questId}", "bogus-quest"))
                     .andExpect(status().isBadRequest());
-
-            verify(userRepository, never()).findById(any());
         }
 
         @Test
         @DisplayName("idempotent — completing the same quest twice does not duplicate in the set")
         void isIdempotent() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+            Map<String, Object> progress = Map.of(
+                    "quests", List.of(),
+                    "doneCount", 1,
+                    "totalQuests", 5,
+                    "allDone", false,
+                    "claimedVoucher", false
+            );
+            when(questService.completeQuest(USER_ID, "profile")).thenReturn(progress);
 
             mockMvc.perform(post("/api/v1/quests/complete/{questId}", "profile"))
                     .andExpect(status().isOk())
@@ -107,9 +106,14 @@ class QuestControllerTest {
         @Test
         @DisplayName("allDone=true once all 5 quests are completed")
         void reportsAllDoneWhenComplete() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "reading"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+            Map<String, Object> progress = Map.of(
+                    "quests", List.of(),
+                    "doneCount", 5,
+                    "totalQuests", 5,
+                    "allDone", true,
+                    "claimedVoucher", false
+            );
+            when(questService.completeQuest(USER_ID, "leaderboard")).thenReturn(progress);
 
             mockMvc.perform(post("/api/v1/quests/complete/{questId}", "leaderboard"))
                     .andExpect(status().isOk())
@@ -124,8 +128,8 @@ class QuestControllerTest {
         @Test
         @DisplayName("409 COUPON_ALREADY_USED when already claimed")
         void rejectsWhenAlreadyClaimed() throws Exception {
-            User user = baseUser().newbieVoucherClaimed(true).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(questService.claimVoucher(USER_ID))
+                    .thenThrow(new AppException(ErrorCode.COUPON_ALREADY_USED, "Bạn đã nhận quà tân thủ trước đó."));
 
             mockMvc.perform(post("/api/v1/quests/claim-voucher")).andExpect(status().isConflict());
         }
@@ -133,45 +137,24 @@ class QuestControllerTest {
         @Test
         @DisplayName("400 VALIDATION_FAILED when not all quests are completed")
         void rejectsWhenQuestsIncomplete() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(questService.claimVoucher(USER_ID))
+                    .thenThrow(new AppException(ErrorCode.VALIDATION_FAILED, "Vui lòng hoàn thành tất cả 5 nhiệm vụ để nhận quà!"));
 
             mockMvc.perform(post("/api/v1/quests/claim-voucher")).andExpect(status().isBadRequest());
-
-            verify(discountCodeRepository, never()).save(any(DiscountCode.class));
         }
 
         @Test
         @DisplayName("generates and saves a new voucher when all quests done and not yet claimed")
         void generatesVoucherWhenEligible() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard", "reading"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(discountCodeRepository.findByCodeIgnoreCase(any())).thenReturn(Optional.empty());
-            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(false);
-            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+            Map<String, Object> voucherMap = Map.of(
+                    "code", "MCNEW50",
+                    "discountPercent", 50
+            );
+            when(questService.claimVoucher(USER_ID)).thenReturn(voucherMap);
 
             mockMvc.perform(post("/api/v1/quests/claim-voucher"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.discountPercent").value(50));
-
-            verify(discountCodeRepository).save(any(DiscountCode.class));
-            verify(userVoucherRepository).save(any());
-        }
-
-        @Test
-        @DisplayName("does not duplicate DiscountCode when it already exists (retry-safe)")
-        void doesNotDuplicateExistingCode() throws Exception {
-            User user = baseUser().completedQuests(new HashSet<>(Set.of("profile", "practice", "courses", "leaderboard", "reading"))).build();
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(discountCodeRepository.findByCodeIgnoreCase(any()))
-                    .thenReturn(Optional.of(DiscountCode.builder().id("existing").build()));
-            when(userVoucherRepository.existsByUserIdAndCode(any(), any())).thenReturn(true);
-            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            mockMvc.perform(post("/api/v1/quests/claim-voucher")).andExpect(status().isOk());
-
-            verify(discountCodeRepository, never()).save(any(DiscountCode.class));
-            verify(userVoucherRepository, never()).save(any());
         }
     }
 }

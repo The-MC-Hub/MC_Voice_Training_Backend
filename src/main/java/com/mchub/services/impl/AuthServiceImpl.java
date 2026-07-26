@@ -16,6 +16,8 @@ import com.mchub.services.AuthService;
 import com.mchub.services.EmailService;
 import com.mchub.services.GoogleTokenVerifierService;
 import com.mchub.services.JwtService;
+import com.mchub.util.EntityUtils;
+import com.mchub.util.SecurityConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
@@ -36,13 +38,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    // Kept in sync with Register.jsx's AVATARS list (same emoji set, so a
-    // server-side random pick still looks like something the user could
-    // have chosen themselves in the picker).
-    private static final String[] DEFAULT_AVATAR_EMOJIS = {
-            "🎤", "⭐", "👑", "🔥", "💎", "🚀", "🎵", "🏆", "✨", "⚡"
-    };
     private static final SecureRandom AVATAR_RANDOM = new SecureRandom();
+    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
+
+    private String generateReferralCode() {
+        StringBuilder sb = new StringBuilder(5);
+        for (int i = 0; i < 5; i++) {
+            sb.append(SecurityConstants.REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(SecurityConstants.REFERRAL_CHARS.length())));
+        }
+        return sb.toString();
+    }
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -97,7 +102,7 @@ public class AuthServiceImpl implements AuthService {
 
         String avatar = (req.getAvatar() != null && !req.getAvatar().isBlank())
                 ? req.getAvatar()
-                : DEFAULT_AVATAR_EMOJIS[AVATAR_RANDOM.nextInt(DEFAULT_AVATAR_EMOJIS.length)];
+                : SecurityConstants.DEFAULT_AVATAR_EMOJIS[AVATAR_RANDOM.nextInt(SecurityConstants.DEFAULT_AVATAR_EMOJIS.length)];
 
         User user = User.builder()
                 .name(req.getName())
@@ -147,17 +152,6 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return savedUser;
-    }
-
-    private static final String REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
-
-    private String generateReferralCode() {
-        StringBuilder sb = new StringBuilder(5);
-        for (int i = 0; i < 5; i++) {
-            sb.append(REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(REFERRAL_CHARS.length())));
-        }
-        return sb.toString();
     }
 
     private static final int MAX_FAILED_ATTEMPTS = 10;
@@ -679,6 +673,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code) {
+        verifyOtp(email, code);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        String token = jwtService.generateToken(user.getId(), user.getRole().name());
+        return new LoginResponse(user, token);
+    }
+
+    @Override
     public LoginResponse verifyEmailByToken(@NonNull String token) {
         User user = userRepository.findByEmailVerificationToken(token)
                 .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Link xác thực không hợp lệ hoặc đã hết hạn."));
@@ -715,4 +718,32 @@ public class AuthServiceImpl implements AuthService {
             userRepository.save(u);
         });
     }
+
+    @Override
+    public User getUserById(@NonNull String userId) {
+        return EntityUtils.getOrThrow(userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found: " + userId);
+    }
+
+    @Override
+    public String getOrGenerateReferralCode(@NonNull String userId) {
+        User user = getUserById(userId);
+        if (user.getReferralCode() != null) {
+            return user.getReferralCode();
+        }
+        String code = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            String candidate = generateReferralCode();
+            if (userRepository.findByReferralCode(candidate).isEmpty()) {
+                code = candidate;
+                break;
+            }
+        }
+        if (code == null) {
+            code = generateReferralCode();
+        }
+        user.setReferralCode(code);
+        userRepository.save(user);
+        return code;
+    }
 }
+

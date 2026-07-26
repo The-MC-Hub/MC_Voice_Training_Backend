@@ -39,5 +39,16 @@ public interface MCProfileMapper {
     @Mapping(target = "totalEvents", source = "profile.totalEvents")
     @Mapping(target = "achievements", source = "profile.achievements")
     @Mapping(target = "preferredContact", source = "profile.preferredContact")
+    @Mapping(target = "visibleFields", source = "profile.visibleFields")
+    @Mapping(target = "events", expression = "java(toEventEntryDTOs(profile.getEvents()))")
     MCProfileResponseDTO toResponseDTO(MCProfile profile, User user);
+
+    default java.util.List<MCProfileResponseDTO.EventEntryDTO> toEventEntryDTOs(java.util.List<MCProfile.EventEntry> events) {
+        if (events == null) return null;
+        return events.stream().map(e -> new MCProfileResponseDTO.EventEntryDTO(
+                e.getId(), e.getTitle(), e.getDescription(), e.getEventType(), e.getLocation(),
+                e.getDate() != null ? e.getDate().toString() : null,
+                e.getSkillsLearned(), e.getPhotos()
+        )).toList();
+    }
 }

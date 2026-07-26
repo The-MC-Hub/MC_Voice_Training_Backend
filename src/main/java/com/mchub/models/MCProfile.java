@@ -91,6 +91,17 @@ public class MCProfile {
     @Builder.Default
     private String preferredContact = "IN_APP"; // IN_APP, PHONE, EMAIL, ZALO
 
+    // Per-field public visibility toggle, keyed by MCProfileResponseDTO field name
+    // (biography, personality, hostingStyle, experience, styles, languages,
+    // regions, rates, portfolio, notableEvents, achievements). Missing key
+    // defaults to visible — see MCProfileMapper#applyVisibility.
+    @Builder.Default
+    private Map<String, Boolean> visibleFields = new java.util.LinkedHashMap<>();
+
+    // Event portfolio entries, each with its own photos + description
+    @Builder.Default
+    private List<EventEntry> events = new ArrayList<>();
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -118,5 +129,22 @@ public class MCProfile {
         private String tiktok;
         private String facebook;
         private String zalo;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EventEntry {
+        private String id;
+        private String title;
+        private String description;
+        private EventType eventType;
+        private String location;
+        private LocalDateTime date;
+        @Builder.Default
+        private List<String> skillsLearned = new ArrayList<>();
+        @Builder.Default
+        private List<String> photos = new ArrayList<>();
     }
 }

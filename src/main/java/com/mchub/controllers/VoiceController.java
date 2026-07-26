@@ -25,7 +25,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -185,9 +184,7 @@ public class VoiceController {
     @PreAuthorize("hasAuthority('MC') or hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getHistory(@PathVariable String userId) {
         String callerId = SecurityUtils.getCurrentUserId();
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
-                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"));
-        if (!isAdmin && !callerId.equals(userId)) {
+        if (!SecurityUtils.isAdmin() && !callerId.equals(userId)) {
             throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
         }
         return ResponseEntity.ok(ApiResponse.success(voiceService.getUserPracticeHistory(userId)));
@@ -199,9 +196,7 @@ public class VoiceController {
     public ResponseEntity<ApiResponse<List<PracticeSessionResponseDTO>>> getLessonHistory(
             @PathVariable String userId, @PathVariable String lessonId) {
         String callerId = SecurityUtils.getCurrentUserId();
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
-                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"));
-        if (!isAdmin && !callerId.equals(userId)) {
+        if (!SecurityUtils.isAdmin() && !callerId.equals(userId)) {
             throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
         }
         return ResponseEntity.ok(ApiResponse.success(voiceService.getUserLessonHistory(userId, lessonId)));

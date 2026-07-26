@@ -13,6 +13,8 @@ import com.mchub.models.PaymentTransaction;
 import com.mchub.models.PracticeSession;
 import com.mchub.models.User;
 import com.mchub.models.UserStats;
+import com.mchub.models.Booking;
+import com.mchub.repositories.BookingRepository;
 import com.mchub.repositories.AuditLogRepository;
 import com.mchub.repositories.OtpVerificationRepository;
 import com.mchub.repositories.PaymentTransactionRepository;
@@ -22,6 +24,7 @@ import com.mchub.repositories.UserStatsRepository;
 import com.mchub.mapper.UserMapper;
 import com.mchub.services.AdminService;
 import com.mchub.services.EmailService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -39,7 +42,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -57,28 +64,78 @@ public class AdminServiceImpl implements AdminService {
     private final OtpVerificationRepository otpRepo;
     private final UserStatsRepository userStatsRepository;
     private final com.mchub.repositories.DiscountCodeRepository discountCodeRepository;
+    private final BookingRepository bookingRepository;
 
     private static final SecureRandom ADMIN_RNG = new SecureRandom();
 
     @Override
     public Map<String, Object> getAdminDashboardOverview() {
-        List<PaymentTransaction> allTx = transactionRepository.findAll();
-        long completedCount = allTx.stream().filter(t -> t.getStatus() == TransactionStatus.COMPLETED).count();
-        long pendingCount   = allTx.stream().filter(t -> t.getStatus() == TransactionStatus.PENDING).count();
-        long failedCount    = allTx.stream().filter(t -> t.getStatus() == TransactionStatus.FAILED).count();
-        long totalRevenue   = allTx.stream().filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
-                                   .mapToLong(PaymentTransaction::getAmount).sum();
+        long completedCount = transactionRepository.countByStatus(TransactionStatus.COMPLETED);
+        long pendingCount   = transactionRepository.countByStatus(TransactionStatus.PENDING);
+        long failedCount    = transactionRepository.countByStatus(TransactionStatus.FAILED);
+        long totalTransactions = transactionRepository.count();
+        Long totalRevObj    = transactionRepository.sumAmountByStatus(TransactionStatus.COMPLETED);
+        long totalRevenue   = totalRevObj != null ? totalRevObj : 0L;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers",       userRepository.countByRoleNot(UserRole.ADMIN));
         stats.put("totalMCs",         userRepository.countByRole(UserRole.MC));
-        stats.put("totalTransactions", allTx.size());
+        stats.put("totalTransactions", totalTransactions);
         stats.put("completedTransactions", completedCount);
         stats.put("pendingTransactions",   pendingCount);
         stats.put("failedTransactions",    failedCount);
         stats.put("totalRevenue",      totalRevenue);
         return stats;
     }
+
+    @Override
+    public List<Map<String, Object>> getAllBookings() {
+        List<Booking> bookings = bookingRepository.findAll();
+        Set<String> userIds = new java.util.HashSet<>();
+        bookings.forEach(b -> {
+            if (b.getClient() != null) userIds.add(b.getClient());
+            if (b.getMc() != null) userIds.add(b.getMc());
+        });
+        Map<String, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return bookings.stream().map(b -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("_id", b.getId());
+            m.put("client", b.getClient());
+            m.put("mc", b.getMc());
+            m.put("eventName", b.getEventName());
+            m.put("eventDate", b.getEventDate());
+            m.put("startTime", b.getStartTime());
+            m.put("endTime", b.getEndTime());
+            m.put("location", b.getLocation());
+            m.put("eventType", b.getEventType());
+            m.put("description", b.getDescription());
+            m.put("audienceSize", b.getAudienceSize());
+            m.put("budget", b.getBudget());
+            m.put("price", b.getPrice());
+            m.put("status", b.getStatus());
+            m.put("paymentStatus", b.getPaymentStatus());
+            m.put("rejectionReason", b.getRejectionReason());
+            m.put("couponCode", b.getCouponCode());
+            m.put("createdAt", b.getCreatedAt());
+            m.put("decidedAt", b.getDecidedAt());
+
+            User clientUser = userMap.get(b.getClient());
+            if (clientUser != null) {
+                m.put("clientName", clientUser.getName());
+                m.put("clientAvatar", clientUser.getAvatar());
+            }
+            User mcUser = userMap.get(b.getMc());
+            if (mcUser != null) {
+                m.put("mcName", mcUser.getName());
+                m.put("mcAvatar", mcUser.getAvatar());
+            }
+
+            return m;
+        }).toList();
+    }
+
 
     @Override
     public List<UserResponseDTO> getAllUsers() {
@@ -88,9 +145,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO getUserById(@NonNull String userId) {
-        return userRepository.findById(userId)
-                .map(userMapper::toResponseDTO)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        return userMapper.toResponseDTO(EntityUtils.getUserOrThrow(userRepository, userId));
     }
 
     @Override
@@ -386,8 +441,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void sendPasswordResetEmail(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         String code = String.format("%06d", ADMIN_RNG.nextInt(1_000_000));
         otpRepo.deleteAllByEmail(user.getEmail());
         otpRepo.save(OtpVerification.builder()
@@ -404,8 +458,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void changeUserPassword(@NonNull String userId, @NonNull String newPassword) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordChangedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
@@ -413,8 +466,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteUser(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         // Soft delete: deactivate instead of hard delete to preserve data integrity
         user.setActive(false);
         userRepository.save(user);
@@ -422,8 +474,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> getUserStats(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         List<PracticeSession> sessions = practiceSessionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId);
@@ -486,8 +537,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void sendNotificationEmail(@NonNull String userId, @NonNull String subject, @NonNull String content) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         emailService.sendSimpleEmail(user.getEmail(), subject, content);
     }
 
@@ -504,8 +554,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified) {
-        User user = userRepository.findById(Objects.requireNonNull(id))
-            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + id));
+        User user = EntityUtils.getUserOrThrow(userRepository, id);
         user.setActive(isActive);
         user.setVerified(isVerified);
         return userMapper.toResponseDTO(userRepository.save(user));
@@ -513,8 +562,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO updateUserPlan(@NonNull String id, @NonNull String planStr) {
-        User user = userRepository.findById(Objects.requireNonNull(id))
-            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        User user = EntityUtils.getUserOrThrow(userRepository, id);
         
         if (planStr.equalsIgnoreCase("FREE")) {
             user.setPremium(false);

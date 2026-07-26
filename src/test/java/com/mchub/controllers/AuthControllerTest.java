@@ -58,8 +58,6 @@ class AuthControllerTest {
     @MockBean private AuditLogService auditLogService;
     @MockBean private JwtService jwtService;
     @MockBean private UserMapper userMapper;
-    @MockBean private UserRepository userRepository;
-    @MockBean private ReferralRepository referralRepository;
     @MockBean private GamificationService gamificationService;
 
     private static final String USER_ID = "user-001";
@@ -221,8 +219,8 @@ class AuthControllerTest {
         @Test
         @DisplayName("200 OK with fresh token after verify + auto-login")
         void returns200AfterVerify() throws Exception {
-            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(sampleUser()));
-            when(jwtService.generateToken(USER_ID, "CLIENT")).thenReturn("fresh-jwt");
+            when(authService.verifyOtpAndLogin(EMAIL, "123456"))
+                    .thenReturn(new AuthService.LoginResponse(sampleUser(), "fresh-jwt"));
             when(userMapper.toResponseDTO(any(User.class))).thenReturn(sampleUserDto());
 
             mockMvc.perform(post("/api/v1/auth/verify-otp")
@@ -231,14 +229,14 @@ class AuthControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.token").value("fresh-jwt"));
 
-            verify(authService).verifyOtp(EMAIL, "123456");
+            verify(authService).verifyOtpAndLogin(EMAIL, "123456");
         }
 
         @Test
         @DisplayName("propagates VALIDATION_FAILED as 400 when OTP invalid")
         void returns400OnInvalidOtp() throws Exception {
-            org.mockito.Mockito.doThrow(new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung"))
-                    .when(authService).verifyOtp(EMAIL, "000000");
+            when(authService.verifyOtpAndLogin(EMAIL, "000000"))
+                    .thenThrow(new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung"));
 
             mockMvc.perform(post("/api/v1/auth/verify-otp")
                             .contentType(MediaType.APPLICATION_JSON)

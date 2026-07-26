@@ -10,6 +10,9 @@ public class SearchMCRequest {
     private String keyword;
     private List<EventType> eventTypes;
     private List<String> regions;
+    private List<String> styles;
+    private List<String> languages;
+    private String hostingStyle;
     private Double budgetMin;
     private Double budgetMax;
     private Integer minExperience;

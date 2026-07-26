@@ -129,7 +129,32 @@ public class PublicServiceImpl implements PublicService {
             return null;
 
         User user = userRepository.findById(Objects.requireNonNull(profile.getUser())).orElse(null);
-        return mcProfileMapper.toResponseDTO(profile, user);
+        MCProfileResponseDTO dto = mcProfileMapper.toResponseDTO(profile, user);
+        applyFieldVisibility(dto);
+        return dto;
+    }
+
+    // Nulls out any content field the MC has toggled off in Settings before it
+    // reaches a public viewer. Missing map entry = visible (opt-out model, not
+    // opt-in, so existing profiles created before this feature keep showing
+    // everything). Core identity fields (name/avatar/verified) are never
+    // gated — a hidden profile isn't useful to a recruiter.
+    private void applyFieldVisibility(MCProfileResponseDTO dto) {
+        Map<String, Boolean> visibility = dto.getVisibleFields();
+        if (visibility == null || visibility.isEmpty()) return;
+
+        if (Boolean.FALSE.equals(visibility.get("biography"))) dto.setBiography(null);
+        if (Boolean.FALSE.equals(visibility.get("personality"))) dto.setPersonality(null);
+        if (Boolean.FALSE.equals(visibility.get("hostingStyle"))) dto.setHostingStyle(null);
+        if (Boolean.FALSE.equals(visibility.get("experience"))) dto.setExperience(0);
+        if (Boolean.FALSE.equals(visibility.get("styles"))) dto.setStyles(null);
+        if (Boolean.FALSE.equals(visibility.get("languages"))) dto.setLanguages(null);
+        if (Boolean.FALSE.equals(visibility.get("regions"))) dto.setRegions(null);
+        if (Boolean.FALSE.equals(visibility.get("rates"))) { dto.setRatesMin(null); dto.setRatesMax(null); }
+        if (Boolean.FALSE.equals(visibility.get("portfolio"))) dto.setPortfolio(null);
+        if (Boolean.FALSE.equals(visibility.get("notableEvents"))) dto.setNotableEvents(null);
+        if (Boolean.FALSE.equals(visibility.get("achievements"))) dto.setAchievements(null);
+        if (Boolean.FALSE.equals(visibility.get("events"))) dto.setEvents(null);
     }
 
 
@@ -206,7 +231,41 @@ public class PublicServiceImpl implements PublicService {
                         }
                     }
 
-                    // 4. Budget fit — bidirectional + tight-fit bonus
+                    // 4. Style match — proportional scoring
+                    if (req.getStyles() != null && !req.getStyles().isEmpty()) {
+                        if (p.getStyles() != null && !p.getStyles().isEmpty()) {
+                            long styleMatchCount = p.getStyles().stream().filter(s -> req.getStyles().contains(s)).count();
+                            double styleScore = Math.min(styleMatchCount * 1.5, 2.5);
+                            score += styleScore;
+                            breakdown.put("style_match", styleScore);
+                        } else {
+                            breakdown.put("style_match", 0);
+                        }
+                    }
+
+                    // 5. Language match — proportional scoring
+                    if (req.getLanguages() != null && !req.getLanguages().isEmpty()) {
+                        if (p.getLanguages() != null && !p.getLanguages().isEmpty()) {
+                            long langMatchCount = p.getLanguages().stream().filter(l -> req.getLanguages().contains(l)).count();
+                            double langScore = Math.min(langMatchCount * 1.0, 2.0);
+                            score += langScore;
+                            breakdown.put("language_match", langScore);
+                        } else {
+                            breakdown.put("language_match", 0);
+                        }
+                    }
+
+                    // 6. Hosting style match — exact match bonus
+                    if (req.getHostingStyle() != null && !req.getHostingStyle().isBlank()) {
+                        if (p.getHostingStyle() != null && p.getHostingStyle().equalsIgnoreCase(req.getHostingStyle())) {
+                            score += 1.5;
+                            breakdown.put("hosting_style_match", 1.5);
+                        } else {
+                            breakdown.put("hosting_style_match", 0);
+                        }
+                    }
+
+                    // 7. Budget fit — bidirectional + tight-fit bonus
                     if (p.getRates() != null) {
                         double budgetScore = 0;
                         if (req.getBudgetMax() != null && req.getBudgetMax() > 0 && p.getRates().getMax() <= req.getBudgetMax()) {
@@ -227,42 +286,42 @@ public class PublicServiceImpl implements PublicService {
                         }
                     }
 
-                    // 5. Experience bonus — scaled up to 1.5
+                    // 8. Experience bonus — scaled up to 1.5
                     if (req.getMinExperience() != null && req.getMinExperience() > 0 && p.getExperience() >= req.getMinExperience()) {
                         double expBonus = Math.min(p.getExperience() / 10.0, 1.5);
                         score += expBonus;
                         breakdown.put("experience_bonus", expBonus);
                     }
 
-                    // 6. Rating bonus
+                    // 9. Rating bonus
                     if (p.getRating() > 0) {
                         double ratingScore = (p.getRating() / 5.0) * 1.5;
                         score += ratingScore;
                         breakdown.put("rating_bonus", Math.round(ratingScore * 100.0) / 100.0);
                     }
 
-                    // 7. Total events hosted — proven track record
+                    // 10. Total events hosted — proven track record
                     if (p.getTotalEvents() >= 10) {
                         double eventsBonus = Math.min(p.getTotalEvents() / 200.0, 1.5);
                         score += eventsBonus;
                         breakdown.put("events_bonus", Math.round(eventsBonus * 100.0) / 100.0);
                     }
 
-                    // 8. Response time bonus — fast response = premium
+                    // 11. Response time bonus — fast response = premium
                     if (p.getResponseTime() > 0 && p.getResponseTime() <= 60) {
                         double responseBonus = (60.0 - p.getResponseTime()) / 60.0 * 1.0;
                         score += responseBonus;
                         breakdown.put("response_bonus", Math.round(responseBonus * 100.0) / 100.0);
                     }
 
-                    // 9. Language diversity bonus
+                    // 12. Language diversity bonus
                     if (p.getLanguages() != null && p.getLanguages().size() > 1) {
                         double langBonus = Math.min((p.getLanguages().size() - 1) * 0.25, 0.5);
                         score += langBonus;
                         breakdown.put("language_bonus", langBonus);
                     }
 
-                    // 10. Recency bonus — recently active MCs
+                    // 13. Recency bonus — recently active MCs
                     if (p.getLastActive() != null) {
                         long daysSinceActive = java.time.Duration.between(p.getLastActive(), LocalDateTime.now()).toDays();
                         if (daysSinceActive <= 30) {
@@ -322,6 +381,16 @@ public class PublicServiceImpl implements PublicService {
     @Override public List<EnumOptionDTO> getUserRoles() { return toEnumOptions(UserRole.class); }
 
     @Override public List<EnumOptionDTO> getReportReasons() { return toEnumOptions(ReportReason.class); }
+
+    @Override
+    public Map<String, List<EnumOptionDTO>> getMCAttributes() {
+        Map<String, List<EnumOptionDTO>> map = new LinkedHashMap<>();
+        map.put("hostingStyles", toEnumOptions(HostingStyle.class));
+        map.put("languages", toEnumOptions(Language.class));
+        map.put("eventTypes", toEnumOptions(EventType.class));
+        map.put("regions", toEnumOptions(Region.class));
+        return map;
+    }
 
         private <E extends Enum<E>> List<EnumOptionDTO> toEnumOptions(Class<E> enumClass) {
         return Arrays.stream(enumClass.getEnumConstants())

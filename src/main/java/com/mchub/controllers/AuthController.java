@@ -35,18 +35,7 @@ public class AuthController {
     private final AuditLogService auditLogService;
     private final JwtService jwtService;
     private final UserMapper userMapper;
-    private final UserRepository userRepository;
-    private final ReferralRepository referralRepository;
     private final GamificationService gamificationService;
-
-    private static final String REFERRAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
-
-    private String generateReferralCode() {
-        StringBuilder sb = new StringBuilder(5);
-        for (int i = 0; i < 5; i++) sb.append(REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(REFERRAL_CHARS.length())));
-        return sb.toString();
-    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(
@@ -76,13 +65,9 @@ public class AuthController {
             @RequestBody Map<String, String> body) {
         String email = body.get("email");
         String code = body.get("code");
-        authService.verifyOtp(Objects.requireNonNull(email), Objects.requireNonNull(code));
-        // After verify, auto-login
-        var user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
-        String token = jwtService.generateToken(user.getId(), user.getRole().name());
+        AuthService.LoginResponse resp = authService.verifyOtpAndLogin(Objects.requireNonNull(email), Objects.requireNonNull(code));
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully",
-                Map.of("token", token, "user", userMapper.toResponseDTO(user))));
+                Map.of("token", resp.token(), "user", userMapper.toResponseDTO(resp.user()))));
     }
 
     @PostMapping("/resend-otp")
@@ -212,8 +197,7 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMe() {
         String userId = SecurityUtils.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = authService.getUserById(userId);
         return ResponseEntity.ok(ApiResponse.success("User retrieved", Map.of("user", userMapper.toResponseDTO(user))));
     }
 
@@ -221,24 +205,8 @@ public class AuthController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Map<String, String>>> generateReferralCodeEndpoint() {
         String userId = SecurityUtils.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
-        if (user.getReferralCode() != null) {
-            return ResponseEntity.ok(ApiResponse.success("Referral code retrieved",
-                    Map.of("referralCode", user.getReferralCode())));
-        }
-        String code = null;
-        for (int attempt = 0; attempt < 3; attempt++) {
-            String candidate = generateReferralCode();
-            if (userRepository.findByReferralCode(candidate).isEmpty()) {
-                code = candidate;
-                break;
-            }
-        }
-        if (code == null) code = generateReferralCode();
-        user.setReferralCode(code);
-        userRepository.save(user);
-        return ResponseEntity.ok(ApiResponse.success("Referral code generated",
+        String code = authService.getOrGenerateReferralCode(userId);
+        return ResponseEntity.ok(ApiResponse.success("Referral code retrieved",
                 Map.of("referralCode", code)));
     }
 
@@ -250,3 +218,4 @@ public class AuthController {
                 Map.of("user", userMapper.toResponseDTO(user))));
     }
 }
+

@@ -7,6 +7,7 @@ import com.mchub.models.DiscountCode;
 import com.mchub.models.PlanDefinition;
 import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.PlanDefinitionRepository;
+import com.mchub.services.impl.PlanServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,7 +44,7 @@ class PlanServiceTest {
 
     @BeforeEach
     void setUp() {
-        planService = new PlanService(planRepo, discountRepo);
+        planService = new PlanServiceImpl(planRepo, discountRepo);
     }
 
     private PlanDefinition.PlanDefinitionBuilder basicPlanDef() {
