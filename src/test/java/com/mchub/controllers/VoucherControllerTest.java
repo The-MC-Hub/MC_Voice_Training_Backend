@@ -2,7 +2,7 @@ package com.mchub.controllers;
 
 import com.mchub.exception.GlobalExceptionHandler;
 import com.mchub.models.UserVoucher;
-import com.mchub.repositories.UserVoucherRepository;
+import com.mchub.services.VoucherService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class VoucherControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserVoucherRepository userVoucherRepository;
+    @MockBean private VoucherService voucherService;
 
     private static final String USER_ID = "user-voucher-001";
 
@@ -53,7 +53,7 @@ class VoucherControllerTest {
         @Test
         @DisplayName("200 OK, returns all vouchers for caller (active + used)")
         void returnsAllVouchers() throws Exception {
-            when(userVoucherRepository.findByUserIdOrderByCreatedAtDesc(USER_ID)).thenReturn(List.of());
+            when(voucherService.getMyVouchers(USER_ID)).thenReturn(List.of());
 
             mockMvc.perform(get("/api/v1/vouchers/my")).andExpect(status().isOk());
         }
@@ -66,12 +66,10 @@ class VoucherControllerTest {
         @Test
         @DisplayName("filters out expired vouchers")
         void filtersOutExpired() throws Exception {
-            UserVoucher expired = UserVoucher.builder().userId(USER_ID)
-                    .expiresAt(LocalDateTime.now().minusDays(1)).build();
             UserVoucher valid = UserVoucher.builder().userId(USER_ID)
                     .expiresAt(LocalDateTime.now().plusDays(1)).build();
-            when(userVoucherRepository.findByUserIdAndUsedAtIsNullAndActiveTrue(USER_ID))
-                    .thenReturn(List.of(expired, valid));
+            when(voucherService.getAvailableVouchers(USER_ID))
+                    .thenReturn(List.of(valid));
 
             mockMvc.perform(get("/api/v1/vouchers/my/available"))
                     .andExpect(status().isOk())
@@ -82,7 +80,7 @@ class VoucherControllerTest {
         @DisplayName("includes vouchers with no expiry date (expiresAt=null)")
         void includesVouchersWithNoExpiry() throws Exception {
             UserVoucher noExpiry = UserVoucher.builder().userId(USER_ID).expiresAt(null).build();
-            when(userVoucherRepository.findByUserIdAndUsedAtIsNullAndActiveTrue(USER_ID))
+            when(voucherService.getAvailableVouchers(USER_ID))
                     .thenReturn(List.of(noExpiry));
 
             mockMvc.perform(get("/api/v1/vouchers/my/available"))

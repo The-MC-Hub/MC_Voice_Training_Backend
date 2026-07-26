@@ -8,6 +8,7 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.mapper.UserMapper;
 import com.mchub.models.User;
 import com.mchub.repositories.AuditLogRepository;
+import com.mchub.repositories.BookingRepository;
 import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.OtpVerificationRepository;
 import com.mchub.repositories.PaymentTransactionRepository;
@@ -56,6 +57,7 @@ class AdminServiceImplTest {
     @Mock private OtpVerificationRepository otpRepo;
     @Mock private UserStatsRepository userStatsRepository;
     @Mock private DiscountCodeRepository discountCodeRepository;
+    @Mock private BookingRepository bookingRepository;
 
     private AdminServiceImpl adminService;
 
@@ -66,7 +68,7 @@ class AdminServiceImplTest {
         adminService = new AdminServiceImpl(
                 userRepository, userMapper, transactionRepository, auditLogRepository,
                 practiceSessionRepository, emailService, passwordEncoder, otpRepo,
-                userStatsRepository, discountCodeRepository);
+                userStatsRepository, discountCodeRepository, bookingRepository);
     }
 
     private User.UserBuilder baseUser() {
