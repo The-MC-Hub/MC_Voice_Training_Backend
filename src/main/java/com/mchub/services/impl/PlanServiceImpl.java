@@ -81,8 +81,7 @@ public class PlanServiceImpl implements PlanService {
 
     @Override
     public DiscountCode updateDiscount(String id, DiscountCode updated) {
-        DiscountCode existing = discountRepo.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Discount not found: " + id));
+        DiscountCode existing = EntityUtils.getResourceOrThrow(discountRepo, id, "Discount");
         existing.setCode(updated.getCode().toUpperCase().trim());
         existing.setType(updated.getType());
         existing.setDiscountValue(updated.getDiscountValue());
@@ -119,8 +118,7 @@ public class PlanServiceImpl implements PlanService {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá không áp dụng cho gói " + plan.name());
         }
 
-        PlanDefinition planDef = planRepo.findByPlan(plan)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Plan not found"));
+        PlanDefinition planDef = EntityUtils.getOrThrow(planRepo.findByPlan(plan), ErrorCode.RESOURCE_NOT_FOUND, "Plan not found");
 
         int originalPrice = planDef.getPriceVnd();
         int discount;

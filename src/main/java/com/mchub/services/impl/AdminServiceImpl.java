@@ -24,6 +24,7 @@ import com.mchub.repositories.UserStatsRepository;
 import com.mchub.mapper.UserMapper;
 import com.mchub.services.AdminService;
 import com.mchub.services.EmailService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -144,9 +145,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO getUserById(@NonNull String userId) {
-        return userRepository.findById(userId)
-                .map(userMapper::toResponseDTO)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        return userMapper.toResponseDTO(EntityUtils.getUserOrThrow(userRepository, userId));
     }
 
     @Override
@@ -442,8 +441,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void sendPasswordResetEmail(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         String code = String.format("%06d", ADMIN_RNG.nextInt(1_000_000));
         otpRepo.deleteAllByEmail(user.getEmail());
         otpRepo.save(OtpVerification.builder()
@@ -460,8 +458,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void changeUserPassword(@NonNull String userId, @NonNull String newPassword) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordChangedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
@@ -469,8 +466,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteUser(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         // Soft delete: deactivate instead of hard delete to preserve data integrity
         user.setActive(false);
         userRepository.save(user);
@@ -478,8 +474,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> getUserStats(@NonNull String userId) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         List<PracticeSession> sessions = practiceSessionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId);
@@ -542,8 +537,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void sendNotificationEmail(@NonNull String userId, @NonNull String subject, @NonNull String content) {
-        User user = userRepository.findById(Objects.requireNonNull(userId))
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
         emailService.sendSimpleEmail(user.getEmail(), subject, content);
     }
 
@@ -560,8 +554,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO updateUserStatus(@NonNull String id, boolean isActive, boolean isVerified) {
-        User user = userRepository.findById(Objects.requireNonNull(id))
-            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + id));
+        User user = EntityUtils.getUserOrThrow(userRepository, id);
         user.setActive(isActive);
         user.setVerified(isVerified);
         return userMapper.toResponseDTO(userRepository.save(user));
@@ -569,8 +562,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public UserResponseDTO updateUserPlan(@NonNull String id, @NonNull String planStr) {
-        User user = userRepository.findById(Objects.requireNonNull(id))
-            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        User user = EntityUtils.getUserOrThrow(userRepository, id);
         
         if (planStr.equalsIgnoreCase("FREE")) {
             user.setPremium(false);

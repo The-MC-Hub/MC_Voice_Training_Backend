@@ -21,6 +21,7 @@ import com.mchub.services.MediaService;
 import com.mchub.services.VoiceLessonSearchService;
 import com.mchub.services.VoiceService;
 import com.mchub.services.GamificationService;
+import com.mchub.util.EntityUtils;
 import com.mchub.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,8 +109,7 @@ public class VoiceServiceImpl implements VoiceService {
             String difficulty, String description, MultipartFile thumbnail, String videoUrl,
             List<VoiceLesson.EvaluationCriteria> evaluationCriteria, String evaluationHint,
             int targetWpmMin, int targetWpmMax, int passingScore) {
-        VoiceLesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+        VoiceLesson lesson = EntityUtils.getResourceOrThrow(lessonRepository, id, "Lesson");
 
         lesson.setTitle(title);
         lesson.setContent(content);
@@ -137,8 +137,7 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public VoiceLessonResponseDTO setSampleAudio(String id, MultipartFile audioFile) {
-        VoiceLesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+        VoiceLesson lesson = EntityUtils.getResourceOrThrow(lessonRepository, id, "Lesson");
 
         if (audioFile == null || audioFile.isEmpty()) {
             lesson.setSampleAudioUrl(null);
@@ -169,8 +168,7 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public void deleteLesson(String id) {
-        VoiceLesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new AppException(com.mchub.exception.ErrorCode.RESOURCE_NOT_FOUND, "Lesson not found: " + id));
+        VoiceLesson lesson = EntityUtils.getResourceOrThrow(lessonRepository, id, "Lesson");
         lesson.setActive(false);
         lessonRepository.save(lesson);
     }
@@ -184,16 +182,14 @@ public class VoiceServiceImpl implements VoiceService {
 
     @Override
     public VoiceLessonResponseDTO getLessonById(String id) {
-        VoiceLesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+        VoiceLesson lesson = EntityUtils.getResourceOrThrow(lessonRepository, id, "Lesson");
         return lessonMapper.toResponseDTO(lesson);
     }
 
     @Override
     public PracticeSessionResponseDTO analyzePractice(String lessonId, String userId, MultipartFile audioFile) {
         // 0. Limit checking (5 free practice attempts)
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         SubscriptionPlan plan = user.getPlan() != null ? user.getPlan() : SubscriptionPlan.FREE;
 
@@ -206,8 +202,7 @@ public class VoiceServiceImpl implements VoiceService {
             userRepository.save(user);
         }
 
-        VoiceLesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Lesson not found"));
+        VoiceLesson lesson = EntityUtils.getResourceOrThrow(lessonRepository, lessonId, "Lesson");
 
         if (plan == SubscriptionPlan.FREE) {
             long count = sessionRepository.countByUserId(userId);

@@ -519,14 +519,14 @@ class VoiceServiceImplTest {
         }
 
         @Test
-        @DisplayName("getLessonById throws USER_NOT_FOUND (misleading name but follows code) for missing")
+        @DisplayName("getLessonById throws RESOURCE_NOT_FOUND for missing lesson")
         void getLessonByIdThrowsOnMissing() {
             when(lessonRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> voiceService.getLessonById("missing"))
                     .isInstanceOf(AppException.class)
                     .extracting(ex -> ((AppException) ex).getErrorCode())
-                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                    .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
         @Test

@@ -9,6 +9,7 @@ import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.UserRepository;
 import com.mchub.repositories.UserVoucherRepository;
 import com.mchub.services.QuestService;
+import com.mchub.util.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +32,7 @@ public class QuestServiceImpl implements QuestService {
 
     @Override
     public Map<String, Object> getProgress(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         Set<String> completed = user.getCompletedQuests();
         int total = ALL_QUEST_IDS.size();
@@ -53,8 +53,7 @@ public class QuestServiceImpl implements QuestService {
             throw new AppException(ErrorCode.VALIDATION_FAILED, "Unknown quest: " + questId);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         user.getCompletedQuests().add(questId);
         userRepository.save(user);
@@ -74,8 +73,7 @@ public class QuestServiceImpl implements QuestService {
 
     @Override
     public Map<String, Object> claimVoucher(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+        User user = EntityUtils.getUserOrThrow(userRepository, userId);
 
         if (user.isNewbieVoucherClaimed()) {
             throw new AppException(ErrorCode.COUPON_ALREADY_USED, "Newbie voucher đã được nhận rồi.");
