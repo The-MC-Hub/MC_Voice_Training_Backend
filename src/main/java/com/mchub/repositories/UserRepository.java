@@ -39,6 +39,8 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     long countByPlanAndRoleNot(SubscriptionPlan plan, UserRole role);
 
+    List<User> findByPlanAndRoleNot(SubscriptionPlan plan, UserRole role);
+
     long countByIsPremiumTrueAndRoleNot(UserRole role);
 
     List<User> findByCreatedAtAfterAndRoleNot(LocalDateTime after, UserRole role);
