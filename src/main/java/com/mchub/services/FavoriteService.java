@@ -5,9 +5,9 @@ import java.util.Map;
 
 public interface FavoriteService {
 
-    Map<String, Object> toggle(String clientId, String mcUserId);
+  Map<String, Object> toggle(String clientId, String mcUserId);
 
-    List<String> getMyFavoriteIds(String clientId);
+  List<String> getMyFavoriteIds(String clientId);
 
-    boolean check(String clientId, String mcUserId);
+  boolean check(String clientId, String mcUserId);
 }

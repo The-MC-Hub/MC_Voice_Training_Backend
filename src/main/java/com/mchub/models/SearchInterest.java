@@ -1,6 +1,8 @@
 package com.mchub.models;
 
 import com.mchub.enums.EventType;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +13,6 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 @Document(collection = "search_interests")
 @Data
 @Builder
@@ -22,31 +21,27 @@ import java.util.List;
 @CompoundIndex(name = "client_eventtype", def = "{'clientId': 1, 'eventTypes': 1}")
 public class SearchInterest {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String clientId;
+  @Indexed private String clientId;
 
-    private String keyword;
+  private String keyword;
 
-    private List<EventType> eventTypes;
+  private List<EventType> eventTypes;
 
-    private List<String> regions;
+  private List<String> regions;
 
-    private Double budgetMin;
-    private Double budgetMax;
+  private Double budgetMin;
+  private Double budgetMax;
 
-    private Integer minExperience;
+  private Integer minExperience;
 
-    @Builder.Default
-    private int searchCount = 1;
+  @Builder.Default private int searchCount = 1;
 
-    @CreatedDate
-    private LocalDateTime firstSearchedAt;
+  @CreatedDate private LocalDateTime firstSearchedAt;
 
-    private LocalDateTime lastSearchedAt;
+  private LocalDateTime lastSearchedAt;
 
-    // Last time a MC_RECOMMENDATION notification was sent for this interest — throttles repeats
-    private LocalDateTime lastNotifiedAt;
+  // Last time a MC_RECOMMENDATION notification was sent for this interest — throttles repeats
+  private LocalDateTime lastNotifiedAt;
 }

@@ -7,5 +7,5 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface CertificateMapper {
-    CertificateResponseDTO toResponseDTO(Certificate certificate);
+  CertificateResponseDTO toResponseDTO(Certificate certificate);
 }

@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,12 +9,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
-
 /**
- * Stores calibrated thresholds for each lesson derived from
- * aggregated practice session data. Updated asynchronously after
- * every practice session once the lesson has enough data points.
+ * Stores calibrated thresholds for each lesson derived from aggregated practice session data.
+ * Updated asynchronously after every practice session once the lesson has enough data points.
  */
 @Document(collection = "lesson_adaptive_stats")
 @Data
@@ -22,31 +20,30 @@ import java.time.Instant;
 @AllArgsConstructor
 public class LessonAdaptiveStats {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed(unique = true)
-    private String lessonId;
+  @Indexed(unique = true)
+  private String lessonId;
 
-    // Raw aggregated metrics from practice sessions
-    private long sessionCount;
-    private double avgOverallScore;
-    private double avgAccuracyScore;
-    private double avgRhythmScore;
-    private double avgWpm;
-    private double minOverallScore;
-    private double maxOverallScore;
-    private double p25OverallScore;
-    private double p75OverallScore;
+  // Raw aggregated metrics from practice sessions
+  private long sessionCount;
+  private double avgOverallScore;
+  private double avgAccuracyScore;
+  private double avgRhythmScore;
+  private double avgWpm;
+  private double minOverallScore;
+  private double maxOverallScore;
+  private double p25OverallScore;
+  private double p75OverallScore;
 
-    // Calibrated thresholds (what AI actually uses for scoring)
-    private int calibratedPassingScore;
-    private int calibratedWpmMin;
-    private int calibratedWpmMax;
+  // Calibrated thresholds (what AI actually uses for scoring)
+  private int calibratedPassingScore;
+  private int calibratedWpmMin;
+  private int calibratedWpmMax;
 
-    // Difficulty signal: "EASY" | "MEDIUM" | "HARD" | "VERY_HARD"
-    private String perceivedDifficulty;
+  // Difficulty signal: "EASY" | "MEDIUM" | "HARD" | "VERY_HARD"
+  private String perceivedDifficulty;
 
-    private Instant lastCalibrated;
-    private Instant createdAt;
+  private Instant lastCalibrated;
+  private Instant createdAt;
 }

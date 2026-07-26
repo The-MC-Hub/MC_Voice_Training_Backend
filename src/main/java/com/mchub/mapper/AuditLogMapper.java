@@ -7,5 +7,5 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface AuditLogMapper {
-    AuditLogResponseDTO toResponseDTO(AuditLog auditLog);
+  AuditLogResponseDTO toResponseDTO(AuditLog auditLog);
 }

@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,8 +9,6 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "cv_documents")
 @Data
 @Builder
@@ -17,14 +16,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CVDocument {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    private String userId;
-    private String fileName;
-    private String fileUrl;
-    private long fileSizeBytes;
+  private String userId;
+  private String fileName;
+  private String fileUrl;
+  private long fileSizeBytes;
 
-    @CreatedDate
-    private LocalDateTime uploadedAt;
+  @CreatedDate private LocalDateTime uploadedAt;
 }

@@ -1,46 +1,53 @@
 package com.mchub.util;
 
 import com.mchub.models.Announcement;
-
 import java.time.LocalDateTime;
 
 public final class EmailTemplateBuilder {
 
-    private EmailTemplateBuilder() {
-        // Utility class
+  private EmailTemplateBuilder() {
+    // Utility class
+  }
+
+  public static String buildAnnouncementEmail(Announcement.EmailDesignData d) {
+    if (d == null) {
+      return "<p>Empty design</p>";
     }
 
-    public static String buildAnnouncementEmail(Announcement.EmailDesignData d) {
-        if (d == null) {
-            return "<p>Empty design</p>";
-        }
-
-        String logoHtml = (d.getLogoUrl() != null && !d.getLogoUrl().isBlank())
-                ? """
+    String logoHtml =
+        (d.getLogoUrl() != null && !d.getLogoUrl().isBlank())
+            ? """
                   <img src="%s" alt="Logo" style="max-height:50px;display:block;margin:0 auto 20px auto;"/>
-                  """.formatted(d.getLogoUrl())
-                : "";
+                  """
+                .formatted(d.getLogoUrl())
+            : "";
 
-        String bannerHtml = (d.getBannerUrl() != null && !d.getBannerUrl().isBlank())
-                ? """
+    String bannerHtml =
+        (d.getBannerUrl() != null && !d.getBannerUrl().isBlank())
+            ? """
                   <img src="%s" alt="Banner" style="width:100%%;max-width:600px;height:auto;display:block;border-radius:8px;margin-bottom:24px;"/>
-                  """.formatted(d.getBannerUrl())
-                : "";
+                  """
+                .formatted(d.getBannerUrl())
+            : "";
 
-        String buttonHtml = (d.getButtonLink() != null && !d.getButtonLink().isBlank()
-                && d.getButtonText() != null && !d.getButtonText().isBlank())
-                ? """
+    String buttonHtml =
+        (d.getButtonLink() != null
+                && !d.getButtonLink().isBlank()
+                && d.getButtonText() != null
+                && !d.getButtonText().isBlank())
+            ? """
                   <div style="text-align:center;margin-top:32px;margin-bottom:16px;">
                       <a href="%s" target="_blank" style="background-color:#f5a623;color:#000;text-decoration:none;padding:12px 28px;font-weight:600;border-radius:6px;display:inline-block;font-size:16px;">%s</a>
                   </div>
-                  """.formatted(d.getButtonLink(), d.getButtonText())
-                : "";
+                  """
+                .formatted(d.getButtonLink(), d.getButtonText())
+            : "";
 
-        String title = d.getTitle() != null ? d.getTitle() : "Thông báo từ MC Hub";
-        String description = d.getDescription() != null ? d.getDescription() : "";
-        int currentYear = LocalDateTime.now().getYear();
+    String title = d.getTitle() != null ? d.getTitle() : "Thông báo từ MC Hub";
+    String description = d.getDescription() != null ? d.getDescription() : "";
+    int currentYear = LocalDateTime.now().getYear();
 
-        return """
+    return """
                <!DOCTYPE html>
                <html lang="vi">
                <head>
@@ -73,6 +80,7 @@ public final class EmailTemplateBuilder {
                    </div>
                </body>
                </html>
-               """.formatted(title, logoHtml, title, bannerHtml, description, buttonHtml, currentYear);
-    }
+               """
+        .formatted(title, logoHtml, title, bannerHtml, description, buttonHtml, currentYear);
+  }
 }

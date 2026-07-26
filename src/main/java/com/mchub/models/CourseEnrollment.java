@@ -1,5 +1,8 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,10 +14,6 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 @Document(collection = "course_enrollments")
 @CompoundIndex(name = "user_course_idx", def = "{'userId': 1, 'courseId': 1}", unique = true)
 @Data
@@ -23,38 +22,29 @@ import java.util.List;
 @AllArgsConstructor
 public class CourseEnrollment {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String userId;
+  @Indexed private String userId;
 
-    @Indexed
-    private String courseId;
+  @Indexed private String courseId;
 
-    @Builder.Default
-    private List<String> completedLessonIds = new ArrayList<>();
+  @Builder.Default private List<String> completedLessonIds = new ArrayList<>();
 
-    @Builder.Default
-    private List<String> completedReadingIds = new ArrayList<>();
+  @Builder.Default private List<String> completedReadingIds = new ArrayList<>();
 
-    @Builder.Default
-    private List<String> completedExerciseIds = new ArrayList<>();
+  @Builder.Default private List<String> completedExerciseIds = new ArrayList<>();
 
-    private Integer quizScore;    // null = not attempted
+  private Integer quizScore; // null = not attempted
 
-    @Builder.Default
-    private int quizAttempts = 0;
+  @Builder.Default private int quizAttempts = 0;
 
-    @Builder.Default
-    private double completionRate = 0.0; // 0–100
+  @Builder.Default private double completionRate = 0.0; // 0–100
 
-    @Builder.Default
-    @Field("isCompleted")
-    private boolean completed = false;
+  @Builder.Default
+  @Field("isCompleted")
+  private boolean completed = false;
 
-    @CreatedDate
-    private LocalDateTime enrolledAt;
+  @CreatedDate private LocalDateTime enrolledAt;
 
-    private LocalDateTime completedAt;
+  private LocalDateTime completedAt;
 }

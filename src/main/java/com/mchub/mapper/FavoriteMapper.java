@@ -8,5 +8,5 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface FavoriteMapper {
 
-    FavoriteResponseDTO toResponseDTO(Favorite favorite);
+  FavoriteResponseDTO toResponseDTO(Favorite favorite);
 }

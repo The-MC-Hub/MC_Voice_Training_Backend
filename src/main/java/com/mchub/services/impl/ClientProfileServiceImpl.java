@@ -16,61 +16,70 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ClientProfileServiceImpl implements ClientProfileService {
 
-    private final ClientProfileRepository clientProfileRepository;
-    private final UserRepository userRepository;
-    private final ClientProfileMapper clientProfileMapper;
+  private final ClientProfileRepository clientProfileRepository;
+  private final UserRepository userRepository;
+  private final ClientProfileMapper clientProfileMapper;
 
-    @Override
-    public ClientProfileDTO getProfile(String userId) {
-        ClientProfile profile = clientProfileRepository.findByUser(userId)
-                .orElse(new ClientProfile());
-        return clientProfileMapper.toDTO(profile);
+  @Override
+  public ClientProfileDTO getProfile(String userId) {
+    ClientProfile profile = clientProfileRepository.findByUser(userId).orElse(new ClientProfile());
+    return clientProfileMapper.toDTO(profile);
+  }
+
+  @Override
+  public ClientProfileDTO updateProfile(String userId, ClientProfileDTO profileData) {
+    ClientProfile existing =
+        clientProfileRepository
+            .findByUser(userId)
+            .orElse(ClientProfile.builder().user(userId).build());
+
+    existing.setUser(userId);
+    if (profileData.getRegion() != null) {
+      existing.setRegion(profileData.getRegion());
+    }
+    if (profileData.getCustomRegion() != null) {
+      existing.setCustomRegion(profileData.getCustomRegion());
+    }
+    if (profileData.getPreferredEventTypes() != null) {
+      existing.setPreferredEventTypes(profileData.getPreferredEventTypes());
+    }
+    if (profileData.getOrganization() != null) {
+      existing.setOrganization(profileData.getOrganization());
+    }
+    if (profileData.getBio() != null) {
+      existing.setBio(profileData.getBio());
     }
 
-    @Override
-    public ClientProfileDTO updateProfile(String userId, ClientProfileDTO profileData) {
-        ClientProfile existing = clientProfileRepository.findByUser(userId)
-                .orElse(ClientProfile.builder().user(userId).build());
+    ClientProfile saved = clientProfileRepository.save(existing);
+    return clientProfileMapper.toDTO(saved);
+  }
 
-        existing.setUser(userId);
-        if (profileData.getRegion() != null) {
-            existing.setRegion(profileData.getRegion());
-        }
-        if (profileData.getCustomRegion() != null) {
-            existing.setCustomRegion(profileData.getCustomRegion());
-        }
-        if (profileData.getPreferredEventTypes() != null) {
-            existing.setPreferredEventTypes(profileData.getPreferredEventTypes());
-        }
-        if (profileData.getOrganization() != null) {
-            existing.setOrganization(profileData.getOrganization());
-        }
-        if (profileData.getBio() != null) {
-            existing.setBio(profileData.getBio());
-        }
+  @Override
+  public ClientProfileDTO createProfile(String userId, ClientProfileDTO profileData) {
+    ClientProfile profile =
+        ClientProfile.builder()
+            .user(userId)
+            .region(profileData.getRegion())
+            .customRegion(
+                profileData.getCustomRegion() != null ? profileData.getCustomRegion() : "")
+            .preferredEventTypes(
+                profileData.getPreferredEventTypes() != null
+                    ? profileData.getPreferredEventTypes()
+                    : new java.util.ArrayList<>())
+            .organization(
+                profileData.getOrganization() != null ? profileData.getOrganization() : "")
+            .bio(profileData.getBio() != null ? profileData.getBio() : "")
+            .build();
 
-        ClientProfile saved = clientProfileRepository.save(existing);
-        return clientProfileMapper.toDTO(saved);
-    }
+    ClientProfile saved = clientProfileRepository.save(profile);
 
-    @Override
-    public ClientProfileDTO createProfile(String userId, ClientProfileDTO profileData) {
-        ClientProfile profile = ClientProfile.builder()
-                .user(userId)
-                .region(profileData.getRegion())
-                .customRegion(profileData.getCustomRegion() != null ? profileData.getCustomRegion() : "")
-                .preferredEventTypes(profileData.getPreferredEventTypes() != null ? profileData.getPreferredEventTypes() : new java.util.ArrayList<>())
-                .organization(profileData.getOrganization() != null ? profileData.getOrganization() : "")
-                .bio(profileData.getBio() != null ? profileData.getBio() : "")
-                .build();
+    // Link profile to user
+    User user =
+        EntityUtils.getOrThrow(
+            userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found with id: " + userId);
+    user.setClientProfile(saved.getId());
+    userRepository.save(user);
 
-        ClientProfile saved = clientProfileRepository.save(profile);
-
-        // Link profile to user
-        User user = EntityUtils.getOrThrow(userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found with id: " + userId);
-        user.setClientProfile(saved.getId());
-        userRepository.save(user);
-
-        return clientProfileMapper.toDTO(saved);
-    }
+    return clientProfileMapper.toDTO(saved);
+  }
 }

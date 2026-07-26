@@ -1,18 +1,16 @@
 package com.mchub.models;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 @Document(collection = "practice_sessions")
 @Data
@@ -20,78 +18,83 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PracticeSession {
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String lessonId;
+  @Indexed private String lessonId;
 
-    @Indexed
-    @Field("userId")
-    private String userId;
-    
-    private String audioUrl;
+  @Indexed
+  @Field("userId")
+  private String userId;
 
-    // AI Analysis results
-    private String textSpoken;
+  private String audioUrl;
 
-    /** Server-truth per-word timing from Whisper: [{word, start, end}] — used to sync
-     *  karaoke highlight to actual audio playback after recording, instead of the
-     *  live browser SpeechRecognition guess used only during the recording itself. */
-    private List<Map<String, Object>> wordAlignment;
+  // AI Analysis results
+  private String textSpoken;
 
-    /** Per-sentence pace/pitch feedback from Whisper segment boundaries:
-     *  [{text, start, end, wpm, pitch_std, issues, needs_rework}] — lets the UI
-     *  flag which specific sentence needs a reread instead of the whole take. */
-    private List<Map<String, Object>> sentenceFeedback;
-    private double accuracyScore;
-    private double rhythmScore;
-    private double speakingRateWpm;
+  /**
+   * Server-truth per-word timing from Whisper: [{word, start, end}] — used to sync karaoke
+   * highlight to actual audio playback after recording, instead of the live browser
+   * SpeechRecognition guess used only during the recording itself.
+   */
+  private List<Map<String, Object>> wordAlignment;
 
-    /** Total audio duration in seconds, from AI service's analysis_meta.duration_total_sec */
-    private double durationSeconds;
-    private String feedbackVi;
-    private String feedbackEn;
-    private String reportVi;
-    private String reportEn;
-    private List<ExpertTip> expertTipsVi;
-    private List<ExpertTip> expertTipsEn;
+  /**
+   * Per-sentence pace/pitch feedback from Whisper segment boundaries: [{text, start, end, wpm,
+   * pitch_std, issues, needs_rework}] — lets the UI flag which specific sentence needs a reread
+   * instead of the whole take.
+   */
+  private List<Map<String, Object>> sentenceFeedback;
 
-    /** Per-criterion weighted scores, e.g. {"PRONUNCIATION": 85.0, "PACING": 90.0} */
-    private Map<String, Double> criteriaScores;
+  private double accuracyScore;
+  private double rhythmScore;
+  private double speakingRateWpm;
 
-    /** Weighted overall score computed from criteriaScores + weights */
-    private double overallScore;
+  /** Total audio duration in seconds, from AI service's analysis_meta.duration_total_sec */
+  private double durationSeconds;
 
-    /** Phase 1 extended accuracy metrics */
-    private double cerRate;
-    private double werRate;
+  private String feedbackVi;
+  private String feedbackEn;
+  private String reportVi;
+  private String reportEn;
+  private List<ExpertTip> expertTipsVi;
+  private List<ExpertTip> expertTipsEn;
 
-    /** Phase 2 — Spectral + articulation features (from AI) */
-    /** { spectral_centroid_hz, spectral_contrast_mean, mfcc_stability_score } */
-    private Map<String, Object> spectralFeatures;
+  /** Per-criterion weighted scores, e.g. {"PRONUNCIATION": 85.0, "PACING": 90.0} */
+  private Map<String, Double> criteriaScores;
 
-    /** Phase 2 — Pitch contour direction { pitch_slope, pitch_contour } */
-    private Map<String, Object> pitchContour;
+  /** Weighted overall score computed from criteriaScores + weights */
+  private double overallScore;
 
-    /** Phase 2 — Filler word detection { filler_count, filler_ratio, filler_score, fillers_found } */
-    private Map<String, Object> fillerWords;
+  /** Phase 1 extended accuracy metrics */
+  private double cerRate;
 
-    /** Phase 3 — Voice quality { jitter_pct, shimmer_pct, hnr_db } */
-    private Map<String, Object> voiceQuality;
+  private double werRate;
 
-    /** Emotion breakdown { emotion_score, pitch_score, energy_std_score, tempo_var_score } */
-    private Map<String, Object> emotionBreakdown;
+  /** Phase 2 — Spectral + articulation features (from AI) */
+  /** { spectral_centroid_hz, spectral_contrast_mean, mfcc_stability_score } */
+  private Map<String, Object> spectralFeatures;
 
-    @Field("createdAt")
-    private Instant createdAt;
+  /** Phase 2 — Pitch contour direction { pitch_slope, pitch_contour } */
+  private Map<String, Object> pitchContour;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ExpertTip {
-        private String label;
-        private String tip;
-    }
+  /** Phase 2 — Filler word detection { filler_count, filler_ratio, filler_score, fillers_found } */
+  private Map<String, Object> fillerWords;
+
+  /** Phase 3 — Voice quality { jitter_pct, shimmer_pct, hnr_db } */
+  private Map<String, Object> voiceQuality;
+
+  /** Emotion breakdown { emotion_score, pitch_score, energy_std_score, tempo_var_score } */
+  private Map<String, Object> emotionBreakdown;
+
+  @Field("createdAt")
+  private Instant createdAt;
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ExpertTip {
+    private String label;
+    private String tip;
+  }
 }

@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EnumOptionDTO {
-        private String value;
-        private String label;
+  private String value;
+  private String label;
 }

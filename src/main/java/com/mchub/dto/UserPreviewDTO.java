@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserPreviewDTO {
-    private String id;
-    private String name;
-    private String email;
-    private String plan;
-    private String role;
-    private boolean isPremium;
+  private String id;
+  private String name;
+  private String email;
+  private String plan;
+  private String role;
+  private boolean isPremium;
 }

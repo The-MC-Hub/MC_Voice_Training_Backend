@@ -1,6 +1,7 @@
 package com.mchub.models;
 
 import com.mchub.enums.NotificationType;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,8 +11,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "notifications")
 @Data
 @Builder
@@ -19,27 +18,20 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Notification {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String userId;
+  @Indexed private String userId;
 
-    @Indexed
-    private NotificationType type;
+  @Indexed private NotificationType type;
 
-    private String title;
+  private String title;
 
-    private String body;
+  private String body;
 
-    // Optional deep-link target, e.g. "/m/payment", "/m/courses/{id}"
-    private String actionUrl;
+  // Optional deep-link target, e.g. "/m/payment", "/m/courses/{id}"
+  private String actionUrl;
 
-    @Builder.Default
-    @Indexed
-    private boolean read = false;
+  @Builder.Default @Indexed private boolean read = false;
 
-    @Indexed
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @Indexed @CreatedDate private LocalDateTime createdAt;
 }

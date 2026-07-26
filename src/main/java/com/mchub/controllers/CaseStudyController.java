@@ -14,12 +14,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CaseStudyController {
 
-    private final CaseStudyRepository caseStudyRepository;
+  private final CaseStudyRepository caseStudyRepository;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CaseStudy>> getCaseStudy(@PathVariable String id) {
-        CaseStudy caseStudy = caseStudyRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Case study not found: " + id));
-        return ResponseEntity.ok(ApiResponse.success("Case study retrieved", caseStudy));
-    }
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiResponse<CaseStudy>> getCaseStudy(@PathVariable String id) {
+    CaseStudy caseStudy =
+        caseStudyRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.COURSE_NOT_FOUND, "Case study not found: " + id));
+    return ResponseEntity.ok(ApiResponse.success("Case study retrieved", caseStudy));
+  }
 }

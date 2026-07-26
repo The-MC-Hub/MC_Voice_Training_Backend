@@ -10,6 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class GoogleLoginRequest {
 
-    @NotBlank(message = "idToken cannot be empty")
-    private String idToken;
+  @NotBlank(message = "idToken cannot be empty")
+  private String idToken;
 }

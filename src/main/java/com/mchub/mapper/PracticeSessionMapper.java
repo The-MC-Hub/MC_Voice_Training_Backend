@@ -7,8 +7,8 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface PracticeSessionMapper {
-    PracticeSessionResponseDTO toResponseDTO(PracticeSession session);
+  PracticeSessionResponseDTO toResponseDTO(PracticeSession session);
 
-    // Explicitly map inner class
-    PracticeSessionResponseDTO.ExpertTipDTO toExpertTipDTO(PracticeSession.ExpertTip tip);
+  // Explicitly map inner class
+  PracticeSessionResponseDTO.ExpertTipDTO toExpertTipDTO(PracticeSession.ExpertTip tip);
 }

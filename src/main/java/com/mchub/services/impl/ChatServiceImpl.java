@@ -9,104 +9,127 @@ import com.mchub.repositories.ConversationRepository;
 import com.mchub.repositories.MessageRepository;
 import com.mchub.services.ChatService;
 import com.mchub.util.EntityUtils;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
-    private final ConversationRepository conversationRepository;
-    private final MessageRepository messageRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+  private final ConversationRepository conversationRepository;
+  private final MessageRepository messageRepository;
+  private final SimpMessagingTemplate messagingTemplate;
 
-    @Override
-    public Message sendMessage(@NonNull String conversationId, @NonNull String senderId, @NonNull String content, String type) {
-        Conversation conversation = EntityUtils.getOrThrow(conversationRepository, conversationId, ErrorCode.RESOURCE_NOT_FOUND, "Conversation not found: " + conversationId);
+  @Override
+  public Message sendMessage(
+      @NonNull String conversationId,
+      @NonNull String senderId,
+      @NonNull String content,
+      String type) {
+    Conversation conversation =
+        EntityUtils.getOrThrow(
+            conversationRepository,
+            conversationId,
+            ErrorCode.RESOURCE_NOT_FOUND,
+            "Conversation not found: " + conversationId);
 
-        if (!conversation.isActive()) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Conversation is locked");
-        }
-
-        MessageType msgType;
-        try {
-            msgType = (type != null) ? MessageType.valueOf(type.toUpperCase()) : MessageType.TEXT;
-        } catch (IllegalArgumentException e) {
-            msgType = MessageType.TEXT;
-        }
-
-        Message message = Message.builder()
-                .conversationId(conversationId)
-                .senderId(senderId)
-                .content(content)
-                .type(msgType)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        Message savedMessage = messageRepository.save(message);
-        updateLastMessageAsync(conversationId, savedMessage.getId());
-        broadcastMessage(conversation, savedMessage);
-        return savedMessage;
+    if (!conversation.isActive()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Conversation is locked");
     }
 
-    @Override
-    @Async
-    public void updateLastMessageAsync(@NonNull String conversationId, @NonNull String messageId) {
-        conversationRepository.findById(conversationId).ifPresent(c -> {
-            c.setLastMessage(messageId);
-            c.setUpdatedAt(LocalDateTime.now());
-            conversationRepository.save(c);
-        });
+    MessageType msgType;
+    try {
+      msgType = (type != null) ? MessageType.valueOf(type.toUpperCase()) : MessageType.TEXT;
+    } catch (IllegalArgumentException e) {
+      msgType = MessageType.TEXT;
     }
 
-    @Override
-    public Conversation createConversationForBooking(@NonNull String bookingId, @NonNull String clientId, @NonNull String mcId) {
-        return conversationRepository.findExisting(clientId, mcId, bookingId)
-                .orElseGet(() -> {
-                    Conversation conv = Conversation.builder()
-                            .participants(List.of(clientId, mcId))
-                            .bookingId(bookingId)
-                            .isActive(true)
-                            .build();
-                    return conversationRepository.save(conv);
-                });
-    }
+    Message message =
+        Message.builder()
+            .conversationId(conversationId)
+            .senderId(senderId)
+            .content(content)
+            .type(msgType)
+            .createdAt(LocalDateTime.now())
+            .build();
 
-    @Override
-    public List<Conversation> getUserConversations(@NonNull String userId) {
-        return conversationRepository.findByParticipantsContaining(userId);
-    }
+    Message savedMessage = messageRepository.save(message);
+    updateLastMessageAsync(conversationId, savedMessage.getId());
+    broadcastMessage(conversation, savedMessage);
+    return savedMessage;
+  }
 
-    @Override
-    public Conversation getConversationById(@NonNull String id) {
-        return EntityUtils.getOrThrow(conversationRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Conversation not found: " + id);
-    }
+  @Override
+  @Async
+  public void updateLastMessageAsync(@NonNull String conversationId, @NonNull String messageId) {
+    conversationRepository
+        .findById(conversationId)
+        .ifPresent(
+            c -> {
+              c.setLastMessage(messageId);
+              c.setUpdatedAt(LocalDateTime.now());
+              conversationRepository.save(c);
+            });
+  }
 
-    @Override
-    public void markAsRead(@NonNull String id) {
-        conversationRepository.findById(id).ifPresent(c -> {
-            c.setUpdatedAt(LocalDateTime.now());
-            conversationRepository.save(c);
-        });
-    }
+  @Override
+  public Conversation createConversationForBooking(
+      @NonNull String bookingId, @NonNull String clientId, @NonNull String mcId) {
+    return conversationRepository
+        .findExisting(clientId, mcId, bookingId)
+        .orElseGet(
+            () -> {
+              Conversation conv =
+                  Conversation.builder()
+                      .participants(List.of(clientId, mcId))
+                      .bookingId(bookingId)
+                      .isActive(true)
+                      .build();
+              return conversationRepository.save(conv);
+            });
+  }
 
-    @Override
-    public void deactivateConversationByBookingId(@NonNull String bookingId) {
-        conversationRepository.findByBookingId(bookingId).ifPresent(c -> {
-            c.setActive(false);
-            conversationRepository.save(c);
-        });
-    }
+  @Override
+  public List<Conversation> getUserConversations(@NonNull String userId) {
+    return conversationRepository.findByParticipantsContaining(userId);
+  }
 
-    private void broadcastMessage(@NonNull Conversation conversation, @NonNull Message message) {
-        for (String participantId : conversation.getParticipants()) {
-            messagingTemplate.convertAndSend("/topic/chat/" + participantId, message);
-        }
+  @Override
+  public Conversation getConversationById(@NonNull String id) {
+    return EntityUtils.getOrThrow(
+        conversationRepository, id, ErrorCode.RESOURCE_NOT_FOUND, "Conversation not found: " + id);
+  }
+
+  @Override
+  public void markAsRead(@NonNull String id) {
+    conversationRepository
+        .findById(id)
+        .ifPresent(
+            c -> {
+              c.setUpdatedAt(LocalDateTime.now());
+              conversationRepository.save(c);
+            });
+  }
+
+  @Override
+  public void deactivateConversationByBookingId(@NonNull String bookingId) {
+    conversationRepository
+        .findByBookingId(bookingId)
+        .ifPresent(
+            c -> {
+              c.setActive(false);
+              conversationRepository.save(c);
+            });
+  }
+
+  private void broadcastMessage(@NonNull Conversation conversation, @NonNull Message message) {
+    for (String participantId : conversation.getParticipants()) {
+      messagingTemplate.convertAndSend("/topic/chat/" + participantId, message);
     }
+  }
 }

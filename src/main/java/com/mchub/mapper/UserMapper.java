@@ -8,8 +8,8 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserMapper {
-    @Mapping(target = "name", source = "name", defaultValue = "Unknown")
-    @Mapping(target = "email", source = "email", defaultValue = "")
-    @Mapping(target = "googleLinked", expression = "java(user.getGoogleId() != null)")
-    UserResponseDTO toResponseDTO(User user);
+  @Mapping(target = "name", source = "name", defaultValue = "Unknown")
+  @Mapping(target = "email", source = "email", defaultValue = "")
+  @Mapping(target = "googleLinked", expression = "java(user.getGoogleId() != null)")
+  UserResponseDTO toResponseDTO(User user);
 }

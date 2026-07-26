@@ -8,5 +8,5 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface ScheduleMapper {
 
-    ScheduleResponseDTO toResponseDTO(Schedule schedule);
+  ScheduleResponseDTO toResponseDTO(Schedule schedule);
 }

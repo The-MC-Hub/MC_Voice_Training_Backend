@@ -1,8 +1,8 @@
 package com.mchub.enums;
 
 public enum ScheduleStatus {
-    AVAILABLE,
-    BOOKED,
-    UNAVAILABLE,
-    PENDING
+  AVAILABLE,
+  BOOKED,
+  UNAVAILABLE,
+  PENDING
 }

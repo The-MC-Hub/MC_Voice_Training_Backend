@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,8 +10,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "practice_reviews")
 @Data
 @Builder
@@ -18,27 +17,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PracticeReview {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String practiceSessionId;
+  @Indexed private String practiceSessionId;
 
-    @Indexed
-    private String revieweeId; // the learner who recorded the practice session
+  @Indexed private String revieweeId; // the learner who recorded the practice session
 
-    @Indexed
-    private String reviewerId; // null while pending — set when an MC claims it
+  @Indexed private String reviewerId; // null while pending — set when an MC claims it
 
-    private String comment;
+  private String comment;
 
-    private Integer rating; // 1-5, null until reviewed
+  private Integer rating; // 1-5, null until reviewed
 
-    @Builder.Default
-    private String status = "PENDING"; // PENDING | REVIEWED
+  @Builder.Default private String status = "PENDING"; // PENDING | REVIEWED
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 
-    private LocalDateTime reviewedAt;
+  private LocalDateTime reviewedAt;
 }

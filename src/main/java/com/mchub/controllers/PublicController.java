@@ -9,77 +9,66 @@ import com.mchub.dto.SearchMCRequest;
 import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.services.PublicService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/public")
 @RequiredArgsConstructor
 public class PublicController {
 
-    private final PublicService publicService;
+  private final PublicService publicService;
 
-        @GetMapping("/landing")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getLandingData() {
-        Map<String, Object> data = publicService.getLandingData();
-        return ResponseEntity.ok(ApiResponse.success(data));
+  @GetMapping("/landing")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getLandingData() {
+    Map<String, Object> data = publicService.getLandingData();
+    return ResponseEntity.ok(ApiResponse.success(data));
+  }
+
+  @GetMapping("/featured-training")
+  public ResponseEntity<ApiResponse<List<MCTrainingStatsDTO>>> getFeaturedTrainingStats() {
+    return ResponseEntity.ok(ApiResponse.success(publicService.getFeaturedMCTrainingStats()));
+  }
+
+  @GetMapping("/mcs")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> discoverMCs(
+      @RequestParam(required = false) String category) {
+    List<MCProfileResponseDTO> list = publicService.discoverMCs(category);
+    return ResponseEntity.ok(ApiResponse.success(Map.of("mcs", list, "results", list.size())));
+  }
+
+  @GetMapping("/mcs/{id}")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getMCProfile(@PathVariable String id) {
+    MCProfileResponseDTO profile = publicService.getMCProfile(Objects.requireNonNull(id));
+    if (profile == null) {
+      throw new AppException(ErrorCode.MC_PROFILE_NOT_FOUND);
     }
+    return ResponseEntity.ok(ApiResponse.success(Map.of("profile", profile)));
+  }
 
-        @GetMapping("/featured-training")
-    public ResponseEntity<ApiResponse<List<MCTrainingStatsDTO>>> getFeaturedTrainingStats() {
-        return ResponseEntity.ok(ApiResponse.success(publicService.getFeaturedMCTrainingStats()));
-    }
+  @PostMapping("/mcs/search")
+  public ResponseEntity<ApiResponse<List<MCSearchResultDTO>>> searchMCs(
+      @RequestBody SearchMCRequest req) {
+    List<MCSearchResultDTO> results = publicService.searchMCs(req);
+    return ResponseEntity.ok(ApiResponse.success(results));
+  }
 
-        @GetMapping("/mcs")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> discoverMCs(
-            @RequestParam(required = false) String category) {
-        List<MCProfileResponseDTO> list = publicService.discoverMCs(category);
-        return ResponseEntity.ok(ApiResponse.success(Map.of(
-            "mcs",     list,
-            "results", list.size()
-        )));
-    }
+  @GetMapping("/enums/user-roles")
+  public ResponseEntity<ApiResponse<List<EnumOptionDTO>>> getUserRoles() {
+    return ResponseEntity.ok(ApiResponse.success(publicService.getUserRoles()));
+  }
 
-        @GetMapping("/mcs/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getMCProfile(@PathVariable String id) {
-        MCProfileResponseDTO profile = publicService.getMCProfile(Objects.requireNonNull(id));
-        if (profile == null) {
-            throw new AppException(ErrorCode.MC_PROFILE_NOT_FOUND);
-        }
-        return ResponseEntity.ok(ApiResponse.success(Map.of("profile", profile)));
-    }
+  @GetMapping("/enums/report-reasons")
+  public ResponseEntity<ApiResponse<List<EnumOptionDTO>>> getReportReasons() {
+    return ResponseEntity.ok(ApiResponse.success(publicService.getReportReasons()));
+  }
 
-        @PostMapping("/mcs/search")
-    public ResponseEntity<ApiResponse<List<MCSearchResultDTO>>> searchMCs(@RequestBody SearchMCRequest req) {
-        List<MCSearchResultDTO> results = publicService.searchMCs(req);
-        return ResponseEntity.ok(ApiResponse.success(results));
-    }
-
-    
-
-
-
-    @GetMapping("/enums/user-roles")
-    public ResponseEntity<ApiResponse<List<EnumOptionDTO>>> getUserRoles() {
-        return ResponseEntity.ok(ApiResponse.success(publicService.getUserRoles()));
-    }
-
-
-
-
-
-    @GetMapping("/enums/report-reasons")
-    public ResponseEntity<ApiResponse<List<EnumOptionDTO>>> getReportReasons() {
-        return ResponseEntity.ok(ApiResponse.success(publicService.getReportReasons()));
-    }
-
-    @GetMapping("/enums/mc-attributes")
-    public ResponseEntity<ApiResponse<Map<String, List<EnumOptionDTO>>>> getMCAttributes() {
-        return ResponseEntity.ok(ApiResponse.success(publicService.getMCAttributes()));
-    }
+  @GetMapping("/enums/mc-attributes")
+  public ResponseEntity<ApiResponse<Map<String, List<EnumOptionDTO>>>> getMCAttributes() {
+    return ResponseEntity.ok(ApiResponse.success(publicService.getMCAttributes()));
+  }
 }

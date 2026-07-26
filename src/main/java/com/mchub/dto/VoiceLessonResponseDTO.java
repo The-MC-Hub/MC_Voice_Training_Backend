@@ -3,37 +3,36 @@ package com.mchub.dto;
 import com.mchub.enums.VoiceLessonCategory;
 import com.mchub.models.LessonAdaptiveStats;
 import com.mchub.models.VoiceLesson;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class VoiceLessonResponseDTO {
-    private String id;
-    private String title;
-    private String content;
-    private VoiceLessonCategory category;
-    private String difficulty;
-    private String description;
-    private String thumbnailUrl;
-    private String videoUrl;
-    private String sampleAudioUrl;
-    private List<VoiceLesson.EvaluationCriteria> evaluationCriteria;
-    private int targetWpmMin;
-    private int targetWpmMax;
-    private String evaluationHint;
-    private int passingScore;
-    private int practiceCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+  private String id;
+  private String title;
+  private String content;
+  private VoiceLessonCategory category;
+  private String difficulty;
+  private String description;
+  private String thumbnailUrl;
+  private String videoUrl;
+  private String sampleAudioUrl;
+  private List<VoiceLesson.EvaluationCriteria> evaluationCriteria;
+  private int targetWpmMin;
+  private int targetWpmMax;
+  private String evaluationHint;
+  private int passingScore;
+  private int practiceCount;
+  private LocalDateTime createdAt;
+  private LocalDateTime updatedAt;
 
-    // Populated on-demand — null if lesson has < 10 practice sessions
-    private LessonAdaptiveStats adaptiveStats;
+  // Populated on-demand — null if lesson has < 10 practice sessions
+  private LessonAdaptiveStats adaptiveStats;
 }

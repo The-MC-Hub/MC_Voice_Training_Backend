@@ -1,13 +1,12 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-
-import java.time.LocalDateTime;
 
 @Document(collection = "referrals")
 @Data
@@ -16,13 +15,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Referral {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    private String referrerId;
+  private String referrerId;
 
-    private String referredUserId;
+  private String referredUserId;
 
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+  @Builder.Default private LocalDateTime createdAt = LocalDateTime.now();
 }

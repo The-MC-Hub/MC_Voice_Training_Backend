@@ -7,5 +7,5 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface VoiceLessonMapper {
-    VoiceLessonResponseDTO toResponseDTO(VoiceLesson lesson);
+  VoiceLessonResponseDTO toResponseDTO(VoiceLesson lesson);
 }

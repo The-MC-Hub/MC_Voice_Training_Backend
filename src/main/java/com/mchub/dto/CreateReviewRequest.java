@@ -13,14 +13,12 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CreateReviewRequest {
 
-    @NotBlank
-    private String bookingId;
+  @NotBlank private String bookingId;
 
-    @NotNull
-    @Min(1)
-    @Max(5)
-    private Integer rating;
+  @NotNull
+  @Min(1)
+  @Max(5)
+  private Integer rating;
 
-    @NotBlank
-    private String comment;
+  @NotBlank private String comment;
 }

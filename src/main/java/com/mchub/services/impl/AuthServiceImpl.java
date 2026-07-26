@@ -6,8 +6,8 @@ import com.mchub.exception.AppException;
 import com.mchub.exception.ErrorCode;
 import com.mchub.models.MCProfile;
 import com.mchub.models.OtpVerification;
-import com.mchub.models.User;
 import com.mchub.models.Referral;
+import com.mchub.models.User;
 import com.mchub.repositories.MCProfileRepository;
 import com.mchub.repositories.OtpVerificationRepository;
 import com.mchub.repositories.ReferralRepository;
@@ -18,13 +18,6 @@ import com.mchub.services.GoogleTokenVerifierService;
 import com.mchub.services.JwtService;
 import com.mchub.util.EntityUtils;
 import com.mchub.util.SecurityConstants;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.NonNull;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -33,408 +26,492 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private static final SecureRandom AVATAR_RANDOM = new SecureRandom();
-    private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
+  private static final SecureRandom AVATAR_RANDOM = new SecureRandom();
+  private static final SecureRandom REFERRAL_RANDOM = new SecureRandom();
 
-    private String generateReferralCode() {
-        StringBuilder sb = new StringBuilder(5);
-        for (int i = 0; i < 5; i++) {
-            sb.append(SecurityConstants.REFERRAL_CHARS.charAt(REFERRAL_RANDOM.nextInt(SecurityConstants.REFERRAL_CHARS.length())));
-        }
-        return sb.toString();
+  private String generateReferralCode() {
+    StringBuilder sb = new StringBuilder(5);
+    for (int i = 0; i < 5; i++) {
+      sb.append(
+          SecurityConstants.REFERRAL_CHARS.charAt(
+              REFERRAL_RANDOM.nextInt(SecurityConstants.REFERRAL_CHARS.length())));
     }
+    return sb.toString();
+  }
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final MCProfileRepository mcProfileRepository;
-    private final EmailService emailService;
-    private final OtpVerificationRepository otpRepo;
-    private final ReferralRepository referralRepository;
-    private final GoogleTokenVerifierService googleTokenVerifierService;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtService jwtService;
+  private final MCProfileRepository mcProfileRepository;
+  private final EmailService emailService;
+  private final OtpVerificationRepository otpRepo;
+  private final ReferralRepository referralRepository;
+  private final GoogleTokenVerifierService googleTokenVerifierService;
 
-    @Value("${mchub.admin.otp.email.1:}") private String adminOtpEmail1;
-    @Value("${mchub.admin.otp.email.2:}") private String adminOtpEmail2;
-    @Value("${mchub.admin.otp.email.3:}") private String adminOtpEmail3;
-    @Value("${mchub.admin.otp.email.4:}") private String adminOtpEmail4;
-    @Value("${mchub.admin.otp.email.5:}") private String adminOtpEmail5;
-    @Value("${mchub.admin.otp.email.6:}") private String adminOtpEmail6;
+  @Value("${mchub.admin.otp.email.1:}")
+  private String adminOtpEmail1;
 
-    private Map<String, String> buildAdminOtpEmails() {
-        Map<String, String> m = new HashMap<>();
-        if (!adminOtpEmail1.isBlank()) m.put("admin1@mchub.vn", adminOtpEmail1);
-        if (!adminOtpEmail2.isBlank()) m.put("admin2@mchub.vn", adminOtpEmail2);
-        if (!adminOtpEmail3.isBlank()) m.put("admin3@mchub.vn", adminOtpEmail3);
-        if (!adminOtpEmail4.isBlank()) m.put("admin4@mchub.vn", adminOtpEmail4);
-        if (!adminOtpEmail5.isBlank()) m.put("admin5@mchub.vn", adminOtpEmail5);
-        if (!adminOtpEmail6.isBlank()) m.put("admin6@mchub.vn", adminOtpEmail6);
-        return m;
-    }
+  @Value("${mchub.admin.otp.email.2:}")
+  private String adminOtpEmail2;
 
-    @Override
-    public User register(@NonNull RegisterRequest req) {
-        userRepository.findByEmail(req.getEmail()).ifPresent(existing -> {
-            if (existing.isVerified()) {
-                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email này đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập.");
-            }
-            // Unverified stale account — clean up so user can re-register
-            otpRepo.deleteAllByEmail(req.getEmail());
-            if (existing.getMcProfile() != null) {
+  @Value("${mchub.admin.otp.email.3:}")
+  private String adminOtpEmail3;
+
+  @Value("${mchub.admin.otp.email.4:}")
+  private String adminOtpEmail4;
+
+  @Value("${mchub.admin.otp.email.5:}")
+  private String adminOtpEmail5;
+
+  @Value("${mchub.admin.otp.email.6:}")
+  private String adminOtpEmail6;
+
+  private Map<String, String> buildAdminOtpEmails() {
+    Map<String, String> m = new HashMap<>();
+    if (!adminOtpEmail1.isBlank()) m.put("admin1@mchub.vn", adminOtpEmail1);
+    if (!adminOtpEmail2.isBlank()) m.put("admin2@mchub.vn", adminOtpEmail2);
+    if (!adminOtpEmail3.isBlank()) m.put("admin3@mchub.vn", adminOtpEmail3);
+    if (!adminOtpEmail4.isBlank()) m.put("admin4@mchub.vn", adminOtpEmail4);
+    if (!adminOtpEmail5.isBlank()) m.put("admin5@mchub.vn", adminOtpEmail5);
+    if (!adminOtpEmail6.isBlank()) m.put("admin6@mchub.vn", adminOtpEmail6);
+    return m;
+  }
+
+  @Override
+  public User register(@NonNull RegisterRequest req) {
+    userRepository
+        .findByEmail(req.getEmail())
+        .ifPresent(
+            existing -> {
+              if (existing.isVerified()) {
+                throw new AppException(
+                    ErrorCode.EMAIL_ALREADY_EXISTS,
+                    "Email này đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập.");
+              }
+              // Unverified stale account — clean up so user can re-register
+              otpRepo.deleteAllByEmail(req.getEmail());
+              if (existing.getMcProfile() != null) {
                 mcProfileRepository.deleteByUser(existing.getId());
-            }
-            userRepository.delete(existing);
-        });
+              }
+              userRepository.delete(existing);
+            });
 
-        UserRole role = UserRole.CLIENT;
-        if (req.getRole() != null) {
-            try {
-                UserRole parsed = UserRole.valueOf(req.getRole().toUpperCase());
-                if (parsed == UserRole.MC)
-                    role = UserRole.MC;
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
+    UserRole role = UserRole.CLIENT;
+    if (req.getRole() != null) {
+      try {
+        UserRole parsed = UserRole.valueOf(req.getRole().toUpperCase());
+        if (parsed == UserRole.MC) role = UserRole.MC;
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
 
-        String avatar = (req.getAvatar() != null && !req.getAvatar().isBlank())
-                ? req.getAvatar()
-                : SecurityConstants.DEFAULT_AVATAR_EMOJIS[AVATAR_RANDOM.nextInt(SecurityConstants.DEFAULT_AVATAR_EMOJIS.length)];
+    String avatar =
+        (req.getAvatar() != null && !req.getAvatar().isBlank())
+            ? req.getAvatar()
+            : SecurityConstants.DEFAULT_AVATAR_EMOJIS[
+                AVATAR_RANDOM.nextInt(SecurityConstants.DEFAULT_AVATAR_EMOJIS.length)];
 
-        User user = User.builder()
-                .name(req.getName())
-                .email(req.getEmail())
-                .password(passwordEncoder.encode(req.getPassword()))
-                .role(role)
-                .phoneNumber(req.getPhoneNumber())
-                .bio(req.getBio() != null ? req.getBio() : "")
-                .avatar(avatar)
-                .isVerified(false)
+    User user =
+        User.builder()
+            .name(req.getName())
+            .email(req.getEmail())
+            .password(passwordEncoder.encode(req.getPassword()))
+            .role(role)
+            .phoneNumber(req.getPhoneNumber())
+            .bio(req.getBio() != null ? req.getBio() : "")
+            .avatar(avatar)
+            .isVerified(false)
+            .isActive(true)
+            .build();
 
-                .isActive(true)
-                .build();
+    User savedUser = userRepository.save(Objects.requireNonNull(user));
 
-        User savedUser = userRepository.save(Objects.requireNonNull(user));
+    // Generate referral code (retry on collision)
+    String code = null;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      String candidate = generateReferralCode();
+      if (userRepository.findByReferralCode(candidate).isEmpty()) {
+        code = candidate;
+        break;
+      }
+    }
+    if (code != null) {
+      savedUser.setReferralCode(code);
+    }
 
-        // Generate referral code (retry on collision)
-        String code = null;
-        for (int attempt = 0; attempt < 3; attempt++) {
-            String candidate = generateReferralCode();
-            if (userRepository.findByReferralCode(candidate).isEmpty()) {
-                code = candidate;
-                break;
-            }
-        }
-        if (code != null) {
-            savedUser.setReferralCode(code);
-        }
-
-        // Process incoming referral code
-        if (req.getReferralCode() != null && !req.getReferralCode().isBlank()) {
-            userRepository.findByReferralCode(req.getReferralCode().toUpperCase().trim()).ifPresent(referrer -> {
-                referralRepository.save(Referral.builder()
+    // Process incoming referral code
+    if (req.getReferralCode() != null && !req.getReferralCode().isBlank()) {
+      userRepository
+          .findByReferralCode(req.getReferralCode().toUpperCase().trim())
+          .ifPresent(
+              referrer -> {
+                referralRepository.save(
+                    Referral.builder()
                         .referrerId(referrer.getId())
                         .referredUserId(savedUser.getId())
                         .build());
                 referrer.setReferralCount(referrer.getReferralCount() + 1);
                 userRepository.save(referrer);
                 savedUser.setReferralCount(savedUser.getReferralCount() + 1);
+              });
+    }
+
+    userRepository.save(savedUser);
+
+    if (role == UserRole.MC) {
+      initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
+    }
+
+    return savedUser;
+  }
+
+  private static final int MAX_FAILED_ATTEMPTS = 10;
+  private static final int LOCKOUT_MINUTES = 15;
+
+  @Override
+  public LoginResponse login(@NonNull String email, @NonNull String password) {
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(
+                () ->
+                    new AppException(
+                        ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung."));
+
+    if (!user.isActive()) {
+      throw new AppException(
+          ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
+    }
+    if (!user.isVerified()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "EMAIL_NOT_VERIFIED:" + email);
+    }
+
+    // Check temporary lockout from brute force
+    if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+      throw new AppException(
+          ErrorCode.USER_LOCKED,
+          "Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Thử lại sau "
+              + LOCKOUT_MINUTES
+              + " phút.");
+    }
+
+    boolean isMatch = passwordEncoder.matches(password, user.getPassword());
+
+    if (!isMatch) {
+      int attempts = user.getFailedLoginAttempts() + 1;
+      user.setFailedLoginAttempts(attempts);
+      if (attempts >= MAX_FAILED_ATTEMPTS) {
+        user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
+      }
+      userRepository.save(user);
+      throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung.");
+    }
+
+    // Success — reset lockout counters
+    if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
+      user.setFailedLoginAttempts(0);
+      user.setLockedUntil(null);
+      userRepository.save(user);
+    }
+
+    // Admin 2FA: send OTP to mapped email, block JWT until verified
+    if (user.getRole() == UserRole.ADMIN) {
+      String otpDestination = buildAdminOtpEmails().get(email.toLowerCase());
+      if (otpDestination == null || otpDestination.isBlank()) otpDestination = email;
+      sendAdminLoginOtp(email, otpDestination);
+      throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + email);
+    }
+
+    String token = jwtService.generateToken(user.getId(), user.getRole().name());
+    return new LoginResponse(user, token);
+  }
+
+  private void sendAdminLoginOtp(@NonNull String adminEmail, @NonNull String destination) {
+    otpRepo.deleteAllByEmail("admin_login:" + adminEmail);
+    String code = generateOtp();
+    otpRepo.save(
+        OtpVerification.builder()
+            .email("admin_login:" + adminEmail)
+            .code(code)
+            .expiresAt(LocalDateTime.now().plusMinutes(10))
+            .used(false)
+            .build());
+    emailService.sendSimpleEmail(
+        destination,
+        "MCHub Admin — Mã xác thực đăng nhập",
+        "Mã OTP đăng nhập admin của bạn là: "
+            + code
+            + "\n\nMã có hiệu lực trong 10 phút.\nNếu bạn không thực hiện đăng nhập này, hãy bỏ qua email này.");
+  }
+
+  @Override
+  public LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code) {
+    OtpVerification otp =
+        otpRepo
+            .findTopByEmailOrderByCreatedAtDesc("admin_login:" + email)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
+    if (otp.isUsed()) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
+    if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
+    if (otp.getAttemptCount() >= 3) {
+      otpRepo.delete(otp);
+      throw new AppException(
+          ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 3 lần sai. Vui lòng đăng nhập lại.");
+    }
+    if (!otp.getCode().equals(code.trim())) {
+      otp.setAttemptCount(otp.getAttemptCount() + 1);
+      otpRepo.save(otp);
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
+    }
+    otp.setUsed(true);
+    otpRepo.save(otp);
+    otpRepo.deleteAllByEmail("admin_login:" + email);
+
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Admin not found"));
+    String token = jwtService.generateToken(user.getId(), user.getRole().name());
+    return new LoginResponse(user, token);
+  }
+
+  @Override
+  public GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken) {
+    var identity = googleTokenVerifierService.verify(googleIdToken);
+
+    User existing =
+        userRepository
+            .findByGoogleId(identity.googleId())
+            .or(() -> userRepository.findByEmail(identity.email()))
+            .orElse(null);
+
+    if (existing != null) {
+      if (!existing.isActive()) {
+        throw new AppException(
+            ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
+      }
+      // Auto-link: account exists (password-based or already Google-linked) — trust it,
+      // since Google already verified this email.
+      boolean changed = false;
+      if (existing.getGoogleId() == null) {
+        existing.setGoogleId(identity.googleId());
+        changed = true;
+      }
+      if (!existing.isVerified()) {
+        existing.setVerified(true);
+        changed = true;
+      }
+      if (changed) userRepository.save(existing);
+
+      if (existing.getRole() == UserRole.ADMIN) {
+        // Keep admin 2FA guarantee intact — Google login does not bypass it.
+        String otpDestination = buildAdminOtpEmails().get(existing.getEmail().toLowerCase());
+        if (otpDestination == null || otpDestination.isBlank())
+          otpDestination = existing.getEmail();
+        sendAdminLoginOtp(existing.getEmail(), otpDestination);
+        throw new AppException(
+            ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + existing.getEmail());
+      }
+
+      String token = jwtService.generateToken(existing.getId(), existing.getRole().name());
+      return new GoogleAuthResult.LoggedIn(new LoginResponse(existing, token));
+    }
+
+    String pendingToken =
+        jwtService.generatePendingGoogleToken(
+            identity.googleId(), identity.email(), identity.name());
+    return new GoogleAuthResult.PendingRegistration(
+        pendingToken, identity.email(), identity.name());
+  }
+
+  @Override
+  public User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken) {
+    var identity = googleTokenVerifierService.verify(googleIdToken);
+
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+
+    if (!identity.email().equalsIgnoreCase(user.getEmail())) {
+      throw new AppException(
+          ErrorCode.GOOGLE_EMAIL_MISMATCH,
+          "Email tài khoản Google ("
+              + identity.email()
+              + ") không khớp với email tài khoản hiện tại.");
+    }
+
+    userRepository
+        .findByGoogleId(identity.googleId())
+        .ifPresent(
+            other -> {
+              if (!other.getId().equals(user.getId())) {
+                throw new AppException(
+                    ErrorCode.GOOGLE_ACCOUNT_ALREADY_LINKED,
+                    "Tài khoản Google này đã được liên kết với một tài khoản khác.");
+              }
             });
-        }
 
-        userRepository.save(savedUser);
+    user.setGoogleId(identity.googleId());
+    return userRepository.save(user);
+  }
 
-        if (role == UserRole.MC) {
-            initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
-        }
+  @Override
+  public User unlinkGoogleAccount(@NonNull String userId) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
 
-        return savedUser;
+    // A user whose password was never explicitly set (Google-only registration, random
+    // unusable password) would be permanently locked out if we removed their only sign-in
+    // method. passwordChangedAt is set by updateSettings/resetPassword — never by
+    // completeGoogleRegistration — so its absence means "no real password exists".
+    if (user.getPasswordChangedAt() == null) {
+      throw new AppException(
+          ErrorCode.GOOGLE_UNLINK_BLOCKED_NO_PASSWORD,
+          "Vui lòng đặt mật khẩu trước khi hủy liên kết Google, nếu không bạn sẽ không thể đăng nhập.");
     }
 
-    private static final int MAX_FAILED_ATTEMPTS = 10;
-    private static final int LOCKOUT_MINUTES = 15;
+    user.setGoogleId(null);
+    return userRepository.save(user);
+  }
 
-    @Override
-    public LoginResponse login(@NonNull String email, @NonNull String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung."));
+  @Override
+  public LoginResponse completeGoogleRegistration(
+      @NonNull String pendingToken, @NonNull String role, String referralCode) {
+    var pending = jwtService.extractPendingGoogleIdentity(pendingToken);
 
-        if (!user.isActive()) {
-            throw new AppException(ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
-        }
-        if (!user.isVerified()) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "EMAIL_NOT_VERIFIED:" + email);
-        }
-
-        // Check temporary lockout from brute force
-        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
-            throw new AppException(ErrorCode.USER_LOCKED,
-                    "Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Thử lại sau " + LOCKOUT_MINUTES + " phút.");
-        }
-
-        boolean isMatch = passwordEncoder.matches(password, user.getPassword());
-
-        if (!isMatch) {
-            int attempts = user.getFailedLoginAttempts() + 1;
-            user.setFailedLoginAttempts(attempts);
-            if (attempts >= MAX_FAILED_ATTEMPTS) {
-                user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
-            }
-            userRepository.save(user);
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoac mat khau khong dung.");
-        }
-
-        // Success — reset lockout counters
-        if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
-            user.setFailedLoginAttempts(0);
-            user.setLockedUntil(null);
-            userRepository.save(user);
-        }
-
-        // Admin 2FA: send OTP to mapped email, block JWT until verified
-        if (user.getRole() == UserRole.ADMIN) {
-            String otpDestination = buildAdminOtpEmails().get(email.toLowerCase());
-            if (otpDestination == null || otpDestination.isBlank()) otpDestination = email;
-            sendAdminLoginOtp(email, otpDestination);
-            throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + email);
-        }
-
-        String token = jwtService.generateToken(user.getId(), user.getRole().name());
-        return new LoginResponse(user, token);
+    // Re-check in case the account was created by another request in the meantime
+    // (e.g. user double-clicked "continue", or registered via password in another tab).
+    if (userRepository.findByGoogleId(pending.googleId()).isPresent()
+        || userRepository.findByEmail(pending.email()).isPresent()) {
+      throw new AppException(
+          ErrorCode.EMAIL_ALREADY_EXISTS, "Email này đã được sử dụng. Vui lòng đăng nhập.");
     }
 
-    private void sendAdminLoginOtp(@NonNull String adminEmail, @NonNull String destination) {
-        otpRepo.deleteAllByEmail("admin_login:" + adminEmail);
-        String code = generateOtp();
-        otpRepo.save(OtpVerification.builder()
-                .email("admin_login:" + adminEmail)
-                .code(code)
-                .expiresAt(LocalDateTime.now().plusMinutes(10))
-                .used(false)
-                .build());
-        emailService.sendSimpleEmail(destination,
-                "MCHub Admin — Mã xác thực đăng nhập",
-                "Mã OTP đăng nhập admin của bạn là: " + code + "\n\nMã có hiệu lực trong 10 phút.\nNếu bạn không thực hiện đăng nhập này, hãy bỏ qua email này.");
+    UserRole parsedRole = UserRole.CLIENT;
+    try {
+      UserRole candidate = UserRole.valueOf(role.toUpperCase());
+      if (candidate == UserRole.MC) parsedRole = UserRole.MC;
+    } catch (IllegalArgumentException ignored) {
     }
 
-    @Override
-    public LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code) {
-        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc("admin_login:" + email)
-                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
-        if (otp.isUsed()) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
-        if (otp.getAttemptCount() >= 3) {
-            otpRepo.delete(otp);
-            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 3 lần sai. Vui lòng đăng nhập lại.");
-        }
-        if (!otp.getCode().equals(code.trim())) {
-            otp.setAttemptCount(otp.getAttemptCount() + 1);
-            otpRepo.save(otp);
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
-        }
-        otp.setUsed(true);
-        otpRepo.save(otp);
-        otpRepo.deleteAllByEmail("admin_login:" + email);
+    // Random unguessable password — Google-linked accounts never log in via password unless
+    // the user later sets one explicitly through account settings.
+    byte[] randomBytes = new byte[32];
+    RNG.nextBytes(randomBytes);
+    String unusablePassword =
+        passwordEncoder.encode(java.util.Base64.getEncoder().encodeToString(randomBytes));
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Admin not found"));
-        String token = jwtService.generateToken(user.getId(), user.getRole().name());
-        return new LoginResponse(user, token);
+    User user =
+        User.builder()
+            .name(
+                pending.name() != null && !pending.name().isBlank()
+                    ? pending.name()
+                    : "MC Hub User")
+            .email(pending.email())
+            .password(unusablePassword)
+            .googleId(pending.googleId())
+            .role(parsedRole)
+            .isVerified(true) // Google already verified this email
+            .isActive(true)
+            .build();
+
+    User savedUser = userRepository.save(Objects.requireNonNull(user));
+
+    String generatedCode = null;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      String candidate = generateReferralCode();
+      if (userRepository.findByReferralCode(candidate).isEmpty()) {
+        generatedCode = candidate;
+        break;
+      }
     }
+    if (generatedCode != null) savedUser.setReferralCode(generatedCode);
 
-
-
-    @Override
-    public GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken) {
-        var identity = googleTokenVerifierService.verify(googleIdToken);
-
-        User existing = userRepository.findByGoogleId(identity.googleId())
-                .or(() -> userRepository.findByEmail(identity.email()))
-                .orElse(null);
-
-        if (existing != null) {
-            if (!existing.isActive()) {
-                throw new AppException(ErrorCode.USER_LOCKED, "Tai khoan da bi khoa. Vui long lien he ho tro.");
-            }
-            // Auto-link: account exists (password-based or already Google-linked) — trust it,
-            // since Google already verified this email.
-            boolean changed = false;
-            if (existing.getGoogleId() == null) {
-                existing.setGoogleId(identity.googleId());
-                changed = true;
-            }
-            if (!existing.isVerified()) {
-                existing.setVerified(true);
-                changed = true;
-            }
-            if (changed) userRepository.save(existing);
-
-            if (existing.getRole() == UserRole.ADMIN) {
-                // Keep admin 2FA guarantee intact — Google login does not bypass it.
-                String otpDestination = buildAdminOtpEmails().get(existing.getEmail().toLowerCase());
-                if (otpDestination == null || otpDestination.isBlank()) otpDestination = existing.getEmail();
-                sendAdminLoginOtp(existing.getEmail(), otpDestination);
-                throw new AppException(ErrorCode.ADMIN_OTP_REQUIRED, "ADMIN_OTP_REQUIRED:" + existing.getEmail());
-            }
-
-            String token = jwtService.generateToken(existing.getId(), existing.getRole().name());
-            return new GoogleAuthResult.LoggedIn(new LoginResponse(existing, token));
-        }
-
-        String pendingToken = jwtService.generatePendingGoogleToken(identity.googleId(), identity.email(), identity.name());
-        return new GoogleAuthResult.PendingRegistration(pendingToken, identity.email(), identity.name());
-    }
-
-    @Override
-    public User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken) {
-        var identity = googleTokenVerifierService.verify(googleIdToken);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
-
-        if (!identity.email().equalsIgnoreCase(user.getEmail())) {
-            throw new AppException(ErrorCode.GOOGLE_EMAIL_MISMATCH,
-                    "Email tài khoản Google (" + identity.email() + ") không khớp với email tài khoản hiện tại.");
-        }
-
-        userRepository.findByGoogleId(identity.googleId()).ifPresent(other -> {
-            if (!other.getId().equals(user.getId())) {
-                throw new AppException(ErrorCode.GOOGLE_ACCOUNT_ALREADY_LINKED,
-                        "Tài khoản Google này đã được liên kết với một tài khoản khác.");
-            }
-        });
-
-        user.setGoogleId(identity.googleId());
-        return userRepository.save(user);
-    }
-
-    @Override
-    public User unlinkGoogleAccount(@NonNull String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
-
-        // A user whose password was never explicitly set (Google-only registration, random
-        // unusable password) would be permanently locked out if we removed their only sign-in
-        // method. passwordChangedAt is set by updateSettings/resetPassword — never by
-        // completeGoogleRegistration — so its absence means "no real password exists".
-        if (user.getPasswordChangedAt() == null) {
-            throw new AppException(ErrorCode.GOOGLE_UNLINK_BLOCKED_NO_PASSWORD,
-                    "Vui lòng đặt mật khẩu trước khi hủy liên kết Google, nếu không bạn sẽ không thể đăng nhập.");
-        }
-
-        user.setGoogleId(null);
-        return userRepository.save(user);
-    }
-
-    @Override
-    public LoginResponse completeGoogleRegistration(@NonNull String pendingToken, @NonNull String role, String referralCode) {
-        var pending = jwtService.extractPendingGoogleIdentity(pendingToken);
-
-        // Re-check in case the account was created by another request in the meantime
-        // (e.g. user double-clicked "continue", or registered via password in another tab).
-        if (userRepository.findByGoogleId(pending.googleId()).isPresent()
-                || userRepository.findByEmail(pending.email()).isPresent()) {
-            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email này đã được sử dụng. Vui lòng đăng nhập.");
-        }
-
-        UserRole parsedRole = UserRole.CLIENT;
-        try {
-            UserRole candidate = UserRole.valueOf(role.toUpperCase());
-            if (candidate == UserRole.MC) parsedRole = UserRole.MC;
-        } catch (IllegalArgumentException ignored) {
-        }
-
-        // Random unguessable password — Google-linked accounts never log in via password unless
-        // the user later sets one explicitly through account settings.
-        byte[] randomBytes = new byte[32];
-        RNG.nextBytes(randomBytes);
-        String unusablePassword = passwordEncoder.encode(java.util.Base64.getEncoder().encodeToString(randomBytes));
-
-        User user = User.builder()
-                .name(pending.name() != null && !pending.name().isBlank() ? pending.name() : "MC Hub User")
-                .email(pending.email())
-                .password(unusablePassword)
-                .googleId(pending.googleId())
-                .role(parsedRole)
-                .isVerified(true) // Google already verified this email
-                .isActive(true)
-                .build();
-
-        User savedUser = userRepository.save(Objects.requireNonNull(user));
-
-        String generatedCode = null;
-        for (int attempt = 0; attempt < 3; attempt++) {
-            String candidate = generateReferralCode();
-            if (userRepository.findByReferralCode(candidate).isEmpty()) {
-                generatedCode = candidate;
-                break;
-            }
-        }
-        if (generatedCode != null) savedUser.setReferralCode(generatedCode);
-
-        if (referralCode != null && !referralCode.isBlank()) {
-            userRepository.findByReferralCode(referralCode.toUpperCase().trim()).ifPresent(referrer -> {
-                referralRepository.save(Referral.builder()
+    if (referralCode != null && !referralCode.isBlank()) {
+      userRepository
+          .findByReferralCode(referralCode.toUpperCase().trim())
+          .ifPresent(
+              referrer -> {
+                referralRepository.save(
+                    Referral.builder()
                         .referrerId(referrer.getId())
                         .referredUserId(savedUser.getId())
                         .build());
                 referrer.setReferralCount(referrer.getReferralCount() + 1);
                 userRepository.save(referrer);
                 savedUser.setReferralCount(savedUser.getReferralCount() + 1);
+              });
+    }
+
+    userRepository.save(savedUser);
+
+    if (parsedRole == UserRole.MC) {
+      initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
+    }
+
+    String token = jwtService.generateToken(savedUser.getId(), savedUser.getRole().name());
+    return new LoginResponse(savedUser, token);
+  }
+
+  @Override
+  @Async
+  public void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword) {
+    userRepository
+        .findById(Objects.requireNonNull(userId))
+        .ifPresent(
+            user -> {
+              user.setPassword(passwordEncoder.encode(plainPassword));
+              user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
+              userRepository.save(Objects.requireNonNull(user));
             });
-        }
+  }
 
-        userRepository.save(savedUser);
+  private static final String PWD_RESET_PREFIX = "pwd_reset:";
 
-        if (parsedRole == UserRole.MC) {
-            initializeMCProfile(Objects.requireNonNull(savedUser.getId()));
-        }
+  @Override
+  public void forgotPassword(@NonNull String email) {
+    // Silently succeed if email not found — prevent user enumeration
+    User user = userRepository.findByEmail(email).orElse(null);
+    if (user == null) return;
 
-        String token = jwtService.generateToken(savedUser.getId(), savedUser.getRole().name());
-        return new LoginResponse(savedUser, token);
-    }
+    String key = PWD_RESET_PREFIX + email;
+    otpRepo.deleteAllByEmail(key);
 
-    @Override
-    @Async
-    public void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword) {
-        userRepository.findById(Objects.requireNonNull(userId)).ifPresent(user -> {
-            user.setPassword(passwordEncoder.encode(plainPassword));
-            user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
-            userRepository.save(Objects.requireNonNull(user));
-        });
-    }
+    String code = generateOtp();
+    otpRepo.save(
+        OtpVerification.builder()
+            .email(key)
+            .code(code)
+            .expiresAt(LocalDateTime.now().plusMinutes(10))
+            .used(false)
+            .build());
 
-
-
-    private static final String PWD_RESET_PREFIX = "pwd_reset:";
-
-    @Override
-    public void forgotPassword(@NonNull String email) {
-        // Silently succeed if email not found — prevent user enumeration
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) return;
-
-        String key = PWD_RESET_PREFIX + email;
-        otpRepo.deleteAllByEmail(key);
-
-        String code = generateOtp();
-        otpRepo.save(OtpVerification.builder()
-                .email(key)
-                .code(code)
-                .expiresAt(LocalDateTime.now().plusMinutes(10))
-                .used(false)
-                .build());
-
-        String userName = user.getName() != null ? user.getName() : "ban";
-        String body = """
+    String userName = user.getName() != null ? user.getName() : "ban";
+    String body =
+        """
 <p style="margin:0 0 20px 0;color:#374151;font-size:14px;line-height:1.85;font-family:'Helvetica Neue',Arial,sans-serif;">
   Ban vua yeu cau dat lai mat khau tai khoan <strong style="color:#111113;">MC Hub</strong>.<br/>
   Su dung ma OTP sau de dat lai mat khau cua ban. Ma co hieu luc trong <strong>10 phut</strong>.
 </p>
-""" + """
+"""
+            + """
 <!-- OTP display -->
 <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
   <tr>
@@ -448,141 +525,162 @@ public class AuthServiceImpl implements AuthService {
 <p style="color:#6b7280;font-size:12px;text-align:center;margin:0;font-family:'Helvetica Neue',Arial,sans-serif;">
   Neu ban khong yeu cau dat lai mat khau, vui long bo qua email nay.
 </p>
-""".formatted(formatOtpDigits(code));
+"""
+                .formatted(formatOtpDigits(code));
 
-        try {
-            String html = emailService.buildVerificationEmail(userName, body);
-            emailService.sendHtmlEmail(email, "MC Hub — Ma dat lai mat khau", html);
-        } catch (Exception e) {
-            emailService.sendSimpleEmail(email,
-                    "MC Hub — Ma dat lai mat khau",
-                    "Ma OTP dat lai mat khau cua ban: " + code + "\n\nMa co hieu luc trong 10 phut.\nNeu ban khong yeu cau, hay bo qua email nay.");
-        }
+    try {
+      String html = emailService.buildVerificationEmail(userName, body);
+      emailService.sendHtmlEmail(email, "MC Hub — Ma dat lai mat khau", html);
+    } catch (Exception e) {
+      emailService.sendSimpleEmail(
+          email,
+          "MC Hub — Ma dat lai mat khau",
+          "Ma OTP dat lai mat khau cua ban: "
+              + code
+              + "\n\nMa co hieu luc trong 10 phut.\nNeu ban khong yeu cau, hay bo qua email nay.");
+    }
+  }
+
+  @Override
+  public void resetPassword(
+      @NonNull String email, @NonNull String code, @NonNull String newPassword) {
+    String key = PWD_RESET_PREFIX + email;
+    OtpVerification otp =
+        otpRepo
+            .findTopByEmailOrderByCreatedAtDesc(key)
+            .orElseThrow(
+                () ->
+                    new AppException(
+                        ErrorCode.VALIDATION_FAILED,
+                        "Khong tim thay ma OTP. Vui long yeu cau lai."));
+
+    if (otp.isUsed())
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP da duoc su dung.");
+    if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
+      throw new AppException(
+          ErrorCode.VALIDATION_FAILED, "Ma OTP da het han. Vui long yeu cau lai.");
+    if (otp.getAttemptCount() >= 5) {
+      otpRepo.delete(otp);
+      throw new AppException(
+          ErrorCode.TOO_MANY_ATTEMPTS, "OTP bi khoa sau 5 lan sai. Vui long yeu cau OTP moi.");
+    }
+    if (!otp.getCode().equals(code.trim())) {
+      otp.setAttemptCount(otp.getAttemptCount() + 1);
+      otpRepo.save(otp);
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung.");
     }
 
-    @Override
-    public void resetPassword(@NonNull String email, @NonNull String code, @NonNull String newPassword) {
-        String key = PWD_RESET_PREFIX + email;
-        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc(key)
-                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Khong tim thay ma OTP. Vui long yeu cau lai."));
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    if (newPassword.length() < 8)
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mat khau phai co it nhat 8 ky tu.");
 
-        if (otp.isUsed())
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP da duoc su dung.");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP da het han. Vui long yeu cau lai.");
-        if (otp.getAttemptCount() >= 5) {
-            otpRepo.delete(otp);
-            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bi khoa sau 5 lan sai. Vui long yeu cau OTP moi.");
-        }
-        if (!otp.getCode().equals(code.trim())) {
-            otp.setAttemptCount(otp.getAttemptCount() + 1);
-            otpRepo.save(otp);
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Ma OTP khong dung.");
-        }
+    // Mark used only after all validation passes
+    otp.setUsed(true);
+    otpRepo.save(otp);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (newPassword.length() < 8)
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mat khau phai co it nhat 8 ky tu.");
+    user.setPassword(passwordEncoder.encode(newPassword));
+    user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
+    user.setFailedLoginAttempts(0);
+    user.setLockedUntil(null);
+    userRepository.save(user);
 
-        // Mark used only after all validation passes
-        otp.setUsed(true);
-        otpRepo.save(otp);
+    otpRepo.deleteAllByEmail(key);
+  }
 
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
-        userRepository.save(user);
+  @Override
+  public User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        otpRepo.deleteAllByEmail(key);
+    if (settings.containsKey("name")) user.setName((String) settings.get("name"));
+    if (settings.containsKey("phoneNumber"))
+      user.setPhoneNumber((String) settings.get("phoneNumber"));
+    if (settings.containsKey("avatar")) user.setAvatar((String) settings.get("avatar"));
+    if (settings.containsKey("bio")) user.setBio((String) settings.get("bio"));
+    if (settings.containsKey("password")) {
+      user.setPassword(passwordEncoder.encode((String) settings.get("password")));
+      user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
     }
 
-    @Override
-    public User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    return userRepository.save(user);
+  }
 
-        if (settings.containsKey("name"))
-            user.setName((String) settings.get("name"));
-        if (settings.containsKey("phoneNumber"))
-            user.setPhoneNumber((String) settings.get("phoneNumber"));
-        if (settings.containsKey("avatar"))
-            user.setAvatar((String) settings.get("avatar"));
-        if (settings.containsKey("bio"))
-            user.setBio((String) settings.get("bio"));
-        if (settings.containsKey("password")) {
-            user.setPassword(passwordEncoder.encode((String) settings.get("password")));
-            user.setPasswordChangedAt(LocalDateTime.now(ZoneOffset.UTC));
-        }
-
-        return userRepository.save(user);
+  @Override
+  public void fixAllSeededPasswords() {
+    List<User> users = userRepository.findAll();
+    String hashedPassword = passwordEncoder.encode("password123");
+    for (User u : users) {
+      u.setPassword(hashedPassword);
     }
+    userRepository.saveAll(users);
+  }
 
-    @Override
-    public void fixAllSeededPasswords() {
-        List<User> users = userRepository.findAll();
-        String hashedPassword = passwordEncoder.encode("password123");
-        for (User u : users) {
-            u.setPassword(hashedPassword);
-        }
-        userRepository.saveAll(users);
+  @Override
+  public void disableAllTwoFactor() {
+    // All 2FA fields removed from User model.
+    // This method is now a no-op as the feature is fully decommissioned.
+  }
+
+  // ── OTP ───────────────────────────────────────────────────────────────
+
+  private static final SecureRandom RNG = new SecureRandom();
+
+  private String generateOtp() {
+    return String.format("%06d", RNG.nextInt(1_000_000));
+  }
+
+  private String formatOtpDigits(String code) {
+    StringBuilder sb = new StringBuilder();
+    for (char c : code.toCharArray()) {
+      sb.append("<td style=\"width:38px;height:48px;text-align:center;vertical-align:middle;")
+          .append("background:#1a1a1e;border:1px solid #2a2a2e;border-radius:10px;")
+          .append("font-size:22px;font-weight:800;color:#f5a623;")
+          .append("font-family:'Courier New',Courier,monospace;padding:0 4px;\">")
+          .append(c)
+          .append("</td>");
     }
+    return sb.toString();
+  }
 
-    @Override
-    public void disableAllTwoFactor() {
-        // All 2FA fields removed from User model. 
-        // This method is now a no-op as the feature is fully decommissioned.
-    }
+  @Override
+  public void sendOtp(@NonNull String email) {
+    otpRepo.deleteAllByEmail(email);
+    String code = generateOtp();
+    otpRepo.save(
+        OtpVerification.builder()
+            .email(email)
+            .code(code)
+            .expiresAt(LocalDateTime.now().plusMinutes(10))
+            .used(false)
+            .build());
 
-    // ── OTP ───────────────────────────────────────────────────────────────
+    // Generate magic-link token, persist on user
+    String magicToken = UUID.randomUUID().toString();
+    userRepository
+        .findByEmail(email)
+        .ifPresent(
+            u -> {
+              u.setEmailVerificationToken(magicToken);
+              userRepository.save(u);
+            });
 
-    private static final SecureRandom RNG = new SecureRandom();
+    // Send HTML email with both magic link button + OTP fallback
+    String userName =
+        userRepository
+            .findByEmail(email)
+            .map(u -> u.getName() != null ? u.getName() : "bạn")
+            .orElse("bạn");
 
-    private String generateOtp() {
-        return String.format("%06d", RNG.nextInt(1_000_000));
-    }
+    String feUrl = emailService.getFeUrl();
+    String magicLink = feUrl + "/verify-email?token=" + magicToken + "&email=" + email;
 
-    private String formatOtpDigits(String code) {
-        StringBuilder sb = new StringBuilder();
-        for (char c : code.toCharArray()) {
-            sb.append("<td style=\"width:38px;height:48px;text-align:center;vertical-align:middle;")
-              .append("background:#1a1a1e;border:1px solid #2a2a2e;border-radius:10px;")
-              .append("font-size:22px;font-weight:800;color:#f5a623;")
-              .append("font-family:'Courier New',Courier,monospace;padding:0 4px;\">")
-              .append(c)
-              .append("</td>");
-        }
-        return sb.toString();
-    }
-
-    @Override
-    public void sendOtp(@NonNull String email) {
-        otpRepo.deleteAllByEmail(email);
-        String code = generateOtp();
-        otpRepo.save(OtpVerification.builder()
-                .email(email)
-                .code(code)
-                .expiresAt(LocalDateTime.now().plusMinutes(10))
-                .used(false)
-                .build());
-
-        // Generate magic-link token, persist on user
-        String magicToken = UUID.randomUUID().toString();
-        userRepository.findByEmail(email).ifPresent(u -> {
-            u.setEmailVerificationToken(magicToken);
-            userRepository.save(u);
-        });
-
-        // Send HTML email with both magic link button + OTP fallback
-        String userName = userRepository.findByEmail(email)
-                .map(u -> u.getName() != null ? u.getName() : "bạn")
-                .orElse("bạn");
-
-        String feUrl = emailService.getFeUrl();
-        String magicLink = feUrl + "/verify-email?token=" + magicToken + "&email=" + email;
-
-        String body = """
+    String body =
+        """
 <p style="margin:0 0 20px 0;color:#374151;font-size:14px;line-height:1.85;font-family:'Helvetica Neue',Arial,sans-serif;">
   Chào mừng bạn đến với <strong style="color:#111113;">MC Hub</strong> — nền tảng luyện giọng AI dành cho MC chuyên nghiệp.<br/>
   Để hoàn tất đăng ký, vui lòng xác thực địa chỉ email của bạn.
@@ -629,121 +727,143 @@ public class AuthServiceImpl implements AuthService {
     </td>
   </tr>
 </table>
-""".formatted(magicLink, formatOtpDigits(code));
+"""
+            .formatted(magicLink, formatOtpDigits(code));
 
-        try {
-            String html = emailService.buildVerificationEmail(userName, body);
-            emailService.sendHtmlEmail(email, "MC Hub — Xác thực tài khoản của bạn", html);
-        } catch (Exception e) {
-            // Fallback plain text if HTML fails
-            emailService.sendSimpleEmail(email,
-                    "MCHub — Mã xác thực tài khoản",
-                    "Mã OTP của bạn là: " + code + "\n\nXác thực nhanh: " + magicLink + "\n\nMã có hiệu lực trong 10 phút.");
-        }
+    try {
+      String html = emailService.buildVerificationEmail(userName, body);
+      emailService.sendHtmlEmail(email, "MC Hub — Xác thực tài khoản của bạn", html);
+    } catch (Exception e) {
+      // Fallback plain text if HTML fails
+      emailService.sendSimpleEmail(
+          email,
+          "MCHub — Mã xác thực tài khoản",
+          "Mã OTP của bạn là: "
+              + code
+              + "\n\nXác thực nhanh: "
+              + magicLink
+              + "\n\nMã có hiệu lực trong 10 phút.");
     }
+  }
 
-    @Override
-    public void verifyOtp(@NonNull String email, @NonNull String code) {
-        OtpVerification otp = otpRepo.findTopByEmailOrderByCreatedAtDesc(email)
-                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
-        if (otp.isUsed()) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
-        }
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
-        }
-        if (otp.getAttemptCount() >= 5) {
-            otpRepo.delete(otp);
-            throw new AppException(ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 5 lần sai. Vui lòng yêu cầu OTP mới.");
-        }
-        if (!otp.getCode().equals(code.trim())) {
-            otp.setAttemptCount(otp.getAttemptCount() + 1);
-            otpRepo.save(otp);
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
-        }
-        otp.setUsed(true);
-        otpRepo.save(otp);
-
-        userRepository.findByEmail(email).ifPresent(user -> {
-            user.setVerified(true);
-            user.setEmailVerificationToken(null); // clear magic-link token on OTP verify
-            userRepository.save(user);
-        });
-        otpRepo.deleteAllByEmail(email);
+  @Override
+  public void verifyOtp(@NonNull String email, @NonNull String code) {
+    OtpVerification otp =
+        otpRepo
+            .findTopByEmailOrderByCreatedAtDesc(email)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.VALIDATION_FAILED, "Không tìm thấy mã OTP"));
+    if (otp.isUsed()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã được sử dụng");
     }
-
-    @Override
-    public LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code) {
-        verifyOtp(email, code);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
-        String token = jwtService.generateToken(user.getId(), user.getRole().name());
-        return new LoginResponse(user, token);
+    if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP đã hết hạn");
     }
-
-    @Override
-    public LoginResponse verifyEmailByToken(@NonNull String token) {
-        User user = userRepository.findByEmailVerificationToken(token)
-                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_FAILED, "Link xác thực không hợp lệ hoặc đã hết hạn."));
-        if (user.isVerified()) {
-            // Already verified — just return login response
-            String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
-            return new LoginResponse(user, jwt);
-        }
-        user.setVerified(true);
-        user.setEmailVerificationToken(null);
-        userRepository.save(user);
-        otpRepo.deleteAllByEmail(user.getEmail());
-        String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
-        return new LoginResponse(user, jwt);
+    if (otp.getAttemptCount() >= 5) {
+      otpRepo.delete(otp);
+      throw new AppException(
+          ErrorCode.TOO_MANY_ATTEMPTS, "OTP bị khóa sau 5 lần sai. Vui lòng yêu cầu OTP mới.");
     }
-
-    @Override
-    public void resendOtp(@NonNull String email) {
-        userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Email không tồn tại"));
-        sendOtp(email);
+    if (!otp.getCode().equals(code.trim())) {
+      otp.setAttemptCount(otp.getAttemptCount() + 1);
+      otpRepo.save(otp);
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã OTP không đúng");
     }
+    otp.setUsed(true);
+    otpRepo.save(otp);
 
-    @Override
-    @Async
-    public void initializeMCProfile(@NonNull String userId) {
-        MCProfile profile = MCProfile.builder()
-                .user(userId)
-                .biography("")
-                .build();
-        MCProfile saved = mcProfileRepository.save(Objects.requireNonNull(profile));
-        userRepository.findById(userId).ifPresent(u -> {
-            u.setMcProfile(saved.getId());
-            userRepository.save(u);
-        });
-    }
+    userRepository
+        .findByEmail(email)
+        .ifPresent(
+            user -> {
+              user.setVerified(true);
+              user.setEmailVerificationToken(null); // clear magic-link token on OTP verify
+              userRepository.save(user);
+            });
+    otpRepo.deleteAllByEmail(email);
+  }
 
-    @Override
-    public User getUserById(@NonNull String userId) {
-        return EntityUtils.getOrThrow(userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found: " + userId);
-    }
+  @Override
+  public LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code) {
+    verifyOtp(email, code);
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
+    String token = jwtService.generateToken(user.getId(), user.getRole().name());
+    return new LoginResponse(user, token);
+  }
 
-    @Override
-    public String getOrGenerateReferralCode(@NonNull String userId) {
-        User user = getUserById(userId);
-        if (user.getReferralCode() != null) {
-            return user.getReferralCode();
-        }
-        String code = null;
-        for (int attempt = 0; attempt < 3; attempt++) {
-            String candidate = generateReferralCode();
-            if (userRepository.findByReferralCode(candidate).isEmpty()) {
-                code = candidate;
-                break;
-            }
-        }
-        if (code == null) {
-            code = generateReferralCode();
-        }
-        user.setReferralCode(code);
-        userRepository.save(user);
-        return code;
+  @Override
+  public LoginResponse verifyEmailByToken(@NonNull String token) {
+    User user =
+        userRepository
+            .findByEmailVerificationToken(token)
+            .orElseThrow(
+                () ->
+                    new AppException(
+                        ErrorCode.VALIDATION_FAILED,
+                        "Link xác thực không hợp lệ hoặc đã hết hạn."));
+    if (user.isVerified()) {
+      // Already verified — just return login response
+      String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
+      return new LoginResponse(user, jwt);
     }
+    user.setVerified(true);
+    user.setEmailVerificationToken(null);
+    userRepository.save(user);
+    otpRepo.deleteAllByEmail(user.getEmail());
+    String jwt = jwtService.generateToken(user.getId(), user.getRole().name());
+    return new LoginResponse(user, jwt);
+  }
+
+  @Override
+  public void resendOtp(@NonNull String email) {
+    userRepository
+        .findByEmail(email)
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Email không tồn tại"));
+    sendOtp(email);
+  }
+
+  @Override
+  @Async
+  public void initializeMCProfile(@NonNull String userId) {
+    MCProfile profile = MCProfile.builder().user(userId).biography("").build();
+    MCProfile saved = mcProfileRepository.save(Objects.requireNonNull(profile));
+    userRepository
+        .findById(userId)
+        .ifPresent(
+            u -> {
+              u.setMcProfile(saved.getId());
+              userRepository.save(u);
+            });
+  }
+
+  @Override
+  public User getUserById(@NonNull String userId) {
+    return EntityUtils.getOrThrow(
+        userRepository, userId, ErrorCode.USER_NOT_FOUND, "User not found: " + userId);
+  }
+
+  @Override
+  public String getOrGenerateReferralCode(@NonNull String userId) {
+    User user = getUserById(userId);
+    if (user.getReferralCode() != null) {
+      return user.getReferralCode();
+    }
+    String code = null;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      String candidate = generateReferralCode();
+      if (userRepository.findByReferralCode(candidate).isEmpty()) {
+        code = candidate;
+        break;
+      }
+    }
+    if (code == null) {
+      code = generateReferralCode();
+    }
+    user.setReferralCode(code);
+    userRepository.save(user);
+    return code;
+  }
 }
-

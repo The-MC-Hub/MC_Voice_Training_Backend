@@ -8,5 +8,5 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface BookingDetailMapper {
 
-    BookingDetailResponseDTO toResponseDTO(BookingDetail detail);
+  BookingDetailResponseDTO toResponseDTO(BookingDetail detail);
 }
