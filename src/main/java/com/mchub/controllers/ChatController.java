@@ -74,9 +74,20 @@ public class ChatController {
     }
     String userId = SecurityUtils.getCurrentUserId();
     String type = body.getOrDefault("type", "text");
+    
+    // Safety check for off-platform contact details (phone numbers, bank accounts, external chat apps)
+    boolean hasOffPlatformRisk = content.matches(".*(\\b0[3|5|7|8|9][0-9]{8}\\b|\\bzalo\\b|\\btelegram\\b|\\bchuyển khoản\\b|\\bstk\\b).*");
+    
     Message message = chatService.sendMessage(conversationId, userId, content, type);
-    return ResponseEntity.ok(
-        ApiResponse.success(Map.of("message", messageMapper.toResponseDTO(message))));
+    MessageResponseDTO messageDto = messageMapper.toResponseDTO(message);
+    
+    Map<String, Object> data = new HashMap<>();
+    data.put("message", messageDto);
+    if (hasOffPlatformRisk) {
+      data.put("safetyWarning", "Lưu ý: Để đảm bảo quyền lợi hợp đồng và hoàn tiền khi xảy ra sự cố, vui lòng thực hiện tất cả giao dịch và trao đổi trên MC Hub.");
+    }
+    
+    return ResponseEntity.ok(ApiResponse.success(data));
   }
 
   private ConversationResponseDTO populateConversation(Conversation conv) {
