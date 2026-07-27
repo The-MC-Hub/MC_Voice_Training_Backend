@@ -101,6 +101,7 @@ public class ChatController {
             .ifPresent(
                 user -> {
                   Map<String, Object> u = new HashMap<>();
+                  u.put("id", user.getId());
                   u.put("_id", user.getId());
                   u.put("name", user.getName());
                   u.put("avatar", user.getAvatar());
@@ -117,6 +118,7 @@ public class ChatController {
           .ifPresent(
               booking -> {
                 Map<String, Object> b = new HashMap<>();
+                b.put("id", booking.getId());
                 b.put("_id", booking.getId());
                 b.put("eventName", booking.getEventName());
                 dto.setBookingInfo(b);
@@ -129,6 +131,7 @@ public class ChatController {
           .ifPresent(
               msg -> {
                 Map<String, Object> m = new HashMap<>();
+                m.put("id", msg.getId());
                 m.put("_id", msg.getId());
                 m.put("content", msg.getContent());
                 m.put("type", msg.getType());
