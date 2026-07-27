@@ -47,4 +47,12 @@ public class PaymentTransaction {
   @CreatedDate private LocalDateTime createdAt;
 
   private LocalDateTime completedAt;
+
+  private int refundedAmount;
+
+  private String refundReason;
+
+  private LocalDateTime refundedAt;
+
+  private String refundedBy;
 }

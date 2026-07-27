@@ -131,4 +131,37 @@ public class AdminNotificationController {
               ErrorCode.VALIDATION_FAILED, "Invalid targetType: " + req.getTargetType());
     };
   }
+
+  @PostMapping("/segmented-send")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> segmentedSend(
+      @RequestBody Map<String, String> body) {
+    String segment = body.getOrDefault("segment", "ALL").toUpperCase();
+    String title = body.get("title");
+    String message = body.get("message");
+    String actionUrl = body.getOrDefault("actionUrl", "/dashboard");
+
+    if (title == null || message == null || title.isBlank() || message.isBlank()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "title and message are required");
+    }
+
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    List<User> users = userRepository.findAll();
+    List<User> targetUsers = switch (segment) {
+      case "EXPIRING_VIP_3D" -> users.stream()
+          .filter(u -> u.getPlanExpiresAt() != null 
+              && u.getPlanExpiresAt().isAfter(now) 
+              && u.getPlanExpiresAt().isBefore(now.plusDays(3)))
+          .toList();
+      case "DORMANT_14D" -> users.stream()
+          .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(now.minusDays(14)))
+          .toList();
+      default -> users.stream().filter(u -> u.getRole() != UserRole.ADMIN).toList();
+    };
+
+    targetUsers.forEach(u -> 
+        notificationService.notify(u.getId(), NotificationType.ANNOUNCEMENT, title, message, actionUrl, false)
+    );
+
+    return ResponseEntity.ok(ApiResponse.success("Segmented notification sent", Map.of("segment", segment, "count", targetUsers.size())));
+  }
 }

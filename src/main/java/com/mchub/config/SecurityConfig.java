@@ -31,6 +31,7 @@ public class SecurityConfig {
 
   private final JwtService jwtService;
   private final UserRepository userRepository;
+  private final MaintenanceModeFilter maintenanceModeFilter;
 
   @Value("${mchub.cors.allowed-origins:http://localhost:5173}")
   private String allowedOriginsRaw;
@@ -126,7 +127,8 @@ public class SecurityConfig {
                     .authenticated())
         .addFilterBefore(
             new JwtAuthenticationFilter(Objects.requireNonNull(jwtService), userRepository),
-            UsernamePasswordAuthenticationFilter.class);
+            UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(maintenanceModeFilter, JwtAuthenticationFilter.class);
 
     return http.build();
   }

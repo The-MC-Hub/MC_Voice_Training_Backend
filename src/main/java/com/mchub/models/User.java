@@ -90,7 +90,25 @@ public class User {
   // Account locked until this time (null = not locked)
   private LocalDateTime lockedUntil;
 
+  // Account temporary suspension (null = not suspended)
+  private LocalDateTime suspendedUntil;
+
+  private String suspendReason;
+
+  @Builder.Default private List<SanctionLog> sanctionHistory = new ArrayList<>();
+
   @CreatedDate private LocalDateTime createdAt;
 
   @LastModifiedDate private LocalDateTime updatedAt;
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class SanctionLog {
+    private String action; // SUSPEND_TEMPORARY, UNSUSPEND, PERMANENT_BAN
+    private String reason;
+    private LocalDateTime timestamp;
+    private String adminId;
+  }
 }

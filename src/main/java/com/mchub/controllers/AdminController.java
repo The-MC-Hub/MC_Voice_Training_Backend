@@ -269,4 +269,48 @@ public class AdminController {
     return ResponseEntity.ok(
         ApiResponse.success("Guest cooldown updated to " + hours + " hours", null));
   }
+
+  @PutMapping("/users/{id}/suspend-temporary")
+  public ResponseEntity<ApiResponse<UserResponseDTO>> suspendUserTemporary(
+      @PathVariable String id, @RequestBody Map<String, Object> body) {
+    int days = Integer.parseInt(body.getOrDefault("days", 7).toString());
+    String reason = (String) body.getOrDefault("reason", "Tạm khóa bởi Administrator");
+    String adminId = SecurityUtils.getCurrentUserId();
+
+    UserResponseDTO dto = adminService.suspendUserTemporary(id, days, reason, adminId);
+    return ResponseEntity.ok(ApiResponse.success("Tạm khóa tài khoản thành công", dto));
+  }
+
+  @PutMapping("/users/{id}/unsuspend")
+  public ResponseEntity<ApiResponse<UserResponseDTO>> unsuspendUser(@PathVariable String id) {
+    String adminId = SecurityUtils.getCurrentUserId();
+    UserResponseDTO dto = adminService.unsuspendUser(id, adminId);
+    return ResponseEntity.ok(ApiResponse.success("Mở khóa tài khoản thành công", dto));
+  }
+
+  @PostMapping("/transactions/{id}/refund")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> refundTransaction(
+      @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
+    String reason = body != null ? body.get("reason") : "Hoàn tiền bởi Admin";
+    String adminId = SecurityUtils.getCurrentUserId();
+    Map<String, Object> res = adminService.refundTransaction(id, reason, adminId);
+    return ResponseEntity.ok(ApiResponse.success("Hoàn tiền thành công", res));
+  }
+
+  @PostMapping("/transactions/manual-grant")
+  public ResponseEntity<ApiResponse<UserResponseDTO>> manualGrantPlan(
+      @RequestBody Map<String, Object> body) {
+    String userId = (String) body.get("userId");
+    String plan = (String) body.get("plan");
+    int days = Integer.parseInt(body.getOrDefault("days", 30).toString());
+    String reason = (String) body.getOrDefault("reason", "Cấp tặng bởi Admin");
+    String adminId = SecurityUtils.getCurrentUserId();
+
+    if (userId == null || plan == null) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "userId and plan are required");
+    }
+
+    UserResponseDTO dto = adminService.manualGrantPlan(userId, plan, days, reason, adminId);
+    return ResponseEntity.ok(ApiResponse.success("Cấp tặng gói thành công", dto));
+  }
 }

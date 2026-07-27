@@ -37,4 +37,7 @@ public class UserResponseDTO {
 
   @JsonProperty("isGoogleLinked")
   private boolean isGoogleLinked;
+
+  private LocalDateTime suspendedUntil;
+  private String suspendReason;
 }

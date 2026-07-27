@@ -76,4 +76,16 @@ public interface AdminService {
 
   @PreAuthorize("hasAuthority('ADMIN')")
   Map<String, Object> getBookingStats();
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  UserResponseDTO suspendUserTemporary(@NonNull String userId, int days, String reason, String adminId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  UserResponseDTO unsuspendUser(@NonNull String userId, String adminId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  Map<String, Object> refundTransaction(@NonNull String transactionId, String reason, String adminId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  UserResponseDTO manualGrantPlan(@NonNull String userId, @NonNull String plan, int days, String reason, String adminId);
 }

@@ -870,4 +870,97 @@ public class AdminServiceImpl implements AdminService {
     res.put("byStatus", byStatus);
     return res;
   }
+
+  @Override
+  public UserResponseDTO suspendUserTemporary(
+      @NonNull String userId, int days, String reason, String adminId) {
+    User user = EntityUtils.getUserOrThrow(userRepository, userId);
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime until = now.plusDays(Math.max(1, days));
+
+    user.setActive(false);
+    user.setSuspendedUntil(until);
+    user.setSuspendReason(reason);
+
+    if (user.getSanctionHistory() == null) {
+      user.setSanctionHistory(new ArrayList<>());
+    }
+    user.getSanctionHistory().add(
+        User.SanctionLog.builder()
+            .action("SUSPEND_TEMPORARY_" + days + "D")
+            .reason(reason)
+            .timestamp(now)
+            .adminId(adminId)
+            .build());
+
+    User saved = userRepository.save(user);
+    return userMapper.toResponseDTO(saved);
+  }
+
+  @Override
+  public UserResponseDTO unsuspendUser(@NonNull String userId, String adminId) {
+    User user = EntityUtils.getUserOrThrow(userRepository, userId);
+    LocalDateTime now = LocalDateTime.now();
+
+    user.setActive(true);
+    user.setSuspendedUntil(null);
+    user.setSuspendReason(null);
+
+    if (user.getSanctionHistory() == null) {
+      user.setSanctionHistory(new ArrayList<>());
+    }
+    user.getSanctionHistory().add(
+        User.SanctionLog.builder()
+            .action("UNSUSPEND")
+            .reason("Manual unsuspend by admin")
+            .timestamp(now)
+            .adminId(adminId)
+            .build());
+
+    User saved = userRepository.save(user);
+    return userMapper.toResponseDTO(saved);
+  }
+
+  @Override
+  public Map<String, Object> refundTransaction(
+      @NonNull String transactionId, String reason, String adminId) {
+    PaymentTransaction tx =
+        EntityUtils.getResourceOrThrow(transactionRepository, transactionId, "Transaction");
+    tx.setStatus(TransactionStatus.REFUNDED);
+    tx.setRefundedAmount(tx.getAmount());
+    tx.setRefundReason(reason != null ? reason : "Refunded by Administrator");
+    tx.setRefundedAt(LocalDateTime.now());
+    tx.setRefundedBy(adminId);
+    transactionRepository.save(tx);
+
+    return Map.of(
+        "id", tx.getId(),
+        "status", tx.getStatus().name(),
+        "refundedAmount", tx.getRefundedAmount(),
+        "refundReason", tx.getRefundReason());
+  }
+
+  @Override
+  public UserResponseDTO manualGrantPlan(
+      @NonNull String userId, @NonNull String planStr, int days, String reason, String adminId) {
+    User user = EntityUtils.getUserOrThrow(userRepository, userId);
+    SubscriptionPlan targetPlan;
+    try {
+      targetPlan = SubscriptionPlan.valueOf(planStr.toUpperCase());
+    } catch (Exception e) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid plan: " + planStr);
+    }
+
+    LocalDateTime currentExpiry =
+        (user.getPlanExpiresAt() != null && user.getPlanExpiresAt().isAfter(LocalDateTime.now()))
+            ? user.getPlanExpiresAt()
+            : LocalDateTime.now();
+
+    user.setPlan(targetPlan);
+    user.setPremium(targetPlan != SubscriptionPlan.FREE);
+    user.setPlanExpiresAt(currentExpiry.plusDays(Math.max(1, days)));
+
+    User saved = userRepository.save(user);
+    return userMapper.toResponseDTO(saved);
+  }
 }

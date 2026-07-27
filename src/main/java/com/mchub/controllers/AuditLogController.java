@@ -67,4 +67,30 @@ public class AuditLogController {
         ApiResponse.success(
             "Purge completed", Map.of("deleted", deleted, "olderThanDays", safeDays)));
   }
+
+  @GetMapping("/export-csv")
+  public ResponseEntity<String> exportCsv() {
+    List<com.mchub.models.AuditLog> logs = auditLogService.getAllLogs();
+    StringBuilder csv = new StringBuilder();
+    csv.append("ID,CreatedAt,UserId,Action,Resource,ResourceId,IP,Details\n");
+    for (com.mchub.models.AuditLog log : logs) {
+      csv.append(
+          String.format(
+              "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+              log.getId(),
+              log.getCreatedAt(),
+              log.getUserId(),
+              log.getAction(),
+              log.getResource() != null ? log.getResource() : "",
+              log.getResourceId() != null ? log.getResourceId() : "",
+              log.getIpAddress() != null ? log.getIpAddress() : "",
+              log.getDetails() != null ? log.getDetails().replace("\"", "\"\"") : ""));
+    }
+    return ResponseEntity.ok()
+        .header(
+            org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=audit-logs.csv")
+        .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+        .body(csv.toString());
+  }
 }
