@@ -1,27 +1,36 @@
-# MC Hub Voice Training — Use Case Documentation
+# MC Hub Voice Training — Central Use Case Documentation
 
-Tài liệu liệt kê toàn bộ tính năng (117 endpoints / 24 controllers) theo luồng nghiệp vụ, dựa trên đọc trực tiếp các Controller trong `src/main/java/com/mchub/controllers/`.
+Tài liệu thiết kế chi tiết toàn bộ các tính năng nghiệp vụ của hệ thống được mô đun hóa theo từng thư mục và từng file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
 
-## Danh sách file theo luồng
+---
 
-| File | Luồng |
-|---|---|
-| [UC-01-authentication.md](UC-01-authentication.md) | Đăng ký, đăng nhập, xác minh email, khôi phục mật khẩu |
-| [UC-02-user-profile.md](UC-02-user-profile.md) | Hồ sơ user, streak, hồ sơ MC, chứng chỉ |
-| [UC-03-voice-training.md](UC-03-voice-training.md) | Luyện giọng AI — luồng chính sản phẩm |
-| [UC-04-courses-learning.md](UC-04-courses-learning.md) | Khoá học, lộ trình học, quiz, chứng chỉ hoàn thành |
-| [UC-05-community-leaderboard.md](UC-05-community-leaderboard.md) | Cộng đồng, bảng xếp hạng, giải đấu, bài đăng mạng xã hội |
-| [UC-06-payment-subscription.md](UC-06-payment-subscription.md) | Gói cước, thanh toán PayOS, mã giảm giá, voucher |
-| [UC-07-onboarding-quest.md](UC-07-onboarding-quest.md) | Quest onboarding cho người dùng mới |
-| [UC-08-support-public.md](UC-08-support-public.md) | Trang công khai, liên hệ, báo cáo vi phạm, upload media |
-| [UC-09-admin-dashboard.md](UC-09-admin-dashboard.md) | Quản trị hệ thống, người dùng, log, audit |
-| [UC-10-marketing-communication.md](UC-10-marketing-communication.md) | Thông báo, email campaign, mẫu email |
-| [UC-11-mc-booking-hiring.md](UC-11-mc-booking-hiring.md) | Đặt lịch thuê MC, xác nhận báo giá, thanh toán |
-| [UC-12-chat-messaging.md](UC-12-chat-messaging.md) | Trò chuyện trực tiếp, nhắn tin Realtime WebSocket |
-| [UC-13-peer-review.md](UC-13-peer-review.md) | Chấm điểm & nhận xét đồng nghiệp (Peer Review) |
+## 📁 Danh Sách Cấu Trúc Các Thư Mục Use Case
 
-## Quy ước
+| Thư Mục / Domain | Mô Tả Luồng Nghiệp Vụ | Số Lượng File Sub-UC |
+|---|---|:---:|
+| 🔑 [uc-01-authentication/](uc-01-authentication/README.md) | Đăng ký, Đăng nhập, OTP, Admin 2FA, Google OAuth, Reset Password | 6 Files |
+| 👤 [uc-02-user-profile/](uc-02-user-profile/README.md) | Hồ sơ cá nhân, Update Bio/Avatar, Streak, Freeze Streak, Public MC | 5 Files |
+| 🎙️ [uc-03-voice-training/](uc-03-voice-training/README.md) | Kho bài đọc, Chấm điểm AI, Guest Cooldown, History, Audio TTS | 5 Files |
+| 📚 [uc-04-courses-learning/](uc-04-courses-learning/README.md) | Danh mục khóa học, Enroll, Tiến độ, Lesson Complete, Quiz & Cert | 5 Files |
+| 🏆 [uc-05-community-leaderboard/](uc-05-community-leaderboard/README.md) | Stats, Bảng xếp hạng, Tra cứu My Rank, Voice Arena, Social Posts | 5 Files |
+| 💳 [uc-06-payment-subscription/](uc-06-payment-subscription/README.md) | Gói VIP, Link PayOS, HMAC Webhook, Status, Voucher, Lịch sử | 6 Files |
+| 🎯 [uc-07-onboarding-quest/](uc-07-onboarding-quest/README.md) | Quests tân thủ & Claim phần thưởng XP / Freeze Streak | 2 Files |
+| 📞 [uc-08-support-public/](uc-08-support-public/README.md) | Landing Metrics, Contact Form, Submit Report, Cloudinary Upload | 4 Files |
+| 🛠️ [uc-09-admin-dashboard/](uc-09-admin-dashboard/README.md) | System Health, Maintenance Mode, Temp Ban, Auto Unban, Export CSV, Refund, Manual VIP, Bulk Resolve | 9 Files |
+| 📢 [uc-10-marketing-communication/](uc-10-marketing-communication/README.md) | Brevo Email Campaign, Test Email, Segmented Push, Daily Streak Reminders | 4 Files |
+| 📅 [uc-11-mc-booking-hiring/](uc-11-mc-booking-hiring/README.md) | Booking Request, MC Quote, PayOS Payment, Cancel, Review MC, Admin Force Cancel | 6 Files |
+| 💬 [uc-12-chat-messaging/](uc-12-chat-messaging/README.md) | Create Conversation, Recent Chats, History, STOMP WS Realtime (`/ws-chat`), Mark Read, Unread Count | 6 Files |
+| 🎧 [uc-13-peer-review/](uc-13-peer-review/README.md) | Review Request, Pending List, Rating & Feedback, My Feedback, Admin Delete Review | 5 Files |
 
-- Mỗi dòng = 1 tính năng độc lập ánh xạ 1:1 với 1 API endpoint trong controller tương ứng.
-- Không mô tả kỹ thuật (HTTP method, path) — chỉ tên và mục đích nghiệp vụ.
-- Nhóm theo actor: User thường, MC, Admin, Guest (khách chưa đăng nhập), System (tự động).
+---
+
+## 📌 Quy Ước Cấu Trúc Mỗi File Sub-UC (`.md`):
+
+1. **📋 1. Bảng Mô Tả Nghiệp Vụ (Business Description Table)**:
+   - Mã UC, Tên Tính Năng, Actor, Mục Tiêu, Endpoint, Tiền Điều Kiện, Hậu Điều Kiện, Quy Tắc Nghiệp Vụ, Mã Lỗi ErrorCodes.
+2. **📐 2. Class Diagram (Mermaid `classDiagram`)**:
+   - Cấu trúc Class, Interface, DTOs, Service, Repositories liên quan trực tiếp.
+3. **🔄 3. Sequence Diagram (Mermaid `sequenceDiagram`)**:
+   - Sơ đồ tương tác từng bước Client → Security Filter → Controller → Service → DB / Cloudinary / PayOS / Brevo / AI Engine.
+4. **🧪 4. Testing & Verification Report**:
+   - Tên `@Test` Class, Method kiểm thử và Assertions.
