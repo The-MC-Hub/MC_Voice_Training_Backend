@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExerciseResultDTO {
-    private boolean correct;
-    private String explanation;
-    private CourseResponseDTO.EnrollmentProgressDTO progress;
+  private boolean correct;
+  private String explanation;
+  private CourseResponseDTO.EnrollmentProgressDTO progress;
 }

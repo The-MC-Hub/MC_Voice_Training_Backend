@@ -4,7 +4,7 @@ import com.mchub.models.BookingDetail;
 
 public interface BookingDetailService {
 
-    BookingDetail getOrCreate(String bookingId);
+  BookingDetail getOrCreate(String bookingId);
 
-    BookingDetail update(String bookingId, BookingDetail updated);
+  BookingDetail update(String bookingId, BookingDetail updated);
 }

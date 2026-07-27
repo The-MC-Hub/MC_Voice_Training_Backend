@@ -17,14 +17,13 @@ import com.mchub.services.NotificationService;
 import com.mchub.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/notifications")
@@ -32,92 +31,137 @@ import java.util.Map;
 @PreAuthorize("hasAuthority('ADMIN')")
 public class AdminNotificationController {
 
-    private final NotificationRepository notificationRepository;
-    private final NotificationMapper notificationMapper;
-    private final NotificationService notificationService;
-    private final UserRepository userRepository;
-    private final AuditLogService auditLogService;
+  private final NotificationRepository notificationRepository;
+  private final NotificationMapper notificationMapper;
+  private final NotificationService notificationService;
+  private final UserRepository userRepository;
+  private final AuditLogService auditLogService;
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<NotificationResponseDTO>>> getAllNotifications() {
-        List<NotificationResponseDTO> dtos = notificationRepository.findAll()
-                .stream().map(notificationMapper::toResponseDTO).toList();
-        return ResponseEntity.ok(ApiResponse.success(dtos));
+  @GetMapping
+  public ResponseEntity<ApiResponse<List<NotificationResponseDTO>>> getAllNotifications() {
+    List<NotificationResponseDTO> dtos =
+        notificationRepository.findAll().stream().map(notificationMapper::toResponseDTO).toList();
+    return ResponseEntity.ok(ApiResponse.success(dtos));
+  }
+
+  @GetMapping("/stats")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getStats() {
+    Map<String, Object> stats = new HashMap<>();
+    stats.put("totalCount", notificationRepository.count());
+    stats.put("unreadCount", notificationRepository.countByRead(false));
+
+    Map<String, Long> byType = new HashMap<>();
+    for (NotificationType type : NotificationType.values()) {
+      byType.put(type.name(), notificationRepository.countByType(type));
+    }
+    stats.put("byType", byType);
+
+    return ResponseEntity.ok(ApiResponse.success(stats));
+  }
+
+  @PostMapping("/send")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> sendNotification(
+      @RequestBody @Valid SendNotificationRequest req, HttpServletRequest request) {
+
+    List<String> userIds = resolveTargetUserIds(req);
+
+    for (String userId : userIds) {
+      notificationService.notify(
+          userId, req.getType(), req.getTitle(), req.getBody(), req.getActionUrl(), false);
     }
 
-    @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalCount", notificationRepository.count());
-        stats.put("unreadCount", notificationRepository.countByRead(false));
+    String adminId = SecurityUtils.getCurrentUserId();
+    auditLogService.log(
+        adminId,
+        AuditAction.ADMIN_SEND_NOTIFICATION,
+        "Notification",
+        null,
+        "{\"targetType\":\""
+            + req.getTargetType()
+            + "\",\"recipientCount\":"
+            + userIds.size()
+            + "}",
+        request);
 
-        Map<String, Long> byType = new HashMap<>();
-        for (NotificationType type : NotificationType.values()) {
-            byType.put(type.name(), notificationRepository.countByType(type));
+    return ResponseEntity.ok(
+        ApiResponse.success("Notification sent", Map.of("recipientCount", userIds.size())));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<ApiResponse<Void>> deleteNotification(
+      @PathVariable String id, HttpServletRequest request) {
+    if (!notificationRepository.existsById(id)) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Notification not found: " + id);
+    }
+    notificationRepository.deleteById(id);
+
+    String adminId = SecurityUtils.getCurrentUserId();
+    auditLogService.log(
+        adminId, AuditAction.ADMIN_DELETE_NOTIFICATION, "Notification", id, null, request);
+
+    return ResponseEntity.ok(ApiResponse.success("Notification deleted", null));
+  }
+
+  private List<String> resolveTargetUserIds(SendNotificationRequest req) {
+    String targetType = req.getTargetType().toUpperCase();
+    return switch (targetType) {
+      case "USER" -> {
+        if (req.getUserId() == null || req.getUserId().isBlank()) {
+          throw new AppException(
+              ErrorCode.VALIDATION_FAILED, "userId is required when targetType=USER");
         }
-        stats.put("byType", byType);
-
-        return ResponseEntity.ok(ApiResponse.success(stats));
-    }
-
-    @PostMapping("/send")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> sendNotification(
-            @RequestBody @Valid SendNotificationRequest req,
-            HttpServletRequest request) {
-
-        List<String> userIds = resolveTargetUserIds(req);
-
-        for (String userId : userIds) {
-            notificationService.notify(userId, req.getType(), req.getTitle(), req.getBody(),
-                    req.getActionUrl(), false);
+        yield List.of(req.getUserId());
+      }
+      case "ROLE" -> {
+        if (req.getRole() == null || req.getRole().isBlank()) {
+          throw new AppException(
+              ErrorCode.VALIDATION_FAILED, "role is required when targetType=ROLE");
         }
-
-        String adminId = SecurityUtils.getCurrentUserId();
-        auditLogService.log(adminId, AuditAction.ADMIN_SEND_NOTIFICATION, "Notification", null,
-                "{\"targetType\":\"" + req.getTargetType() + "\",\"recipientCount\":" + userIds.size() + "}",
-                request);
-
-        return ResponseEntity.ok(ApiResponse.success("Notification sent",
-                Map.of("recipientCount", userIds.size())));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteNotification(
-            @PathVariable String id, HttpServletRequest request) {
-        if (!notificationRepository.existsById(id)) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Notification not found: " + id);
+        UserRole role;
+        try {
+          role = UserRole.valueOf(req.getRole().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+          throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid role: " + req.getRole());
         }
-        notificationRepository.deleteById(id);
+        yield userRepository.findByRole(role).stream().map(User::getId).toList();
+      }
+      case "ALL" -> userRepository.findByRoleNot(UserRole.ADMIN).stream().map(User::getId).toList();
+      default ->
+          throw new AppException(
+              ErrorCode.VALIDATION_FAILED, "Invalid targetType: " + req.getTargetType());
+    };
+  }
 
-        String adminId = SecurityUtils.getCurrentUserId();
-        auditLogService.log(adminId, AuditAction.ADMIN_DELETE_NOTIFICATION, "Notification", id, null, request);
+  @PostMapping("/segmented-send")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> segmentedSend(
+      @RequestBody Map<String, String> body) {
+    String segment = body.getOrDefault("segment", "ALL").toUpperCase();
+    String title = body.get("title");
+    String message = body.get("message");
+    String actionUrl = body.getOrDefault("actionUrl", "/dashboard");
 
-        return ResponseEntity.ok(ApiResponse.success("Notification deleted", null));
+    if (title == null || message == null || title.isBlank() || message.isBlank()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "title and message are required");
     }
 
-    private List<String> resolveTargetUserIds(SendNotificationRequest req) {
-        String targetType = req.getTargetType().toUpperCase();
-        return switch (targetType) {
-            case "USER" -> {
-                if (req.getUserId() == null || req.getUserId().isBlank()) {
-                    throw new AppException(ErrorCode.VALIDATION_FAILED, "userId is required when targetType=USER");
-                }
-                yield List.of(req.getUserId());
-            }
-            case "ROLE" -> {
-                if (req.getRole() == null || req.getRole().isBlank()) {
-                    throw new AppException(ErrorCode.VALIDATION_FAILED, "role is required when targetType=ROLE");
-                }
-                UserRole role;
-                try {
-                    role = UserRole.valueOf(req.getRole().toUpperCase());
-                } catch (IllegalArgumentException ex) {
-                    throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid role: " + req.getRole());
-                }
-                yield userRepository.findByRole(role).stream().map(User::getId).toList();
-            }
-            case "ALL" -> userRepository.findByRoleNot(UserRole.ADMIN).stream().map(User::getId).toList();
-            default -> throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid targetType: " + req.getTargetType());
-        };
-    }
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    List<User> users = userRepository.findAll();
+    List<User> targetUsers = switch (segment) {
+      case "EXPIRING_VIP_3D" -> users.stream()
+          .filter(u -> u.getPlanExpiresAt() != null 
+              && u.getPlanExpiresAt().isAfter(now) 
+              && u.getPlanExpiresAt().isBefore(now.plusDays(3)))
+          .toList();
+      case "DORMANT_14D" -> users.stream()
+          .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(now.minusDays(14)))
+          .toList();
+      default -> users.stream().filter(u -> u.getRole() != UserRole.ADMIN).toList();
+    };
+
+    targetUsers.forEach(u -> 
+        notificationService.notify(u.getId(), NotificationType.ANNOUNCEMENT, title, message, actionUrl, false)
+    );
+
+    return ResponseEntity.ok(ApiResponse.success("Segmented notification sent", Map.of("segment", segment, "count", targetUsers.size())));
+  }
 }

@@ -1,6 +1,7 @@
 package com.mchub.models;
 
 import com.mchub.enums.AuditAction;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,8 +11,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "auditlogs")
 @Data
 @Builder
@@ -19,31 +18,25 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class AuditLog {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-        @Indexed
-    private String userId;
+  @Indexed private String userId;
 
-        @Indexed
-    private AuditAction action;
+  @Indexed private AuditAction action;
 
-        private String resource;
+  private String resource;
 
-        private String resourceId;
+  private String resourceId;
 
-        private String details;
+  private String details;
 
-        private String ipAddress;
+  private String ipAddress;
 
-        private String userAgent;
+  private String userAgent;
 
-        @Builder.Default
-    private String status = "SUCCESS";
+  @Builder.Default private String status = "SUCCESS";
 
-        private String errorMessage;
+  private String errorMessage;
 
-    @Indexed
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @Indexed @CreatedDate private LocalDateTime createdAt;
 }

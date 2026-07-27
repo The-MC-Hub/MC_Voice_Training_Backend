@@ -1,5 +1,6 @@
 package com.mchub.services;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -7,57 +8,57 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.internet.MimeMessage;
-
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+  private final JavaMailSender mailSender;
 
-    @Value("${app.mail.from}")
-    private String fromEmail;
+  @Value("${app.mail.from}")
+  private String fromEmail;
 
-    @Value("${mchub.fe-url:http://localhost:5173}")
-    private String feUrl;
+  @Value("${mchub.fe-url:http://localhost:5173}")
+  private String feUrl;
 
-    public void sendSimpleEmail(String to, String subject, String content) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(content);
-        mailSender.send(message);
-    }
+  public void sendSimpleEmail(String to, String subject, String content) {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(fromEmail);
+    message.setTo(to);
+    message.setSubject(subject);
+    message.setText(content);
+    mailSender.send(message);
+  }
 
-    public String getFeUrl() {
-        return feUrl;
-    }
+  public String getFeUrl() {
+    return feUrl;
+  }
 
-    public void sendHtmlEmail(String to, String subject, String htmlContent) throws Exception {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail);
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(htmlContent, true);
-        mailSender.send(message);
-    }
+  public void sendHtmlEmail(String to, String subject, String htmlContent) throws Exception {
+    MimeMessage message = mailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    helper.setFrom(fromEmail);
+    helper.setTo(to);
+    helper.setSubject(subject);
+    helper.setText(htmlContent, true);
+    mailSender.send(message);
+  }
 
-    /**
-     * Builds the branded MC Hub HTML email template.
-     * @param recipientName  personalised name (or "bạn")
-     * @param bodyText       plain-text content — newlines converted to <br> paragraphs
-     * @param type           announcement type label for the banner tag
-     */
-    public String buildHtmlEmail(String recipientName, String bodyText, String type) {
-        String safeBody    = escapeAndFormatBody(bodyText, recipientName);
-        String bannerColor = bannerColorFor(type);
-        String typeLabel   = typeLabelFor(type);
-        String heroBg      = heroBgFor(type);
-        String year        = String.valueOf(java.time.Year.now().getValue());
+  /**
+   * Builds the branded MC Hub HTML email template.
+   *
+   * @param recipientName personalised name (or "bạn")
+   * @param bodyText plain-text content — newlines converted to <br>
+   *     paragraphs
+   * @param type announcement type label for the banner tag
+   */
+  public String buildHtmlEmail(String recipientName, String bodyText, String type) {
+    String safeBody = escapeAndFormatBody(bodyText, recipientName);
+    String bannerColor = bannerColorFor(type);
+    String typeLabel = typeLabelFor(type);
+    String heroBg = heroBgFor(type);
+    String year = String.valueOf(java.time.Year.now().getValue());
 
-        return """
+    return """
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -201,25 +202,27 @@ public class EmailService {
 </table>
 </body>
 </html>
-""".formatted(
-                bannerColor, typeLabel,   // header badge
-                heroBg,                  // hero section background
-                recipientName,           // greeting name
-                safeBody,                // main content
-                feUrl,                   // CTA href
-                feUrl,                   // footer unsubscribe
-                feUrl,                   // footer manage
-                year                     // copyright
-        );
-    }
+"""
+        .formatted(
+            bannerColor,
+            typeLabel, // header badge
+            heroBg, // hero section background
+            recipientName, // greeting name
+            safeBody, // main content
+            feUrl, // CTA href
+            feUrl, // footer unsubscribe
+            feUrl, // footer manage
+            year // copyright
+            );
+  }
 
-    /**
-     * Verification email template — body is trusted HTML (caller constructs it),
-     * so we do NOT escape it. Use only for OTP/magic-link emails.
-     */
-    public String buildVerificationEmail(String recipientName, String trustedHtmlBody) {
-        String year = String.valueOf(java.time.Year.now().getValue());
-        return """
+  /**
+   * Verification email template — body is trusted HTML (caller constructs it), so we do NOT escape
+   * it. Use only for OTP/magic-link emails.
+   */
+  public String buildVerificationEmail(String recipientName, String trustedHtmlBody) {
+    String year = String.valueOf(java.time.Year.now().getValue());
+    return """
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -396,70 +399,66 @@ public class EmailService {
 </table>
 </body>
 </html>
-""".formatted(recipientName, trustedHtmlBody, feUrl, year);
-    }
+"""
+        .formatted(recipientName, trustedHtmlBody, feUrl, year);
+  }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-    private String escapeAndFormatBody(String text, String recipientName) {
-        if (text == null) return "";
-        // Personalize
-        String personalized = text
-                .replace("{{name}}", recipientName)
-                .replace("{{email}}", "");
-        // Escape HTML special chars
-        String escaped = personalized
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-        // Convert newlines to <br> and wrap paragraphs
-        String[] paragraphs = escaped.split("\\n\\n+");
-        StringBuilder sb = new StringBuilder();
-        for (String para : paragraphs) {
-            if (para.isBlank()) continue;
-            sb.append("<p style=\"margin:0 0 16px 0;\">")
-              .append(para.replace("\n", "<br/>"))
-              .append("</p>");
-        }
-        return sb.toString();
+  private String escapeAndFormatBody(String text, String recipientName) {
+    if (text == null) return "";
+    // Personalize
+    String personalized = text.replace("{{name}}", recipientName).replace("{{email}}", "");
+    // Escape HTML special chars
+    String escaped = personalized.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    // Convert newlines to <br> and wrap paragraphs
+    String[] paragraphs = escaped.split("\\n\\n+");
+    StringBuilder sb = new StringBuilder();
+    for (String para : paragraphs) {
+      if (para.isBlank()) continue;
+      sb.append("<p style=\"margin:0 0 16px 0;\">")
+          .append(para.replace("\n", "<br/>"))
+          .append("</p>");
     }
+    return sb.toString();
+  }
 
-    private String heroBgFor(String type) {
-        if (type == null) return "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)";
-        return switch (type) {
-            case "NEW_LESSON"     -> "linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)";
-            case "DISCOUNT"       -> "linear-gradient(135deg,#1a0a00 0%,#3d1f00 100%)";
-            case "MAINTENANCE"    -> "linear-gradient(135deg,#1a0000 0%,#3d0a0a 100%)";
-            case "SOCIAL_POST"    -> "linear-gradient(135deg,#1a0014 0%,#3d0030 100%)";
-            case "FEATURE_UPDATE" -> "linear-gradient(135deg,#0e0020 0%,#2d0060 100%)";
-            case "COMPETITION"    -> "linear-gradient(135deg,#001a0a 0%,#003d1a 100%)";
-            default               -> "linear-gradient(135deg,#0c0c0f 0%,#1a1a1e 100%)";
-        };
-    }
+  private String heroBgFor(String type) {
+    if (type == null) return "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)";
+    return switch (type) {
+      case "NEW_LESSON" -> "linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)";
+      case "DISCOUNT" -> "linear-gradient(135deg,#1a0a00 0%,#3d1f00 100%)";
+      case "MAINTENANCE" -> "linear-gradient(135deg,#1a0000 0%,#3d0a0a 100%)";
+      case "SOCIAL_POST" -> "linear-gradient(135deg,#1a0014 0%,#3d0030 100%)";
+      case "FEATURE_UPDATE" -> "linear-gradient(135deg,#0e0020 0%,#2d0060 100%)";
+      case "COMPETITION" -> "linear-gradient(135deg,#001a0a 0%,#003d1a 100%)";
+      default -> "linear-gradient(135deg,#0c0c0f 0%,#1a1a1e 100%)";
+    };
+  }
 
-    private String bannerColorFor(String type) {
-        if (type == null) return "#f5a623";
-        return switch (type) {
-            case "DISCOUNT"       -> "#f5a623";
-            case "MAINTENANCE"    -> "#ef4444";
-            case "SOCIAL_POST"    -> "#ec4899";
-            case "FEATURE_UPDATE" -> "#a855f7";
-            case "COMPETITION"    -> "#10b981";
-            case "NEW_LESSON"     -> "#3b82f6";
-            default               -> "#f5a623";
-        };
-    }
+  private String bannerColorFor(String type) {
+    if (type == null) return "#f5a623";
+    return switch (type) {
+      case "DISCOUNT" -> "#f5a623";
+      case "MAINTENANCE" -> "#ef4444";
+      case "SOCIAL_POST" -> "#ec4899";
+      case "FEATURE_UPDATE" -> "#a855f7";
+      case "COMPETITION" -> "#10b981";
+      case "NEW_LESSON" -> "#3b82f6";
+      default -> "#f5a623";
+    };
+  }
 
-    private String typeLabelFor(String type) {
-        if (type == null) return "Thông báo";
-        return switch (type) {
-            case "NEW_LESSON"     -> "Bài học mới";
-            case "DISCOUNT"       -> "Khuyến mãi";
-            case "MAINTENANCE"    -> "Bảo trì";
-            case "SOCIAL_POST"    -> "Bài đăng mới";
-            case "FEATURE_UPDATE" -> "Tính năng mới";
-            case "COMPETITION"    -> "Thi đấu";
-            default               -> "Thông báo";
-        };
-    }
+  private String typeLabelFor(String type) {
+    if (type == null) return "Thông báo";
+    return switch (type) {
+      case "NEW_LESSON" -> "Bài học mới";
+      case "DISCOUNT" -> "Khuyến mãi";
+      case "MAINTENANCE" -> "Bảo trì";
+      case "SOCIAL_POST" -> "Bài đăng mới";
+      case "FEATURE_UPDATE" -> "Tính năng mới";
+      case "COMPETITION" -> "Thi đấu";
+      default -> "Thông báo";
+    };
+  }
 }

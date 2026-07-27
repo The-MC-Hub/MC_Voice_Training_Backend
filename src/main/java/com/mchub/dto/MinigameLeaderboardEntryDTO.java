@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MinigameLeaderboardEntryDTO {
-    private int rank;
-    private String userId;
-    private String userName;
-    private String avatar;
-    private int bestScore;
-    private int bestCombo;
+  private int rank;
+  private String userId;
+  private String userName;
+  private String avatar;
+  private int bestScore;
+  private int bestCombo;
 }

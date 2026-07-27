@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MinigameResultDTO {
-    private int score;
-    private double xpEarned;
-    private boolean isNewPersonalBest;
-    private int personalBestScore;
+  private int score;
+  private double xpEarned;
+  private boolean isNewPersonalBest;
+  private int personalBestScore;
 }

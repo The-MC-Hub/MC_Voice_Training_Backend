@@ -8,5 +8,5 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface MessageMapper {
 
-    MessageResponseDTO toResponseDTO(Message message);
+  MessageResponseDTO toResponseDTO(Message message);
 }

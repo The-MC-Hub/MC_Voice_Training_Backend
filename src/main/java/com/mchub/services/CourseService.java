@@ -2,40 +2,59 @@ package com.mchub.services;
 
 import com.mchub.dto.*;
 import com.mchub.enums.CourseType;
-
 import java.util.List;
 
 public interface CourseService {
 
-    // ── Public / User ────────────────────────────────────────────────
-    List<String> getAllCourseTypes();
-    List<CourseResponseDTO> getAllActiveCourses(String userId);
-    List<CourseResponseDTO> getCoursesByType(CourseType type, String userId);
-    List<CourseResponseDTO> getMilestoneCourses(String userId);
-    CourseResponseDTO getCourseDetail(String courseId, String userId);
-    com.mchub.models.ReadingGuide getReadingGuide(String id);
+  // ── Public / User ────────────────────────────────────────────────
+  List<String> getAllCourseTypes();
 
-    // ── Enrollment ───────────────────────────────────────────────────
-    boolean hasCourseAccess(String courseId, String userId);
-    CourseResponseDTO.EnrollmentProgressDTO enroll(String courseId, String userId);
-    CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId);
-    CourseResponseDTO.EnrollmentProgressDTO completeLesson(String courseId, String lessonId, String userId);
-    CourseResponseDTO.EnrollmentProgressDTO completeReading(String courseId, String readingId, String userId);
-    ExerciseResultDTO completeExercise(String courseId, String exerciseId, String userId, ExerciseSubmitRequest request);
-    QuizResultDTO submitQuiz(String courseId, String userId, QuizSubmitRequest request);
-    List<CourseResponseDTO> getMyEnrolledCourses(String userId);
+  List<CourseResponseDTO> getAllActiveCourses(String userId);
 
-    // ── Certificates ─────────────────────────────────────────────────
-    List<CertificateResponseDTO> getMyCertificates(String userId);
+  List<CourseResponseDTO> getCoursesByType(CourseType type, String userId);
 
-    // ── Progress analytics ──────────────────────────────────────────
-    CourseProgressStatsDTO getCourseProgressStats(String courseId, String userId);
+  List<CourseResponseDTO> getMilestoneCourses(String userId);
 
-    // ── Admin CRUD ───────────────────────────────────────────────────
-    CourseResponseDTO createCourse(SaveCourseRequest request);
-    CourseResponseDTO updateCourse(String courseId, SaveCourseRequest request);
-    void deleteCourse(String courseId);
-    List<CourseResponseDTO> getAllCoursesAdmin();
-    CourseResponseDTO updatePricing(String courseId, Integer priceVnd, Integer discountPercent);
-    CourseResponseDTO updateOutcomes(String courseId, List<String> outcomes);
+  CourseResponseDTO getCourseDetail(String courseId, String userId);
+
+  com.mchub.models.ReadingGuide getReadingGuide(String id);
+
+  // ── Enrollment ───────────────────────────────────────────────────
+  boolean hasCourseAccess(String courseId, String userId);
+
+  CourseResponseDTO.EnrollmentProgressDTO enroll(String courseId, String userId);
+
+  CourseResponseDTO.EnrollmentProgressDTO giftEnroll(String courseId, String userId);
+
+  CourseResponseDTO.EnrollmentProgressDTO completeLesson(
+      String courseId, String lessonId, String userId);
+
+  CourseResponseDTO.EnrollmentProgressDTO completeReading(
+      String courseId, String readingId, String userId);
+
+  ExerciseResultDTO completeExercise(
+      String courseId, String exerciseId, String userId, ExerciseSubmitRequest request);
+
+  QuizResultDTO submitQuiz(String courseId, String userId, QuizSubmitRequest request);
+
+  List<CourseResponseDTO> getMyEnrolledCourses(String userId);
+
+  // ── Certificates ─────────────────────────────────────────────────
+  List<CertificateResponseDTO> getMyCertificates(String userId);
+
+  // ── Progress analytics ──────────────────────────────────────────
+  CourseProgressStatsDTO getCourseProgressStats(String courseId, String userId);
+
+  // ── Admin CRUD ───────────────────────────────────────────────────
+  CourseResponseDTO createCourse(SaveCourseRequest request);
+
+  CourseResponseDTO updateCourse(String courseId, SaveCourseRequest request);
+
+  void deleteCourse(String courseId);
+
+  List<CourseResponseDTO> getAllCoursesAdmin();
+
+  CourseResponseDTO updatePricing(String courseId, Integer priceVnd, Integer discountPercent);
+
+  CourseResponseDTO updateOutcomes(String courseId, List<String> outcomes);
 }

@@ -3,6 +3,8 @@ package com.mchub.models;
 import com.mchub.enums.BookingStatus;
 import com.mchub.enums.EventType;
 import com.mchub.enums.PaymentStatus;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,9 +14,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 @Document(collection = "bookings")
 @Data
 @Builder
@@ -22,54 +21,47 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Booking {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    private String client;
+  private String client;
 
-    private String mc;
+  private String mc;
 
-    private LocalDate eventDate;
+  private LocalDate eventDate;
 
-    private String eventName;
+  private String eventName;
 
-    private String startTime;
+  private String startTime;
 
-    private String endTime;
+  private String endTime;
 
-    private String location;
+  private String location;
 
-    private EventType eventType;
+  private EventType eventType;
 
-    private String description;
+  private String description;
 
-    @Builder.Default
-    private int audienceSize = 0;
+  @Builder.Default private int audienceSize = 0;
 
-    private double budget;
+  private double budget;
 
-    private String specialRequests;
+  private String specialRequests;
 
-    private double price;
+  private double price;
 
-    private String rejectionReason;
+  private String rejectionReason;
 
-    private String couponCode;
+  private String couponCode;
 
-    @Builder.Default
-    private double discountAmount = 0;
+  @Builder.Default private double discountAmount = 0;
 
-    @Builder.Default
-    private BookingStatus status = BookingStatus.PENDING;
+  @Builder.Default private BookingStatus status = BookingStatus.PENDING;
 
-    @Builder.Default
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+  @Builder.Default private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
-    private LocalDateTime decidedAt;
+  private LocalDateTime decidedAt;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+  @LastModifiedDate private LocalDateTime updatedAt;
 }

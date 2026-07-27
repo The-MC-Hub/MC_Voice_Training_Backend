@@ -1,6 +1,8 @@
 package com.mchub.models;
 
 import com.mchub.enums.ScheduleStatus;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,9 +12,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 @Document(collection = "schedules")
 @Data
 @Builder
@@ -20,25 +19,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Schedule {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String mc;
+  @Indexed private String mc;
 
-    private LocalDate date;
+  private LocalDate date;
 
-    private String startTime;
+  private String startTime;
 
-    private String endTime;
+  private String endTime;
 
-    @Builder.Default
-    private ScheduleStatus status = ScheduleStatus.UNAVAILABLE;
+  @Builder.Default private ScheduleStatus status = ScheduleStatus.UNAVAILABLE;
 
-    private String bookingId;
+  private String bookingId;
 
-    private String note;
+  private String note;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 }

@@ -7,10 +7,9 @@ import lombok.Data;
 
 @Data
 public class SubmitReviewRequest {
-    @NotBlank
-    private String comment;
+  @NotBlank private String comment;
 
-    @Min(1)
-    @Max(5)
-    private int rating;
+  @Min(1)
+  @Max(5)
+  private int rating;
 }

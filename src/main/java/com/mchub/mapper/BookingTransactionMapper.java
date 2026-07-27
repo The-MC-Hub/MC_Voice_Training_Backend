@@ -8,5 +8,5 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface BookingTransactionMapper {
 
-    TransactionResponseDTO toResponseDTO(Transaction transaction);
+  TransactionResponseDTO toResponseDTO(Transaction transaction);
 }

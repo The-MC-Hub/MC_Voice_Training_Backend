@@ -2,6 +2,7 @@ package com.mchub.models;
 
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.TransactionStatus;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,8 +12,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "payment_transactions")
 @Data
 @Builder
@@ -20,36 +19,40 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentTransaction {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String userId;
+  @Indexed private String userId;
 
-    private int amount;
+  private int amount;
 
-    private SubscriptionPlan plan;
+  private SubscriptionPlan plan;
 
-    /** Non-null when this transaction is a single-course purchase (plan is null in that case) */
-    private String courseId;
+  /** Non-null when this transaction is a single-course purchase (plan is null in that case) */
+  private String courseId;
 
-    @Builder.Default
-    private TransactionStatus status = TransactionStatus.PENDING;
+  @Builder.Default private TransactionStatus status = TransactionStatus.PENDING;
 
-    private String memo;
+  private String memo;
 
-    private Long orderCode;
+  private Long orderCode;
 
-    private String discountCode;
+  private String discountCode;
 
-    private String checkoutUrl;
+  private String checkoutUrl;
 
-    private String bankRef;
+  private String bankRef;
 
-    private String webhookRaw;
+  private String webhookRaw;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 
-    private LocalDateTime completedAt;
+  private LocalDateTime completedAt;
+
+  private int refundedAmount;
+
+  private String refundReason;
+
+  private LocalDateTime refundedAt;
+
+  private String refundedBy;
 }

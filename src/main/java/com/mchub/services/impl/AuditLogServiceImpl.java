@@ -5,24 +5,29 @@ import com.mchub.models.AuditLog;
 import com.mchub.repositories.AuditLogRepository;
 import com.mchub.services.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class AuditLogServiceImpl implements AuditLogService {
 
-    private final AuditLogRepository auditLogRepository;
+  private final AuditLogRepository auditLogRepository;
 
-    @Override
-    @Async
-    public void log(String userId, AuditAction action, String resource,
-                    String resourceId, String details, HttpServletRequest request) {
-        AuditLog log = AuditLog.builder()
+  @Override
+  @Async
+  public void log(
+      String userId,
+      AuditAction action,
+      String resource,
+      String resourceId,
+      String details,
+      HttpServletRequest request) {
+    AuditLog log =
+        AuditLog.builder()
             .userId(userId)
             .action(action)
             .resource(resource)
@@ -32,14 +37,19 @@ public class AuditLogServiceImpl implements AuditLogService {
             .userAgent(request != null ? request.getHeader("User-Agent") : null)
             .status("SUCCESS")
             .build();
-        auditLogRepository.save(Objects.requireNonNull(log));
-    }
+    auditLogRepository.save(Objects.requireNonNull(log));
+  }
 
-    @Override
-    @Async
-    public void logError(String userId, AuditAction action, String resource,
-                         String errorMessage, HttpServletRequest request) {
-        AuditLog log = AuditLog.builder()
+  @Override
+  @Async
+  public void logError(
+      String userId,
+      AuditAction action,
+      String resource,
+      String errorMessage,
+      HttpServletRequest request) {
+    AuditLog log =
+        AuditLog.builder()
             .userId(userId)
             .action(action)
             .resource(resource)
@@ -47,30 +57,30 @@ public class AuditLogServiceImpl implements AuditLogService {
             .status("FAILED")
             .errorMessage(errorMessage)
             .build();
-        auditLogRepository.save(Objects.requireNonNull(log));
-    }
+    auditLogRepository.save(Objects.requireNonNull(log));
+  }
 
-    @Override
-    public List<AuditLog> getUserLogs(String userId) {
-        return auditLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
-    }
+  @Override
+  public List<AuditLog> getUserLogs(String userId) {
+    return auditLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
+  }
 
-    @Override
-    public List<AuditLog> getAllLogs() {
-        return auditLogRepository.findAllByOrderByCreatedAtDesc();
-    }
+  @Override
+  public List<AuditLog> getAllLogs() {
+    return auditLogRepository.findAllByOrderByCreatedAtDesc();
+  }
 
-    @Override
-    public long purgeLogs(int daysOld) {
-        // Hard floor: never delete logs younger than 3 days
-        int safeDays = Math.max(daysOld, 3);
-        java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(safeDays);
-        return auditLogRepository.deleteByCreatedAtBefore(cutoff);
-    }
+  @Override
+  public long purgeLogs(int daysOld) {
+    // Hard floor: never delete logs younger than 3 days
+    int safeDays = Math.max(daysOld, 3);
+    java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(safeDays);
+    return auditLogRepository.deleteByCreatedAtBefore(cutoff);
+  }
 
-    private String getClientIp(HttpServletRequest request) {
-        if (request == null) return "unknown";
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        return (xfHeader != null) ? xfHeader.split(",")[0].trim() : request.getRemoteAddr();
-    }
+  private String getClientIp(HttpServletRequest request) {
+    if (request == null) return "unknown";
+    String xfHeader = request.getHeader("X-Forwarded-For");
+    return (xfHeader != null) ? xfHeader.split(",")[0].trim() : request.getRemoteAddr();
+  }
 }

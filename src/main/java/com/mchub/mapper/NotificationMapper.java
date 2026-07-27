@@ -7,5 +7,5 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface NotificationMapper {
-    NotificationResponseDTO toResponseDTO(Notification notification);
+  NotificationResponseDTO toResponseDTO(Notification notification);
 }

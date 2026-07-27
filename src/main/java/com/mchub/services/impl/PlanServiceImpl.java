@@ -9,154 +9,175 @@ import com.mchub.repositories.DiscountCodeRepository;
 import com.mchub.repositories.PlanDefinitionRepository;
 import com.mchub.services.PlanService;
 import com.mchub.util.EntityUtils;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class PlanServiceImpl implements PlanService {
 
-    private final PlanDefinitionRepository planRepo;
-    private final DiscountCodeRepository discountRepo;
+  private final PlanDefinitionRepository planRepo;
+  private final DiscountCodeRepository discountRepo;
 
-    @Override
-    public List<PlanDefinition> getAllPlans() {
-        return planRepo.findAll();
+  @Override
+  public List<PlanDefinition> getAllPlans() {
+    return planRepo.findAll();
+  }
+
+  @Override
+  public List<PlanDefinition> getActivePlans() {
+    return planRepo.findByActiveTrue();
+  }
+
+  @Override
+  public PlanDefinition getPlanByKey(SubscriptionPlan plan) {
+    return EntityUtils.getOrThrow(
+        planRepo.findByPlan(plan), ErrorCode.RESOURCE_NOT_FOUND, "Plan not found: " + plan);
+  }
+
+  @Override
+  public PlanDefinition savePlan(PlanDefinition plan) {
+    return planRepo.save(plan);
+  }
+
+  @Override
+  public PlanDefinition updatePlan(String id, PlanDefinition updated) {
+    PlanDefinition existing =
+        EntityUtils.getOrThrow(planRepo, id, ErrorCode.RESOURCE_NOT_FOUND, "Plan not found: " + id);
+    existing.setPriceVnd(updated.getPriceVnd());
+    existing.setDurationDays(updated.getDurationDays());
+    existing.setAiSessionLimit(updated.getAiSessionLimit());
+    existing.setDisplayName(updated.getDisplayName());
+    existing.setTagline(updated.getTagline());
+    existing.setDescription(updated.getDescription());
+    existing.setBadge(updated.getBadge());
+    existing.setUrgencyText(updated.getUrgencyText());
+    existing.setSocialProof(updated.getSocialProof());
+    existing.setHighlights(updated.getHighlights());
+    existing.setComparisonEntries(updated.getComparisonEntries());
+    existing.setDiscountedPriceVnd(updated.getDiscountedPriceVnd());
+    existing.setDiscountPercent(updated.getDiscountPercent());
+    existing.setActive(updated.isActive());
+    return planRepo.save(existing);
+  }
+
+  @Override
+  public List<DiscountCode> getAllDiscounts() {
+    return discountRepo.findAll();
+  }
+
+  @Override
+  public DiscountCode saveDiscount(DiscountCode discount) {
+    discount.setCode(discount.getCode().toUpperCase().trim());
+    discountRepo
+        .findByCodeIgnoreCase(discount.getCode())
+        .ifPresent(
+            existing -> {
+              if (!existing.getId().equals(discount.getId())) {
+                throw new AppException(
+                    ErrorCode.VALIDATION_FAILED, "Code already exists: " + discount.getCode());
+              }
+            });
+    return discountRepo.save(discount);
+  }
+
+  @Override
+  public DiscountCode updateDiscount(String id, DiscountCode updated) {
+    DiscountCode existing = EntityUtils.getResourceOrThrow(discountRepo, id, "Discount");
+    existing.setCode(updated.getCode().toUpperCase().trim());
+    existing.setType(updated.getType());
+    existing.setDiscountValue(updated.getDiscountValue());
+    existing.setApplicablePlans(updated.getApplicablePlans());
+    existing.setMaxUses(updated.getMaxUses());
+    existing.setStartsAt(updated.getStartsAt());
+    existing.setExpiresAt(updated.getExpiresAt());
+    existing.setActive(updated.isActive());
+    existing.setDescription(updated.getDescription());
+    return discountRepo.save(existing);
+  }
+
+  @Override
+  public void deleteDiscount(String id) {
+    discountRepo.deleteById(id);
+  }
+
+  @Override
+  public Map<String, Object> applyDiscount(String code, SubscriptionPlan plan) {
+    DiscountCode dc =
+        discountRepo
+            .findByCodeIgnoreCase(code)
+            .orElseThrow(
+                () -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Mã giảm giá không tồn tại"));
+
+    if (!dc.isActive()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết hiệu lực");
+    }
+    if (dc.getExpiresAt() != null && dc.getExpiresAt().isBefore(LocalDateTime.now())) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết hạn");
+    }
+    if (dc.getMaxUses() > 0 && dc.getUsedCount() >= dc.getMaxUses()) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết lượt sử dụng");
+    }
+    if (dc.getApplicablePlans() != null
+        && !dc.getApplicablePlans().isEmpty()
+        && !dc.getApplicablePlans().contains(plan)) {
+      throw new AppException(
+          ErrorCode.VALIDATION_FAILED, "Mã giảm giá không áp dụng cho gói " + plan.name());
     }
 
-    @Override
-    public List<PlanDefinition> getActivePlans() {
-        return planRepo.findByActiveTrue();
+    PlanDefinition planDef =
+        EntityUtils.getOrThrow(
+            planRepo.findByPlan(plan), ErrorCode.RESOURCE_NOT_FOUND, "Plan not found");
+
+    int originalPrice = planDef.getPriceVnd();
+    int discount;
+    if (dc.getType() == DiscountCode.DiscountType.PERCENT) {
+      discount = originalPrice * dc.getDiscountValue() / 100;
+    } else {
+      discount = Math.min(dc.getDiscountValue(), originalPrice);
     }
+    int finalPrice = Math.max(0, originalPrice - discount);
 
-    @Override
-    public PlanDefinition getPlanByKey(SubscriptionPlan plan) {
-        return EntityUtils.getOrThrow(planRepo.findByPlan(plan), ErrorCode.RESOURCE_NOT_FOUND, "Plan not found: " + plan);
-    }
+    return Map.of(
+        "code",
+        dc.getCode(),
+        "type",
+        dc.getType().name(),
+        "discountValue",
+        dc.getDiscountValue(),
+        "discountAmount",
+        discount,
+        "originalPrice",
+        originalPrice,
+        "finalPrice",
+        finalPrice,
+        "description",
+        dc.getDescription() != null ? dc.getDescription() : "");
+  }
 
-    @Override
-    public PlanDefinition savePlan(PlanDefinition plan) {
-        return planRepo.save(plan);
-    }
+  @Override
+  public List<DiscountCode> getActiveFlashDeals() {
+    LocalDateTime now = LocalDateTime.now();
+    return discountRepo.findAll().stream()
+        .filter(DiscountCode::isActive)
+        .filter(DiscountCode::isShowInSidebar)
+        .filter(dc -> dc.getStartsAt() == null || !dc.getStartsAt().isAfter(now))
+        .filter(dc -> dc.getExpiresAt() == null || dc.getExpiresAt().isAfter(now))
+        .filter(dc -> dc.getMaxUses() <= 0 || dc.getUsedCount() < dc.getMaxUses())
+        .toList();
+  }
 
-    @Override
-    public PlanDefinition updatePlan(String id, PlanDefinition updated) {
-        PlanDefinition existing = EntityUtils.getOrThrow(planRepo, id, ErrorCode.RESOURCE_NOT_FOUND, "Plan not found: " + id);
-        existing.setPriceVnd(updated.getPriceVnd());
-        existing.setDurationDays(updated.getDurationDays());
-        existing.setAiSessionLimit(updated.getAiSessionLimit());
-        existing.setDisplayName(updated.getDisplayName());
-        existing.setTagline(updated.getTagline());
-        existing.setDescription(updated.getDescription());
-        existing.setBadge(updated.getBadge());
-        existing.setUrgencyText(updated.getUrgencyText());
-        existing.setSocialProof(updated.getSocialProof());
-        existing.setHighlights(updated.getHighlights());
-        existing.setComparisonEntries(updated.getComparisonEntries());
-        existing.setDiscountedPriceVnd(updated.getDiscountedPriceVnd());
-        existing.setDiscountPercent(updated.getDiscountPercent());
-        existing.setActive(updated.isActive());
-        return planRepo.save(existing);
-    }
-
-    @Override
-    public List<DiscountCode> getAllDiscounts() {
-        return discountRepo.findAll();
-    }
-
-    @Override
-    public DiscountCode saveDiscount(DiscountCode discount) {
-        discount.setCode(discount.getCode().toUpperCase().trim());
-        discountRepo.findByCodeIgnoreCase(discount.getCode()).ifPresent(existing -> {
-            if (!existing.getId().equals(discount.getId())) {
-                throw new AppException(ErrorCode.VALIDATION_FAILED, "Code already exists: " + discount.getCode());
-            }
-        });
-        return discountRepo.save(discount);
-    }
-
-    @Override
-    public DiscountCode updateDiscount(String id, DiscountCode updated) {
-        DiscountCode existing = EntityUtils.getResourceOrThrow(discountRepo, id, "Discount");
-        existing.setCode(updated.getCode().toUpperCase().trim());
-        existing.setType(updated.getType());
-        existing.setDiscountValue(updated.getDiscountValue());
-        existing.setApplicablePlans(updated.getApplicablePlans());
-        existing.setMaxUses(updated.getMaxUses());
-        existing.setStartsAt(updated.getStartsAt());
-        existing.setExpiresAt(updated.getExpiresAt());
-        existing.setActive(updated.isActive());
-        existing.setDescription(updated.getDescription());
-        return discountRepo.save(existing);
-    }
-
-    @Override
-    public void deleteDiscount(String id) {
-        discountRepo.deleteById(id);
-    }
-
-    @Override
-    public Map<String, Object> applyDiscount(String code, SubscriptionPlan plan) {
-        DiscountCode dc = discountRepo.findByCodeIgnoreCase(code)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Mã giảm giá không tồn tại"));
-
-        if (!dc.isActive()) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết hiệu lực");
-        }
-        if (dc.getExpiresAt() != null && dc.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết hạn");
-        }
-        if (dc.getMaxUses() > 0 && dc.getUsedCount() >= dc.getMaxUses()) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá đã hết lượt sử dụng");
-        }
-        if (dc.getApplicablePlans() != null && !dc.getApplicablePlans().isEmpty()
-                && !dc.getApplicablePlans().contains(plan)) {
-            throw new AppException(ErrorCode.VALIDATION_FAILED, "Mã giảm giá không áp dụng cho gói " + plan.name());
-        }
-
-        PlanDefinition planDef = EntityUtils.getOrThrow(planRepo.findByPlan(plan), ErrorCode.RESOURCE_NOT_FOUND, "Plan not found");
-
-        int originalPrice = planDef.getPriceVnd();
-        int discount;
-        if (dc.getType() == DiscountCode.DiscountType.PERCENT) {
-            discount = originalPrice * dc.getDiscountValue() / 100;
-        } else {
-            discount = Math.min(dc.getDiscountValue(), originalPrice);
-        }
-        int finalPrice = Math.max(0, originalPrice - discount);
-
-        return Map.of(
-                "code", dc.getCode(),
-                "type", dc.getType().name(),
-                "discountValue", dc.getDiscountValue(),
-                "discountAmount", discount,
-                "originalPrice", originalPrice,
-                "finalPrice", finalPrice,
-                "description", dc.getDescription() != null ? dc.getDescription() : ""
-        );
-    }
-
-    @Override
-    public List<DiscountCode> getActiveFlashDeals() {
-        LocalDateTime now = LocalDateTime.now();
-        return discountRepo.findAll().stream()
-                .filter(DiscountCode::isActive)
-                .filter(DiscountCode::isShowInSidebar)
-                .filter(dc -> dc.getStartsAt() == null || !dc.getStartsAt().isAfter(now))
-                .filter(dc -> dc.getExpiresAt() == null || dc.getExpiresAt().isAfter(now))
-                .filter(dc -> dc.getMaxUses() <= 0 || dc.getUsedCount() < dc.getMaxUses())
-                .toList();
-    }
-
-    @Override
-    public void consumeDiscount(String code) {
-        discountRepo.findByCodeIgnoreCase(code).ifPresent(dc -> {
-            dc.setUsedCount(dc.getUsedCount() + 1);
-            discountRepo.save(dc);
-        });
-    }
+  @Override
+  public void consumeDiscount(String code) {
+    discountRepo
+        .findByCodeIgnoreCase(code)
+        .ifPresent(
+            dc -> {
+              dc.setUsedCount(dc.getUsedCount() + 1);
+              discountRepo.save(dc);
+            });
+  }
 }

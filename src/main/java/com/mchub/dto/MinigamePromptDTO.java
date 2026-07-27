@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MinigamePromptDTO {
-    private String text;
-    /** Milliseconds allowed to read this line, based on word count + difficulty. */
-    private int timeLimitMs;
-    private int roundIndex;
+  private String text;
+
+  /** Milliseconds allowed to read this line, based on word count + difficulty. */
+  private int timeLimitMs;
+
+  private int roundIndex;
 }

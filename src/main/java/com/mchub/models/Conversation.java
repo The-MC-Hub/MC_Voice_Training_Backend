@@ -1,5 +1,8 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,10 +13,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 @Document(collection = "conversations")
 @Data
 @Builder
@@ -21,24 +20,17 @@ import java.util.List;
 @AllArgsConstructor
 public class Conversation {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    @Builder.Default
-    private List<String> participants = new ArrayList<>();
+  @Indexed @Builder.Default private List<String> participants = new ArrayList<>();
 
-    @Indexed
-    private String bookingId;
+  @Indexed private String bookingId;
 
-    private String lastMessage;
+  private String lastMessage;
 
-    @Builder.Default
-    private boolean isActive = true;
+  @Builder.Default private boolean isActive = true;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+  @LastModifiedDate private LocalDateTime updatedAt;
 }

@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ArenaLeaderboardEntryDTO {
-    private String userId;
-    private String userName;
-    private String userAvatar;
-    private double bestAccuracy;
-    private double bestRhythm;
-    private int attemptCount;
-    private double pointsEarned;
+  private String userId;
+  private String userName;
+  private String userAvatar;
+  private double bestAccuracy;
+  private double bestRhythm;
+  private int attemptCount;
+  private double pointsEarned;
 }

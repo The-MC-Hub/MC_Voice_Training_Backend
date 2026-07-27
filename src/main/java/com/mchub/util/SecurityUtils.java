@@ -1,42 +1,40 @@
 package com.mchub.util;
 
+import java.util.Objects;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.Objects;
-
 public final class SecurityUtils {
 
-    private SecurityUtils() {}
+  private SecurityUtils() {}
 
-    public static String getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new IllegalStateException("User not authenticated");
-        }
-        Object principal = auth.getPrincipal();
-        if (principal == null || "anonymousUser".equals(principal.toString())) {
-            throw new IllegalStateException("Could not determine current user");
-        }
-        return principal.toString();
+  public static String getCurrentUserId() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth == null || !auth.isAuthenticated()) {
+      throw new IllegalStateException("User not authenticated");
     }
+    Object principal = auth.getPrincipal();
+    if (principal == null || "anonymousUser".equals(principal.toString())) {
+      throw new IllegalStateException("Could not determine current user");
+    }
+    return principal.toString();
+  }
 
-    public static boolean isAdmin() {
-        return hasRole("ROLE_ADMIN") || hasRole("ADMIN");
-    }
+  public static boolean isAdmin() {
+    return hasRole("ROLE_ADMIN") || hasRole("ADMIN");
+  }
 
-    public static boolean hasRole(String role) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return false;
-        }
-        return auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equalsIgnoreCase(role));
+  public static boolean hasRole(String role) {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth == null || !auth.isAuthenticated()) {
+      return false;
     }
+    return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equalsIgnoreCase(role));
+  }
 
-    public static String safeMessage(Exception e) {
-        return (Objects.requireNonNull(e).getMessage() != null && !e.getMessage().isBlank())
-            ? e.getMessage()
-            : e.getClass().getSimpleName();
-    }
+  public static String safeMessage(Exception e) {
+    return (Objects.requireNonNull(e).getMessage() != null && !e.getMessage().isBlank())
+        ? e.getMessage()
+        : e.getClass().getSimpleName();
+  }
 }

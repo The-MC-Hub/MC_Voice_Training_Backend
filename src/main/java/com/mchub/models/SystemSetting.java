@@ -13,7 +13,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SystemSetting {
-    @Id
-    private String key;
-    private String value;
+  @Id private String key;
+  private String value;
 }

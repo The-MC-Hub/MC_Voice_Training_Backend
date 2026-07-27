@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repo. Written from a direct code a
 
 ## What this service actually is
 
-A **standalone voice-training + course + gamification + admin/marketing platform**, forked from `The-MC-Hub-Java-Backend`. It shares the package root `com.mchub` and general Spring Boot conventions, but **the entire MC-booking domain is absent**: no `Booking`, `Conversation`, `Message`, `Notification`, `Favorite`, `Schedule`, or `Script` models exist in this codebase. Do not assume booking-platform features apply here.
+A **comprehensive voice-training, MC-booking, course learning, gamification, and advanced admin platform**. It shares the package root `com.mchub` and Spring Boot 3.3 conventions with full support for Booking, Conversation, Messaging, Notification, Peer Review, and System Health monitoring.
 
 - **Java 21**, **Spring Boot 3.3.10**, MongoDB Atlas (`mchub` database, cluster `MainDatabase`), Elasticsearch (search index for voice lessons)
 - **API prefix:** `/api/v1/`

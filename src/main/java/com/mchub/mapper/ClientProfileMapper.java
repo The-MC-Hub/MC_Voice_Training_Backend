@@ -9,6 +9,6 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface ClientProfileMapper {
 
-    @Mapping(target = "userId", source = "profile.user")
-    ClientProfileDTO toDTO(ClientProfile profile);
+  @Mapping(target = "userId", source = "profile.user")
+  ClientProfileDTO toDTO(ClientProfile profile);
 }

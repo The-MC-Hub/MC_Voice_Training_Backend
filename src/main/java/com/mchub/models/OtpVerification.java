@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,8 +10,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "otp_verifications")
 @Data
 @Builder
@@ -18,23 +17,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class OtpVerification {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String email;
+  @Indexed private String email;
 
-    private String code;
+  private String code;
 
-    @Indexed(expireAfterSeconds = 600) // TTL: auto-delete after 10 min
-    private LocalDateTime expiresAt;
+  @Indexed(expireAfterSeconds = 600) // TTL: auto-delete after 10 min
+  private LocalDateTime expiresAt;
 
-    @Builder.Default
-    private boolean used = false;
+  @Builder.Default private boolean used = false;
 
-    @Builder.Default
-    private int attemptCount = 0;
+  @Builder.Default private int attemptCount = 0;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 }

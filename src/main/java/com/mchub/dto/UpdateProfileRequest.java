@@ -8,8 +8,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class UpdateProfileRequest {
-    private String name;
-    private String phoneNumber;
-    private String bio;
-    private String avatar;
+  private String name;
+  private String phoneNumber;
+  private String bio;
+  private String avatar;
 }

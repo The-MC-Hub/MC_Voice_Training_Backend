@@ -8,7 +8,7 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface ReportMapper {
-    @Mapping(target = "reporterName", ignore = true)
-    @Mapping(target = "reportedName", ignore = true)
-    ReportResponseDTO toResponseDTO(Report report);
+  @Mapping(target = "reporterName", ignore = true)
+  @Mapping(target = "reportedName", ignore = true)
+  ReportResponseDTO toResponseDTO(Report report);
 }

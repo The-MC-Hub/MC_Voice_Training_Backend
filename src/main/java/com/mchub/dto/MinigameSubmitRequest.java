@@ -6,12 +6,11 @@ import lombok.Data;
 
 @Data
 public class MinigameSubmitRequest {
-    @NotBlank
-    private String difficulty; // EASY | NORMAL | HARD
+  @NotBlank private String difficulty; // EASY | NORMAL | HARD
 
-    @Min(0)
-    private int roundsCleared;
+  @Min(0)
+  private int roundsCleared;
 
-    @Min(0)
-    private int bestCombo;
+  @Min(0)
+  private int bestCombo;
 }

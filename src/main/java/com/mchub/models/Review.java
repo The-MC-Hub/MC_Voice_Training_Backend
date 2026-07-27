@@ -1,5 +1,6 @@
 package com.mchub.models;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,8 +10,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-
 @Document(collection = "reviews")
 @Data
 @Builder
@@ -18,22 +17,17 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Review {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    @Indexed
-    private String booking;
+  @Indexed private String booking;
 
-    @Indexed
-    private String mc;
+  @Indexed private String mc;
 
-    @Indexed
-    private String client;
+  @Indexed private String client;
 
-    private int rating;
+  private int rating;
 
-    private String comment;
+  private String comment;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  @CreatedDate private LocalDateTime createdAt;
 }

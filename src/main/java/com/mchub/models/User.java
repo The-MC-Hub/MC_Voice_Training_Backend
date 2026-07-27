@@ -1,8 +1,13 @@
 package com.mchub.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.UserRole;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,12 +18,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 @Document(collection = "users")
 @Data
 @Builder
@@ -26,89 +25,90 @@ import java.util.Set;
 @AllArgsConstructor
 public class User {
 
-    @Id
-    private String id;
+  @Id private String id;
 
-    private String name;
+  private String name;
 
-    @Indexed(unique = true)
-    private String email;
+  @Indexed(unique = true)
+  private String email;
 
-    @JsonIgnore
-    private String password;
+  @JsonIgnore private String password;
 
-    // Google account id ("sub" claim) — set when this account was created via or linked to
-    // Google Sign-In. Null for password-only accounts.
-    @Indexed(unique = true, sparse = true)
-    private String googleId;
+  // Google account id ("sub" claim) — set when this account was created via or linked to
+  // Google Sign-In. Null for password-only accounts.
+  @Indexed(unique = true, sparse = true)
+  private String googleId;
 
-    @Builder.Default
-    private UserRole role = UserRole.CLIENT;
+  @Builder.Default private UserRole role = UserRole.CLIENT;
 
-    private String phoneNumber;
+  private String phoneNumber;
 
-    @Builder.Default
-    private String avatar = "default-avatar.png";
+  @Builder.Default private String avatar = "default-avatar.png";
 
-    @Builder.Default
-    private String bio = "";
+  @Builder.Default private String bio = "";
 
-    @Builder.Default
-    private boolean isVerified = false;
+  @Builder.Default private boolean isVerified = false;
 
-    @Builder.Default
-    private boolean isActive = true;
+  @Builder.Default private boolean isActive = true;
 
-    private String mcProfile;
+  private String mcProfile;
 
-    private String clientProfile;
+  private String clientProfile;
 
-    @Builder.Default
-    private boolean isPremium = false;
+  @Builder.Default private boolean isPremium = false;
 
-    @Builder.Default
-    private SubscriptionPlan plan = SubscriptionPlan.FREE;
+  @Builder.Default private SubscriptionPlan plan = SubscriptionPlan.FREE;
 
-    private LocalDateTime planExpiresAt;
+  private LocalDateTime planExpiresAt;
 
-    // AI coaching session count for current billing period (resets on renewal)
-    @Builder.Default
-    private int aiSessionsUsed = 0;
+  // AI coaching session count for current billing period (resets on renewal)
+  @Builder.Default private int aiSessionsUsed = 0;
 
-    // Courses bought individually (one-off 199k purchase, independent of plan)
-    @Builder.Default
-    private List<String> purchasedCourseIds = new ArrayList<>();
+  // Courses bought individually (one-off 199k purchase, independent of plan)
+  @Builder.Default private List<String> purchasedCourseIds = new ArrayList<>();
 
-    // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
-    private LocalDateTime passwordChangedAt;
+  // Set when password is changed — JwtAuthenticationFilter rejects tokens issued before this
+  private LocalDateTime passwordChangedAt;
 
-    // One-click email verification token (UUID, cleared after use)
-    @Indexed(sparse = true)
-    private String emailVerificationToken;
+  // One-click email verification token (UUID, cleared after use)
+  @Indexed(sparse = true)
+  private String emailVerificationToken;
 
-    @Indexed(unique = true, sparse = true)
-    private String referralCode;
+  @Indexed(unique = true, sparse = true)
+  private String referralCode;
 
-    @Builder.Default
-    private int referralCount = 0;
+  @Builder.Default private int referralCount = 0;
 
-    // Newbie quest tracking — set of completed quest IDs
-    @Builder.Default
-    private Set<String> completedQuests = new HashSet<>();
+  // Newbie quest tracking — set of completed quest IDs
+  @Builder.Default private Set<String> completedQuests = new HashSet<>();
 
-    @Builder.Default
-    private boolean newbieVoucherClaimed = false;
+  @Builder.Default private boolean newbieVoucherClaimed = false;
 
-    // Brute-force lockout: incremented on each failed login, reset on success
-    @Builder.Default
-    private int failedLoginAttempts = 0;
+  // Brute-force lockout: incremented on each failed login, reset on success
+  @Builder.Default private int failedLoginAttempts = 0;
 
-    // Account locked until this time (null = not locked)
-    private LocalDateTime lockedUntil;
+  // Account locked until this time (null = not locked)
+  private LocalDateTime lockedUntil;
 
-    @CreatedDate
-    private LocalDateTime createdAt;
+  // Account temporary suspension (null = not suspended)
+  private LocalDateTime suspendedUntil;
 
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+  private String suspendReason;
+
+  @Builder.Default private List<SanctionLog> sanctionHistory = new ArrayList<>();
+
+  @CreatedDate private LocalDateTime createdAt;
+
+  @LastModifiedDate private LocalDateTime updatedAt;
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class SanctionLog {
+    private String action; // SUSPEND_TEMPORARY, UNSUSPEND, PERMANENT_BAN
+    private String reason;
+    private LocalDateTime timestamp;
+    private String adminId;
+  }
 }

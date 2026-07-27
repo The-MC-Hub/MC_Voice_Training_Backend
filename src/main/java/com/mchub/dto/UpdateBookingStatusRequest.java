@@ -11,9 +11,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class UpdateBookingStatusRequest {
 
-    @NotNull
-    private BookingStatus status;
+  @NotNull private BookingStatus status;
 
-    private Double price;
-    private String rejectionReason;
+  private Double price;
+  private String rejectionReason;
 }

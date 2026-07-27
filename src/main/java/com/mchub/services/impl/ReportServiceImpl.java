@@ -7,22 +7,22 @@ import com.mchub.exception.ErrorCode;
 import com.mchub.models.Report;
 import com.mchub.repositories.ReportRepository;
 import com.mchub.services.ReportService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final ReportRepository reportRepository;
+  private final ReportRepository reportRepository;
 
-    @Override
-    public Report createReport(CreateReportRequest req, String reporterId) {
-        Report report = Report.builder()
+  @Override
+  public Report createReport(CreateReportRequest req, String reporterId) {
+    Report report =
+        Report.builder()
             .reporterId(reporterId)
             .reportedId(req.getReportedId())
             .reason(req.getReason())
@@ -30,32 +30,74 @@ public class ReportServiceImpl implements ReportService {
             .evidenceUrls(req.getEvidenceUrls())
             .status(ReportStatus.PENDING)
             .build();
-        return reportRepository.save(Objects.requireNonNull(report));
-    }
+    return reportRepository.save(Objects.requireNonNull(report));
+  }
 
-    @Override
-    public Report resolveReport(String reportId, String adminId, ReportStatus status, String adminNote) {
-        Report report = reportRepository.findById(Objects.requireNonNull(reportId))
-            .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Report not found: " + reportId));
-        report.setStatus(status);
-        report.setAdminNote(adminNote);
-        report.setResolvedBy(adminId);
-        report.setResolvedAt(LocalDateTime.now());
-        return reportRepository.save(Objects.requireNonNull(report));
-    }
+  @Override
+  public Report resolveReport(
+      String reportId, String adminId, ReportStatus status, String adminNote) {
+    Report report =
+        reportRepository
+            .findById(Objects.requireNonNull(reportId))
+            .orElseThrow(
+                () ->
+                    new AppException(
+                        ErrorCode.RESOURCE_NOT_FOUND, "Report not found: " + reportId));
+    report.setStatus(status);
+    report.setAdminNote(adminNote);
+    report.setResolvedBy(adminId);
+    report.setResolvedAt(LocalDateTime.now());
+    return reportRepository.save(Objects.requireNonNull(report));
+  }
 
-    @Override
-    public List<Report> getMyReports(String reporterId) {
-        return reportRepository.findByReporterId(reporterId);
-    }
+  @Override
+  public List<Report> getMyReports(String reporterId) {
+    return reportRepository.findByReporterId(reporterId);
+  }
 
-    @Override
-    public List<Report> getPendingReports() {
-        return reportRepository.findByStatus(ReportStatus.PENDING);
-    }
+  @Override
+  public List<Report> getPendingReports() {
+    return reportRepository.findByStatus(ReportStatus.PENDING);
+  }
 
-    @Override
-    public List<Report> getAllReports() {
-        return reportRepository.findAll();
-    }
+  @Override
+  public List<Report> getAllReports() {
+    return reportRepository.findAll();
+  }
+
+  @Override
+  public void deleteReport(String reportId) {
+    reportRepository.deleteById(reportId);
+  }
+
+  @Override
+  public int bulkResolveReports(
+      List<String> reportIds, String adminId, ReportStatus status, String adminNote) {
+    List<Report> reports = reportRepository.findAllById(reportIds);
+    LocalDateTime now = LocalDateTime.now();
+    reports.forEach(
+        r -> {
+          r.setStatus(status);
+          r.setAdminNote(adminNote);
+          r.setResolvedBy(adminId);
+          r.setResolvedAt(now);
+        });
+    reportRepository.saveAll(reports);
+    return reports.size();
+  }
+
+  @Override
+  public java.util.Map<String, Object> getReportStats() {
+    List<Report> all = reportRepository.findAll();
+    long pending = all.stream().filter(r -> r.getStatus() == ReportStatus.PENDING).count();
+    long resolved = all.stream().filter(r -> r.getStatus() == ReportStatus.RESOLVED).count();
+    long dismissed = all.stream().filter(r -> r.getStatus() == ReportStatus.DISMISSED).count();
+
+    java.util.Map<String, Object> stats = new java.util.LinkedHashMap<>();
+    stats.put("total", (long) all.size());
+    stats.put("pending", pending);
+    stats.put("resolved", resolved);
+    stats.put("dismissed", dismissed);
+    return stats;
+  }
 }

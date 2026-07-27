@@ -2,83 +2,82 @@ package com.mchub.services;
 
 import com.mchub.dto.RegisterRequest;
 import com.mchub.models.User;
+import java.util.Map;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 
-import java.util.Map;
-
 public interface AuthService {
 
-    User register(@NonNull RegisterRequest req);
+  User register(@NonNull RegisterRequest req);
 
-    LoginResponse login(@NonNull String email, @NonNull String password);
+  LoginResponse login(@NonNull String email, @NonNull String password);
 
-    @PreAuthorize("isAuthenticated()")
-    void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword);
+  @PreAuthorize("isAuthenticated()")
+  void updatePasswordAsync(@NonNull String userId, @NonNull String plainPassword);
 
-    void forgotPassword(@NonNull String email);
+  void forgotPassword(@NonNull String email);
 
-    void resetPassword(@NonNull String email, @NonNull String code, @NonNull String newPassword);
+  void resetPassword(@NonNull String email, @NonNull String code, @NonNull String newPassword);
 
-    void sendOtp(@NonNull String email);
+  void sendOtp(@NonNull String email);
 
-    void verifyOtp(@NonNull String email, @NonNull String code);
+  void verifyOtp(@NonNull String email, @NonNull String code);
 
-    LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code);
+  LoginResponse verifyOtpAndLogin(@NonNull String email, @NonNull String code);
 
-    LoginResponse verifyEmailByToken(@NonNull String token);
+  LoginResponse verifyEmailByToken(@NonNull String token);
 
-    void resendOtp(@NonNull String email);
+  void resendOtp(@NonNull String email);
 
-    LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code);
+  LoginResponse verifyAdminLoginOtp(@NonNull String email, @NonNull String code);
 
-    /**
-     * Handles a verified Google ID token: if the email already has an account (password-based
-     * or previously Google-linked), links/logs in immediately. If not, returns a pending
-     * registration result carrying a short-lived token the client must send back to
-     * completeGoogleRegistration along with the chosen role.
-     */
-    GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken);
+  /**
+   * Handles a verified Google ID token: if the email already has an account (password-based or
+   * previously Google-linked), links/logs in immediately. If not, returns a pending registration
+   * result carrying a short-lived token the client must send back to completeGoogleRegistration
+   * along with the chosen role.
+   */
+  GoogleAuthResult loginWithGoogle(@NonNull String googleIdToken);
 
-    LoginResponse completeGoogleRegistration(@NonNull String pendingToken, @NonNull String role, String referralCode);
+  LoginResponse completeGoogleRegistration(
+      @NonNull String pendingToken, @NonNull String role, String referralCode);
 
-    sealed interface GoogleAuthResult permits GoogleAuthResult.LoggedIn, GoogleAuthResult.PendingRegistration {
-        record LoggedIn(LoginResponse response) implements GoogleAuthResult {
-        }
+  sealed interface GoogleAuthResult
+      permits GoogleAuthResult.LoggedIn, GoogleAuthResult.PendingRegistration {
+    record LoggedIn(LoginResponse response) implements GoogleAuthResult {}
 
-        record PendingRegistration(String pendingToken, String email, String name) implements GoogleAuthResult {
-        }
-    }
+    record PendingRegistration(String pendingToken, String email, String name)
+        implements GoogleAuthResult {}
+  }
 
-    /**
-     * Links a Google account to the currently authenticated (password-login) user. Requires the
-     * Google token's email to match the account's email exactly — this is not a way to change
-     * an account's email, only to attach an already-matching Google identity to it.
-     */
-    @PreAuthorize("isAuthenticated()")
-    User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken);
+  /**
+   * Links a Google account to the currently authenticated (password-login) user. Requires the
+   * Google token's email to match the account's email exactly — this is not a way to change an
+   * account's email, only to attach an already-matching Google identity to it.
+   */
+  @PreAuthorize("isAuthenticated()")
+  User linkGoogleAccount(@NonNull String userId, @NonNull String googleIdToken);
 
-    @PreAuthorize("isAuthenticated()")
-    User unlinkGoogleAccount(@NonNull String userId);
+  @PreAuthorize("isAuthenticated()")
+  User unlinkGoogleAccount(@NonNull String userId);
 
-    @PreAuthorize("isAuthenticated()")
-    User getUserById(@NonNull String userId);
+  @PreAuthorize("isAuthenticated()")
+  User getUserById(@NonNull String userId);
 
-    @PreAuthorize("isAuthenticated()")
-    String getOrGenerateReferralCode(@NonNull String userId);
+  @PreAuthorize("isAuthenticated()")
+  String getOrGenerateReferralCode(@NonNull String userId);
 
-    @PreAuthorize("isAuthenticated()")
-    User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
+  @PreAuthorize("isAuthenticated()")
+  User updateSettings(@NonNull String userId, @NonNull Map<String, Object> settings);
 
-    @org.springframework.scheduling.annotation.Async
-    void initializeMCProfile(@NonNull String userId);
+  @org.springframework.scheduling.annotation.Async
+  void initializeMCProfile(@NonNull String userId);
 
-    @PreAuthorize("hasAuthority('ADMIN')")
-    void fixAllSeededPasswords();
+  @PreAuthorize("hasAuthority('ADMIN')")
+  void fixAllSeededPasswords();
 
-    @PreAuthorize("hasAuthority('ADMIN')")
-    void disableAllTwoFactor();
+  @PreAuthorize("hasAuthority('ADMIN')")
+  void disableAllTwoFactor();
 
-    record LoginResponse(User user, String token) {
-    }
+  record LoginResponse(User user, String token) {}
 }
