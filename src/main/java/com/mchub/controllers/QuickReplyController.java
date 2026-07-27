@@ -1,7 +1,7 @@
 package com.mchub.controllers;
 
 import com.mchub.dto.ApiResponse;
-import com.mchub.enums.ErrorCode;
+import com.mchub.exception.ErrorCode;
 import com.mchub.exception.AppException;
 import com.mchub.models.QuickReply;
 import com.mchub.repositories.QuickReplyRepository;
