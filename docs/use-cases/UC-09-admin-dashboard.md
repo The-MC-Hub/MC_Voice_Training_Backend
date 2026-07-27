@@ -28,3 +28,17 @@ Công cụ vận hành nội bộ dành cho Admin: thống kê, quản lý user,
 | 22 | Xem audit log toàn hệ thống | Admin xem lịch sử thao tác quan trọng trong hệ thống |
 | 23 | Xem audit log theo user | Admin xem lịch sử thao tác của một user cụ thể |
 | 24 | Xoá audit log cũ | Admin dọn dẹp audit log cũ hơn N ngày (giữ tối thiểu 3 ngày) |
+| 25 | Xuất file CSV Audit Log | Admin tải xuống toàn bộ nhật ký an ninh dạng CSV |
+| 26 | Khóa tài khoản có thời hạn | Admin khóa tạm thời tài khoản theo số ngày chỉ định (1, 3, 7, 30 ngày) |
+| 27 | Tự động khôi phục tài khoản | System tự động bỏ ban khi hết thời hạn khóa temporary |
+| 28 | Theo dõi sức khỏe hệ thống | Admin xem các chỉ số RAM JVM, Active Virtual Threads, Uptime, DB Ping |
+| 29 | Bật/tắt Chế độ Bảo trì | Admin toggle `MAINTENANCE_MODE` tức thì (HTTP 503 cho client thường) |
+| 30 | Hoàn tiền giao dịch | Admin đánh dấu giao dịch `REFUNDED` và lưu lý do hoàn tiền |
+| 31 | Cấp tặng gói cước thủ công | Admin cộng ngày VIP/Plan thủ công cho user kèm lý do đền bù |
+| 32 | Quản lý & duyệt báo cáo vi phạm | Admin xem, duyệt (Resolve), bỏ qua (Dismiss) hoặc xóa báo cáo vi phạm |
+| 33 | Xử lý báo cáo hàng loạt | Admin chọn nhiều báo cáo để duyệt/bỏ qua cùng lúc |
+| 34 | Quản lý & thu hồi chứng chỉ | Admin xem danh sách chứng chỉ, xác minh (Verify) hoặc thu hồi (Revoke) |
+| 35 | Quản lý Peer Review | Admin xem điểm trung bình review đồng nghiệp và xóa đánh giá vi phạm |
+| 36 | Kiểm duyệt cộng đồng & ghi chú | Admin xem ghi chú bài học của user và gỡ bỏ nội dung vi phạm |
+| 37 | Gửi thông báo phân đoạn | Admin gửi thông báo Push/Email theo phân đoạn user (VIP sắp hết hạn, Dormant 14 ngày) |
+
