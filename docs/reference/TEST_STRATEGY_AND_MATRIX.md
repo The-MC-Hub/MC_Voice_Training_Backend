@@ -1,10 +1,10 @@
 # SOFTWARE TEST STRATEGY AND SYSTEM TEST MATRIX
 ## MC Voice Training & Booking Platform Backend
 
-**Document Reference**: SPEC-TEST-2026-V1  
+**Document Reference**: SPEC-TEST-2026-V2  
 **Standard Compliance**: IEEE 829-2008 (IEEE Standard for Software and System Test Documentation)  
 **Test Framework**: JUnit 5, Mockito (`@MockBean`), Spring Boot Test, Maven Surefire  
-**Total Executed Tests**: 493 Unit Tests across 46 Test Classes (100% Pass Rate)  
+**Total Executed Tests**: 539 Unit Tests across 48 Test Classes (100% Pass Rate)  
 
 ---
 
@@ -15,7 +15,7 @@ The testing methodology enforces a multi-layered verification strategy to valida
 ```mermaid
 graph TD
     subgraph TestLayers["Testing Hierarchy"]
-        UnitTest["Level 1: Unit Testing (JUnit 5 / Mockito) - 493 Tests"]
+        UnitTest["Level 1: Unit Testing (JUnit 5 / Mockito) - 539 Tests"]
         IntegrationTest["Level 2: Service Integration & Boundary Testing"]
         SecurityTest["Level 3: Security & Webhook Signature Verification"]
         E2ETest["Level 4: End-to-End API Scenario Testing"]
@@ -65,27 +65,22 @@ All test cases are categorized into four standard execution categories:
 | **TC-09.2** | `AdminController` | Non-Admin Access Health | Request with `ROLE_USER` JWT | HTTP 403 `ACCESS_DENIED` | PASS |
 | **TC-11.1** | `BookingController` | Create Booking Request | Valid clientId, mcId, event date | HTTP 201, Booking status `PENDING` | PASS |
 | **TC-12.1** | `ChatController` | STOMP WS Realtime Message | Valid WebSocket connection + JWT | Message delivered to topic | PASS |
+| **TC-12.2** | `ChatController` | Safety Regex Warning | Message containing phone number/STK | HTTP 200, `safetyWarning` returned | PASS |
+| **TC-12.3** | `QuickReplyController` | MC Quick Replies Fetch | Valid `ROLE_MC` JWT | HTTP 200, Template list returned | PASS |
+| **TC-12.4** | `ScriptCollaborativeCtrl`| Get Script by Booking | Booking ID | HTTP 200, Script document returned | PASS |
+| **TC-12.5** | `ScriptCollaborativeCtrl`| Add Line Annotation | Line number + note + type | HTTP 200, Annotation added | PASS |
 
 ---
 
 ## 4. Automated Verification Results
 
-All 493 unit tests across 46 test classes pass cleanly via Maven build execution:
+All 539 unit tests across 48 test classes pass cleanly via Maven build execution:
 
 ```bash
 mvn clean test
-[INFO] -------------------------------------------------------
-[INFO]  T E S T S
-[INFO] -------------------------------------------------------
-[INFO] Running com.mchub.services.impl.AuthServiceImplTest
-[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.24 s
-[INFO] Running com.mchub.services.impl.VoiceLessonServiceImplTest
-[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.85 s
-[INFO] Running com.mchub.services.impl.PaymentServiceImplTest
-[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.10 s
-...
-[INFO] -------------------------------------------------------
+[INFO] Results:
+[INFO] Tests run: 539, Failures: 0, Errors: 0, Skipped: 0
+[INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
-[INFO] Total time:  28.450 s
-[INFO] -------------------------------------------------------
+[INFO] Total time: 33.512 s
 ```
