@@ -119,7 +119,9 @@ public class PayOSService {
       if (data == null) return false;
 
       String computedSig = createSignatureFromData(data);
-      return computedSig.equalsIgnoreCase(receivedSig);
+      byte[] computedBytes = computedSig.toLowerCase().getBytes(StandardCharsets.UTF_8);
+      byte[] receivedBytes = receivedSig.toLowerCase().getBytes(StandardCharsets.UTF_8);
+      return java.security.MessageDigest.isEqual(computedBytes, receivedBytes);
     } catch (Exception e) {
       log.error("Webhook signature verification failed: {}", e.getMessage());
       return false;
