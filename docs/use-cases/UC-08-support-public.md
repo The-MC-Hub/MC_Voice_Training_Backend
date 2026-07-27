@@ -1,47 +1,107 @@
 # UC-08 — Trang Công Khai & Hỗ Trợ (Support & Public APIs)
 
-## 📌 1. Mô tả Tổng Quan & Luồng Nghiệp Vụ
-
-Luồng nghiệp vụ cung cấp thông tin trang chủ Landing Page, form liên hệ khách hàng (Contact Form), báo cáo nội dung vi phạm (Reports) và tải lên tệp đa phương tiện qua Cloudinary API.
-
-### Actors
-- **Guest / Public**: Khách vãng lai xem thông tin trang chủ và gửi liên hệ.
-- **User (Client/MC)**: Gửi báo cáo vi phạm hoặc tải file ảnh/âm thanh.
+Tài liệu thiết kế chi tiết từng Use Case con (Sub-UC) thuộc luồng Hỗ trợ và APIs công khai.
 
 ---
 
-## 🛠️ 2. Chi Tiết Tính Năng & Điểm Nghiệp Vụ
+## 📞 UC-08.1: Thống Kê Trang Chủ Landing Page (Landing Page Stats)
 
-| # | Tính năng | Mô tả Nghiệp Vụ Chi Tiết | Controller & API Endpoint |
-|---|---|---|---|
-| 1 | Số liệu Landing Page | Lấy tổng quan số lượt bài học, số MC, nhận xét đánh giá tốt nhất trên trang chủ | `GET /api/v1/public/landing` |
-| 2 | Gửi liên hệ hỗ trợ | Khách nhập email, tên, tiêu đề và nội dung để gửi yêu cầu hỗ trợ ban quản trị | `POST /api/v1/public/contact` |
-| 3 | Gửi báo cáo vi phạm | Người dùng gửi báo cáo bài đăng/bài học/báo giá chứa nội dung không phù hợp | `POST /api/v1/reports` |
-| 4 | Upload Media Cloudinary | Tải ảnh đại diện, file ghi âm lên Cloudinary và nhận secure HTTPS URL | `POST /api/v1/media/upload` |
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** Guest / Public.
+- **Mục tiêu:** Lấy chỉ số tổng quan trang chủ: số bài học, số MC nổi bật, các nhận xét testimonial hay nhất.
+- **Endpoint:** `GET /api/v1/public/landing`
 
----
-
-## 📐 3. Class Diagram
-
+### 📐 2. Class Diagram (UC-08.1)
 ```mermaid
 classDiagram
     class PublicController {
-        +getLandingData() ResponseEntity
+        +getLandingData() ResponseEntity~ApiResponse~
     }
+    class LandingPageDTO {
+        +long totalStudents
+        +long totalLessons
+        +List~McProfileDTO~ featuredMcs
+        +List~ReviewDTO~ testimonials
+    }
+    PublicController --> LandingPageDTO
+```
 
+### 🔄 3. Sequence Diagram (UC-08.1)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest as Visitor / Public
+    participant Controller as PublicController
+    participant DB as MongoDB Atlas
+
+    Guest->>Controller: GET /api/v1/public/landing
+    Controller->>DB: Query featured MCs & top reviews
+    DB-->>Controller: Landing Data
+    Controller-->>Guest: 200 OK (Chỉ số tổng quan landing page)
+```
+
+### 🧪 4. Testing & Verification (UC-08.1)
+- **Unit Test Method:** `PublicControllerTest.java` -> `getLandingData_returnsPublicStats()`
+- **Assertions:** Trả về đối tượng `LandingPageDTO` không null.
+
+---
+
+## 📞 UC-08.2: Gửi Yêu Cầu Liên Hệ Hỗ Trợ (Contact Form Submission)
+
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** Guest / User.
+- **Mục tiêu:** Nhập email, tên, tiêu đề và nội dung để gửi lời nhắn tới bộ phận hỗ trợ khách hàng.
+- **Endpoint:** `POST /api/v1/public/contact`
+
+### 📐 2. Class Diagram (UC-08.2)
+```mermaid
+classDiagram
     class ContactController {
-        +submitContact(req) ResponseEntity
+        +submitContact(ContactRequestDTO req) ResponseEntity~ApiResponse~
     }
+    class ContactRequestDTO {
+        +String name
+        +String email
+        +String subject
+        +String message
+    }
+    ContactController --> ContactRequestDTO
+```
 
+### 🔄 3. Sequence Diagram (UC-08.2)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Visitor as Guest / User
+    participant Controller as ContactController
+    participant Email as EmailService
+    participant DB as MongoDB Atlas
+
+    Visitor->>Controller: POST /api/v1/public/contact (name, email, subject, message)
+    Controller->>DB: save(ContactMessage)
+    Controller->>Email: sendNotificationToAdminSupport(subject, message)
+    Controller-->>Visitor: 200 OK (Đã gửi liên hệ hỗ trợ thành công)
+```
+
+### 🧪 4. Testing & Verification (UC-08.2)
+- **Unit Test Method:** `PublicControllerTest.java` -> `submitContact_valid_sendsEmail()`
+- **Assertions:** Message được lưu vào DB và email hỗ trợ được trigger.
+
+---
+
+## 📞 UC-08.3: Gửi Báo Cáo Nội Dung Vi Phạm (Submit Content Report)
+
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** User.
+- **Mục tiêu:** Gửi báo cáo các bài đăng, bài đọc hoặc review chứa nội dung vi phạm quy chuẩn cộng đồng.
+- **Endpoint:** `POST /api/v1/reports`
+
+### 📐 2. Class Diagram (UC-08.3)
+```mermaid
+classDiagram
     class ReportController {
-        +createReport(req) ResponseEntity
-        +getMyReports() ResponseEntity
+        +createReport(CreateReportRequestDTO req) ResponseEntity~ApiResponse~
     }
-
-    class CloudinaryService {
-        +uploadFile(multipartFile, folder) String
-    }
-
     class Report {
         +String id
         +String reporterId
@@ -49,47 +109,64 @@ classDiagram
         +String targetId
         +String reason
         +ReportStatus status
-        +LocalDateTime createdAt
     }
-
     ReportController --> ReportRepository
     ReportRepository --> Report
 ```
 
+### 🔄 3. Sequence Diagram (UC-08.3)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Authenticated User
+    participant Controller as ReportController
+    participant DB as MongoDB Atlas
+
+    User->>Controller: POST /api/v1/reports (targetType, targetId, reason)
+    Controller->>DB: save(Report: status = PENDING)
+    DB-->>Controller: Saved Report
+    Controller-->>User: 200 OK (Đã gửi báo cáo vi phạm tới Ban Quản Trị)
+```
+
+### 🧪 4. Testing & Verification (UC-08.3)
+- **Unit Test Method:** `ReportControllerTest.java` -> `createReport_success_createsPendingReport()`
+- **Assertions:** Bản ghi `Report` mới có trạng thái `PENDING`.
+
 ---
 
-## 🔄 4. Sequence Diagram (Gửi Báo Cáo Vi Phạm Content)
+## 📞 UC-08.4: Tải Lên Tệp Đa Phương Tiện Cloudinary (Cloudinary Upload)
 
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** User.
+- **Mục tiêu:** Upload tệp hình ảnh avatar hoặc audio ghi âm lên CDN Cloudinary và nhận HTTPS URL.
+- **Endpoint:** `POST /api/v1/media/upload`
+
+### 📐 2. Class Diagram (UC-08.4)
+```mermaid
+classDiagram
+    class MediaController {
+        +uploadMedia(MultipartFile file, String folder) ResponseEntity~ApiResponse~
+    }
+    class CloudinaryService {
+        +uploadFile(MultipartFile file, String folder) String
+    }
+    MediaController --> CloudinaryService
+```
+
+### 🔄 3. Sequence Diagram (UC-08.4)
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as Client / MC
-    participant Controller as ReportController
-    participant Repo as ReportRepository
-    participant DB as MongoDB Atlas
+    participant Controller as MediaController
+    participant Cloudinary as Cloudinary Cloud API
 
-    User->>Controller: POST /api/v1/reports (targetType, targetId, reason)
-    Controller->>Controller: Validate token & input reason
-    
-    alt Reason rỗng hoặc targetId không hợp lệ
-        Controller-->>User: 400 Bad Request (VALIDATION_FAILED)
-    else Hợp lệ
-        Controller->>Repo: save(Report: status = PENDING)
-        Repo->>DB: Insert Report Record
-        DB-->>Repo: Saved Report
-        Repo-->>Controller: Report DTO
-        Controller-->>User: 200 OK (Gửi báo cáo thành công, Ban quản trị sẽ kiểm duyệt)
-    end
+    User->>Controller: POST /api/v1/media/upload (file, folder = "avatars")
+    Controller->>Cloudinary: upload(file, folder)
+    Cloudinary-->>Controller: secureUrl ("https://res.cloudinary.com/...")
+    Controller-->>User: 200 OK (secureUrl)
 ```
 
----
-
-## 🧪 5. Testing & Verification Report
-
-- **Test Suite Classes:**
-  - `com.mchub.controllers.PublicControllerTest`
-  - `com.mchub.controllers.ReportControllerTest`
-- **Các kịch bản kiểm thử đã thực thi:**
-  - `getLandingData_returnsPublicStats()`: Lấy đúng chỉ số landing page.
-  - `createReport_success_createsPendingReport()`: Tạo báo cáo vi phạm ở trạng thái `PENDING`.
-- **Kết quả kiểm thử:** Pass **100% (18/18 unit tests trong module Public & Support)**.
+### 🧪 4. Testing & Verification (UC-08.4)
+- **Unit Test Method:** `MediaControllerTest.java` -> `upload_validFile_returnsUrl()`
+- **Assertions:** Trả về URL dạng HTTPS Cloudinary hợp lệ.

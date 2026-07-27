@@ -1,53 +1,79 @@
 # UC-03 — Luyện Giọng Nói AI (Voice Practice & AI Analysis)
 
-## 📌 1. Mô tả Tổng Quan & Luồng Nghiệp Vụ
-
-Luồng nghiệp vụ cốt lõi của sản phẩm: Người dùng nghe bài mẫu, ghi âm bài luyện đọc/nói, gửi file âm thanh tới AI Service (Python FastAPI) để phân tích phát âm (Pacing, Pitch, Clarity, Pronunciation Accuracy) và nhận phản hồi chi tiết.
-
-### Actors
-- **Guest**: Thực hiện bài test đọc thử (giới hạn 1 bài/3 giờ).
-- **User (Client/MC)**: Học viên thực hành các bài luyện trong kho.
+Tài liệu thiết kế chi tiết từng Use Case con (Sub-UC) thuộc luồng Luyện giọng và Chấm điểm AI.
 
 ---
 
-## 🛠️ 2. Chi Tiết Tính Năng & Điểm Nghiệp Vụ
+## 🎙️ UC-03.1: Danh Sách & Chi Tiết Bài Luyện Giọng (Get Voice Lessons)
 
-| # | Tính năng | Mô tả Nghiệp Vụ Chi Tiết | Controller & API Endpoint |
-|---|---|---|---|
-| 1 | Lấy danh sách bài luyện | Lấy danh sách bài luyện phân loại theo danh mục (Phát âm, Tròn vành rõ chữ, Nhấn giọng, Cảm xúc) | `GET /api/v1/voice/lessons` |
-| 2 | Lấy chi tiết bài luyện | Lấy nội dung văn bản bài luyện, audio mẫu và tiêu chí chấm điểm | `GET /api/v1/voice/lessons/{id}` |
-| 3 | Chấm điểm bài tập (AI Analysis) | Tải file âm thanh `.mp3`/`.wav`, gửi tới AI Python engine, nhận score (Accuracy, Rhythm, Pitch, WPM), lưu kết quả vào `PracticeSession` | `POST /api/v1/voice/practice/analyze` |
-| 4 | Chấm điểm Guest | Cho phép khách dùng thử chấm điểm ghi âm ngắn (throttled qua `GuestVoiceUsageRepository`) | `POST /api/v1/voice/practice/analyze-guest` |
-| 5 | Lịch sử luyện tập | Xem danh sách các bài tập đã hoàn thành kèm điểm số và gợi ý cải thiện | `GET /api/v1/voice/history` |
-| 6 | Tạo Audio TTS Mẫu | Tạo âm thanh mẫu chuẩn từ văn bản bài đọc sử dụng Text-To-Speech AI | `POST /api/v1/voice/tts` |
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** Guest / Client / MC.
+- **Mục tiêu:** Tra cứu kho bài luyện tập theo danh mục (Phát âm, Tròn vành rõ chữ, Nhấn giọng, Cảm xúc) và xem chi tiết văn bản bài luyện kèm audio đọc mẫu.
+- **Endpoint:** `GET /api/v1/voice/lessons`, `GET /api/v1/voice/lessons/{id}`
 
----
-
-## 📐 3. Class Diagram
-
+### 📐 2. Class Diagram (UC-03.1)
 ```mermaid
 classDiagram
     class VoiceController {
-        +getLessons(category) ResponseEntity
-        +getLessonDetail(id) ResponseEntity
-        +analyzePractice(file, lessonId) ResponseEntity
-        +analyzeGuest(file) ResponseEntity
+        +getLessons(String category) ResponseEntity~ApiResponse~
+        +getLessonDetail(String id) ResponseEntity~ApiResponse~
     }
+    class VoiceLesson {
+        +String id
+        +String title
+        +String category
+        +String scriptContent
+        +String sampleAudioUrl
+        +int targetWpm
+    }
+    VoiceController --> VoiceLessonRepository
+    VoiceLessonRepository --> VoiceLesson
+```
 
+### 🔄 3. Sequence Diagram (UC-03.1)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Client / MC
+    participant Controller as VoiceController
+    participant DB as MongoDB Atlas
+
+    User->>Controller: GET /api/v1/voice/lessons?category=PRONUNCIATION
+    Controller->>DB: findByCategory("PRONUNCIATION")
+    DB-->>Controller: List<VoiceLesson>
+    Controller-->>User: 200 OK (Danh sách bài tập luyện phát âm)
+```
+
+### 🧪 4. Testing & Verification (UC-03.1)
+- **Unit Test Method:** `VoiceControllerTest.java` -> `getLessons_returnsCategoryLessons()`
+- **Assertions:** Trả về danh sách `VoiceLesson` có đúng category requested.
+
+---
+
+## 🎙️ UC-03.2: Chấm Điểm Bài Tập Luyện Giọng AI (Analyze Voice Practice)
+
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** Client / MC (Học viên đã đăng nhập).
+- **Mục tiêu:** Tải file ghi âm `.wav`/`.mp3` bài đọc, upload lên Cloudinary, gửi URL tới Python AI Engine, tính toán chỉ số (Overall Score, Accuracy, Rhythm, Pitch, WPM) và trừ 1 lượt AI session của user.
+- **Rules:** Nếu `aiSessionsUsed >= maxAllowed` (dựa trên gói VIP), ném lỗi `AI_SESSIONS_EXHAUSTED`.
+- **Endpoint:** `POST /api/v1/voice/practice/analyze`
+
+### 📐 2. Class Diagram (UC-03.2)
+```mermaid
+classDiagram
+    class VoiceController {
+        +analyzePractice(MultipartFile file, String lessonId) ResponseEntity~ApiResponse~
+    }
     class VoiceService {
         <<interface>>
-        +getLessons(category) List~VoiceLessonDTO~
-        +analyzePractice(file, lessonId, userId) PracticeResultDTO
-        +analyzeGuest(file, ip) PracticeResultDTO
+        +analyzePractice(MultipartFile file, String lessonId, String userId) PracticeResultDTO
     }
-
     class VoiceServiceImpl {
-        -VoiceLessonRepository lessonRepo
-        -PracticeSessionRepository sessionRepo
         -CloudinaryService storageService
         -WebClient aiServiceClient
+        -PracticeSessionRepository sessionRepo
+        -UserRepository userRepo
     }
-
     class PracticeSession {
         +String id
         +String userId
@@ -59,58 +85,173 @@ classDiagram
         +double speakingRateWpm
         +String feedbackVi
     }
-
     VoiceController --> VoiceService
     VoiceServiceImpl ..|> VoiceService
     VoiceServiceImpl --> PracticeSessionRepository
     PracticeSessionRepository --> PracticeSession
 ```
 
----
-
-## 🔄 4. Sequence Diagram (Chấm Điểm Bài Tập Luyện Giọng AI)
-
+### 🔄 3. Sequence Diagram (UC-03.2)
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as Client / MC
     participant Controller as VoiceController
     participant Service as VoiceServiceImpl
-    participant Cloudinary as Cloudinary Cloud Storage
+    participant Cloudinary as Cloudinary Storage
     participant AI as Python AI Engine (FastAPI)
     participant DB as MongoDB Atlas
 
     User->>Controller: POST /api/v1/voice/practice/analyze (audioFile, lessonId)
-    Controller->>Service: analyzePractice(audioFile, lessonId, userId)
-    Service->>Service: Kiểm tra hạn ngạch AI session khả dụng
+    Controller->>Service: analyzePractice(audioFile, lessonId, currentUserId)
+    Service->>DB: findUserById(currentUserId)
+    DB-->>Service: User Record
     
-    alt Hết lượt AI Session trong chu kỳ
+    alt Hết Lượt AI Sessions
         Service-->>Controller: AppException(AI_SESSIONS_EXHAUSTED)
         Controller-->>User: 403 Forbidden (Gợi ý nâng cấp VIP)
-    else Còn lượt sử dụng
-        Service->>Cloudinary: Upload File Âm Thanh (.wav/.mp3)
-        Cloudinary-->>Service: Audio URL (HTTPS)
+    else Còn Lượt
+        Service->>Cloudinary: uploadAudio(audioFile)
+        Cloudinary-->>Service: audioUrl (HTTPS)
         
-        Service->>AI: Call HTTP POST /analyze-voice (audioUrl, targetScript)
-        AI-->>Service: JSON { overallScore: 85, accuracyScore: 90, rhythmScore: 80, wpm: 145, feedbackVi: "Phát âm tròn chữ..." }
+        Service->>AI: POST /analyze (audioUrl, targetScript)
+        AI-->>Service: JSON { overallScore: 88, accuracyScore: 92, rhythmScore: 84, wpm: 150, feedbackVi: "Giọng đọc truyền cảm..." }
         
-        Service->>DB: Save PracticeSession (overallScore, feedback, audioUrl)
-        DB-->>Service: Saved Record
-        Service->>Service: Trừ 1 lượt AI session & Cập nhật User XP / Streak
+        Service->>DB: save(PracticeSession)
+        Service->>DB: Update User (aiSessionsUsed++, XP += 50)
         Service-->>Controller: PracticeResultDTO
-        Controller-->>User: 200 OK (Chi tiết điểm số & Nhận xét AI)
+        Controller-->>User: 200 OK (Trả về bảng điểm & nhận xét AI)
     end
 ```
 
+### 🧪 4. Testing & Verification (UC-03.2)
+- **Unit Test Method:** `VoiceServiceImplTest.java` -> `analyzePractice_success_returnsScoresAndFeedback()`
+- **Assertions:** `PracticeSession` được lưu với điểm số > 0, `aiSessionsUsed` tăng thêm 1.
+
 ---
 
-## 🧪 5. Testing & Verification Report
+## 🎙️ UC-03.3: Chấm Điểm Bài Tập Dùng Thử Cho Khách (Analyze Guest Practice)
 
-- **Test Suite Classes:**
-  - `com.mchub.controllers.VoiceControllerTest`
-  - `com.mchub.services.impl.VoiceServiceImplTest`
-- **Các kịch bản kiểm thử đã thực thi:**
-  - `analyzePractice_success_returnsScoresAndFeedback()`: Chấm điểm bài tập thành công và lưu kết quả.
-  - `analyzePractice_exceedsSessionLimit_throwsException()`: Quá giới hạn lượt AI ném lỗi `AI_SESSIONS_EXHAUSTED`.
-  - `analyzeGuest_cooldownCheck()`: Kiểm tra đúng thời gian chờ cooldown giữa 2 lần dùng thử của Guest.
-- **Kết quả kiểm thử:** Pass **100% (64/64 unit tests trong module Voice Training)**.
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** Guest (Khách chưa đăng nhập).
+- **Mục tiêu:** Cho phép khách trải nghiệm tính năng chấm điểm giọng đọc miễn phí.
+- **Rules:** Giới hạn 1 lượt/3 giờ theo IP (`GuestVoiceUsageRepository`). Nếu bấm liên tục sẽ bị từ chối với HTTP 429.
+- **Endpoint:** `POST /api/v1/voice/practice/analyze-guest`
+
+### 📐 2. Class Diagram (UC-03.3)
+```mermaid
+classDiagram
+    class VoiceController {
+        +analyzeGuest(MultipartFile file) ResponseEntity~ApiResponse~
+    }
+    class GuestVoiceUsage {
+        +String ipAddress
+        +LocalDateTime lastUsedAt
+    }
+    VoiceController --> GuestVoiceUsageRepository
+    GuestVoiceUsageRepository --> GuestVoiceUsage
+```
+
+### 🔄 3. Sequence Diagram (UC-03.3)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest as Guest User
+    participant Controller as VoiceController
+    participant DB as MongoDB Atlas
+    participant AI as Python AI Engine
+
+    Guest->>Controller: POST /api/v1/voice/practice/analyze-guest (audioFile)
+    Controller->>DB: findByIpAddress(clientIp)
+    DB-->>Controller: GuestVoiceUsage Record
+    
+    alt Chưa Đủ 3 Giờ Cooldown
+        Controller-->>Guest: 429 Too Many Requests (Vui lòng đăng ký để không bị giới hạn)
+    else Hợp Lệ
+        Controller->>AI: POST /analyze-quick (audioFile)
+        AI-->>Controller: JSON Scores & Feedback
+        Controller->>DB: save(GuestVoiceUsage: lastUsedAt = now)
+        Controller-->>Guest: 200 OK (Trả về điểm dùng thử)
+    end
+```
+
+### 🧪 4. Testing & Verification (UC-03.3)
+- **Unit Test Method:** `VoiceControllerTest.java` -> `analyzeGuest_cooldownActive_returns429()`
+- **Assertions:** Đúng IP bị chặn nếu gọi 2 lần trong 3 giờ.
+
+---
+
+## 🎙️ UC-03.4: Lịch Sử Luyện Tập Cá Nhân (Practice History)
+
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** User.
+- **Mục tiêu:** Xem lại danh sách các phiên đọc ghi âm đã thực hiện kèm biểu đồ tiến bộ điểm số qua thời gian.
+- **Endpoint:** `GET /api/v1/voice/history`
+
+### 📐 2. Class Diagram (UC-03.4)
+```mermaid
+classDiagram
+    class VoiceController {
+        +getPracticeHistory(Pageable pageable) ResponseEntity~ApiResponse~
+    }
+    VoiceController --> PracticeSessionRepository
+```
+
+### 🔄 3. Sequence Diagram (UC-03.4)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Authenticated User
+    participant Controller as VoiceController
+    participant DB as MongoDB Atlas
+
+    User->>Controller: GET /api/v1/voice/history?page=0&size=10
+    Controller->>DB: findByUserIdOrderByCreatedAtDesc(currentUserId, Pageable)
+    DB-->>Controller: Page<PracticeSession>
+    Controller-->>User: 200 OK (Danh sách 10 phiên luyện tập gần nhất)
+```
+
+### 🧪 4. Testing & Verification (UC-03.4)
+- **Unit Test Method:** `VoiceControllerTest.java` -> `getHistory_returnsUserSessions()`
+- **Assertions:** Trả về danh sách phiên luyện tập thuộc đúng `userId`.
+
+---
+
+## 🎙️ UC-03.5: Phát Tạo Âm Thanh TTS Mẫu (Generate Text-To-Speech)
+
+### 📌 1. Mô tả Chi Tiết & Quy Tắc Nghiệp Vụ
+- **Actor:** User / MC / Admin.
+- **Mục tiêu:** Chuyển đổi văn bản bài đọc bất kỳ thành giọng nói đọc mẫu chuẩn MC (Giọng Bắc/Giọng Nam).
+- **Endpoint:** `POST /api/v1/voice/tts`
+
+### 📐 2. Class Diagram (UC-03.5)
+```mermaid
+classDiagram
+    class VoiceController {
+        +generateTts(TtsRequestDTO req) ResponseEntity~ApiResponse~
+    }
+    class TtsRequestDTO {
+        +String text
+        +String voiceGender
+        +String accent
+    }
+    VoiceController --> TtsRequestDTO
+```
+
+### 🔄 3. Sequence Diagram (UC-03.5)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Client / MC
+    participant Controller as VoiceController
+    participant AI as Python TTS Engine
+
+    User->>Controller: POST /api/v1/voice/tts (text, voiceGender="FEMALE", accent="NORTH")
+    Controller->>AI: POST /generate-tts (text, voiceGender, accent)
+    AI-->>Controller: Audio Stream / Cloudinary URL
+    Controller-->>User: 200 OK (Audio URL bài đọc mẫu)
+```
+
+### 🧪 4. Testing & Verification (UC-03.5)
+- **Unit Test Method:** `VoiceControllerTest.java` -> `generateTts_validText_returnsAudioUrl()`
+- **Assertions:** Audio URL trả về không rỗng và có định dạng `.mp3`.
