@@ -45,6 +45,31 @@ AI PHẢI tuân thủ các quy tắc tối ưu hóa để hệ thống vận hà
 
 ---
 
+## PHẦN 4: 🔄 Quy trình phát triển tiêu chuẩn (Standard AI Development Workflow)
+
+AI PHẢI thực hiện nghiêm ngặt quy trình 4 bước cho mọi yêu cầu phát triển hoặc refactor:
+
+1. **📋 Bước 1: Lên Kế Hoạch & Đặc Tả (Plan & Specify)**
+   - Phân tích toàn bộ yêu cầu, kiểm tra tác động hệ thống qua impact analysis.
+   - Viết hoặc cập nhật file đặc tả kĩ thuật (`implementation_plan.md` hoặc `docs/use-cases/`) trước khi thực hiện các thay đổi lớn.
+
+2. **💻 Bước 2: Thực Thi Mã Nguồn (Code & Refactor)**
+   - Tuân thủ kiến trúc 4 tầng (Controller -> Service -> Repository -> Model).
+   - Tái sử dụng `EntityUtils` cho việc kiểm tra tồn tại entity.
+   - Sử dụng Java 21 Virtual Threads và `@Aggregation` cho các tác vụ nặng.
+
+3. **🧪 Bước 3: Kiểm Thử & Xác Nhận (Test & Verify)**
+   - Bắt buộc viết Unit Test bổ sung cho mọi Service/Feature mới.
+   - Chạy `mvn clean test` xác nhận **100% test suite pass** trước khi báo hoàn thành.
+   - Cấm bỏ qua lỗi test hoặc comment out test đang lỗi.
+
+4. **📌 Bước 4: Commit Chi Tiết (Granular Conventional Commits)**
+   - Phân chia commit nhỏ gọn theo đúng phạm vi thay đổi (Scope).
+   - Tuân thủ định dạng Conventional Commits (`feat(...)`, `fix(...)`, `refactor(...)`, `docs(...)`, `test(...)`).
+   - Mô tả commit ngắn gọn, kĩ thuật và rõ ràng.
+
+---
+
 ## 🛠️ Danh mục tài nguyên nhanh (GitNexus)
 
 | Tài nguyên | Mục đích |
