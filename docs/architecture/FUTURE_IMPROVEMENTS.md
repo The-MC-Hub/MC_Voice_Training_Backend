@@ -1,48 +1,56 @@
-# ARCHITECTURE ENHANCEMENT PROPOSAL
+# CLIENT-MC INTERACTION & COLLABORATIVE SCRIPT SPECIFICATION
 
-Document Reference: SPEC-ENHANCE-2026-V1  
+Document Reference: SPEC-COLLAB-2026-V1  
 Target System: MC Voice Training & Booking Platform Backend  
 
 ---
 
-## 1. Summary of Proposed Enhancements
-
-This document outlines 5 high-impact architectural enhancements for `MC_Voice_Training_Backend`:
-
-1. **Caching Layer (Spring Cache + Redis / Caffeine)**: Offload DB reads for high-frequency queries.
-2. **Event-Driven Architecture (Spring ApplicationEvents)**: Asynchronous decoupling of post-payment and booking side effects.
-3. **Automated Search Index Sync (MongoDB Change Streams)**: Event-based synchronization from MongoDB to Elasticsearch.
-4. **Constant-Time Security Verification**: Hardened HMAC SHA-256 webhook comparison using `MessageDigest.isEqual`.
-5. **SpringDoc OpenAPI 3 Integration**: Auto-generated interactive Swagger documentation.
-
----
-
-## 2. Component Blueprint
+## 1. Feature Roadmap & Architecture Blueprint
 
 ```mermaid
 graph TD
-    subgraph CoreBackend["Spring Boot Container"]
-        PaymentSvc["PaymentServiceImpl"]
-        EventPub["ApplicationEventPublisher"]
-        EventListener["PaymentEventListener (@Async)"]
-        CacheManager["Spring CacheManager (Redis / Caffeine)"]
-        MongoWatcher["MongoChangeStreamListener"]
+    subgraph ClientMCInteraction["Client <-> MC Interaction Hub"]
+        ChatEngine["STOMP Chat Engine (/ws-chat)"]
+        ScriptEngine["Collaborative Script Engine (/ws-script/{bookingId})"]
     end
 
-    subgraph Infrastructure["Infrastructure & Search"]
-        PayOS["PayOS Gateway Webhook"]
-        DB[("MongoDB Atlas")]
-        ES[("Elasticsearch Engine")]
-        Brevo["Brevo Email Engine"]
+    subgraph ChatFeatures["Chat Subsystem Enhancements"]
+        VoiceNotes["Voice Note Audio Clips"]
+        QuoteCard["In-Chat VietQR Quote Card"]
+        ScriptAttach["Script File Preview"]
+        TypingIndicator["Realtime Typing Presence"]
+        QuickReplies["MC Quick Reply Templates"]
+        SafetyGuard["Off-Platform Regex Guard"]
     end
 
-    PayOS -->|Inbound Webhook| PaymentSvc
-    PaymentSvc -->|Publish Event| EventPub
-    EventPub -->|Async Event| EventListener
-    EventListener -->|Send Email| Brevo
-    EventListener -->|Update XP/Streak| DB
+    subgraph CollabScriptFeatures["Collaborative Script Features (Google Docs Style)"]
+        RealtimeEdit["Realtime Multi-User Editing"]
+        LiveCursors["Live Presence Cursors"]
+        LineAnnotations["MC Pronunciation Line Annotations"]
+        RevisionHistory["Version History Snapshots"]
+    end
 
-    PaymentSvc -->|Read/Write Cache| CacheManager
-    DB -->|Change Stream| MongoWatcher
-    MongoWatcher -->|Auto Sync| ES
+    ChatEngine --> VoiceNotes
+    ChatEngine --> QuoteCard
+    ChatEngine --> ScriptAttach
+    ChatEngine --> TypingIndicator
+    ChatEngine --> QuickReplies
+    ChatEngine --> SafetyGuard
+
+    ScriptEngine --> RealtimeEdit
+    ScriptEngine --> LiveCursors
+    ScriptEngine --> LineAnnotations
+    ScriptEngine --> RevisionHistory
 ```
+
+---
+
+## 2. Catalog of Proposed Features
+
+1. **Real-Time Collaborative Event Script Editor (Google Docs Style)**: Synchronous multi-user script editing over `/ws-script/{bookingId}` with live cursors, line-by-line MC pronunciation annotations, and version snapshots (`script_revisions`).
+2. **In-Chat Booking Quote Card**: Structured quote cards rendered inside chat bubbles allowing one-click PayOS VietQR payment execution.
+3. **Voice Note Messages**: Cloudinary-backed audio voice recording clips in chat conversations.
+4. **Script Attachment Previews**: Rich previews for uploaded event documents (`.pdf`, `.docx`).
+5. **Real-Time Typing Indicators**: Live STOMP presence updates for active typing.
+6. **MC Quick Reply Templates**: Pre-saved MC response templates managed via CRUD APIs.
+7. **Safety & Off-Platform Protection**: Automatic regex detection for phone numbers, bank accounts, and external messaging links to protect transaction integrity.
