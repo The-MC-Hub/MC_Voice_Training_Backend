@@ -22,4 +22,13 @@ public interface ReportService {
 
   @PreAuthorize("hasAuthority('ADMIN')")
   List<Report> getAllReports();
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  void deleteReport(String reportId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  int bulkResolveReports(List<String> reportIds, String adminId, ReportStatus status, String adminNote);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  java.util.Map<String, Object> getReportStats();
 }

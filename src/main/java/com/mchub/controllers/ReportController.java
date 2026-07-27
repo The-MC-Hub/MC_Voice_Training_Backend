@@ -90,4 +90,42 @@ public class ReportController {
     return ResponseEntity.ok(
         ApiResponse.success("Processed successfully", reportMapper.toResponseDTO(resolved)));
   }
+
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<Void>> deleteReport(@PathVariable String id) {
+    reportService.deleteReport(id);
+    return ResponseEntity.ok(ApiResponse.success("Report deleted successfully", null));
+  }
+
+  @PutMapping("/bulk-resolve")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> bulkResolve(
+      @RequestBody Map<String, Object> body) {
+    String adminId = SecurityUtils.getCurrentUserId();
+    @SuppressWarnings("unchecked")
+    List<String> ids = (List<String>) body.get("ids");
+    String statusStr = (String) body.get("status");
+    String adminNote = (String) body.getOrDefault("adminNote", "");
+
+    if (ids == null || ids.isEmpty() || statusStr == null) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "ids and status are required");
+    }
+    ReportStatus status;
+    try {
+      status = ReportStatus.valueOf(statusStr.toUpperCase());
+    } catch (Exception e) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, "Invalid status: " + statusStr);
+    }
+
+    int count = reportService.bulkResolveReports(ids, adminId, status, adminNote);
+    return ResponseEntity.ok(
+        ApiResponse.success("Bulk resolve complete", Map.of("resolvedCount", count)));
+  }
+
+  @GetMapping("/admin/stats")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getStats() {
+    return ResponseEntity.ok(ApiResponse.success(reportService.getReportStats()));
+  }
 }

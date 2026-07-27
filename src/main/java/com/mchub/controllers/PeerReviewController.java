@@ -150,4 +150,40 @@ public class PeerReviewController {
         .reviewedAt(r.getReviewedAt())
         .build();
   }
+
+  @GetMapping("/admin/all")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<List<PracticeReviewDTO>>> getAllAdmin() {
+    List<PracticeReview> all = practiceReviewRepository.findAll();
+    List<PracticeReviewDTO> dtos = all.stream().map(this::toDTO).toList();
+    return ResponseEntity.ok(ApiResponse.success(dtos));
+  }
+
+  @DeleteMapping("/admin/{id}")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<Void>> deleteAdmin(@PathVariable String id) {
+    practiceReviewRepository.deleteById(id);
+    return ResponseEntity.ok(ApiResponse.success("Review deleted by admin", null));
+  }
+
+  @GetMapping("/admin/stats")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getStatsAdmin() {
+    List<PracticeReview> all = practiceReviewRepository.findAll();
+    long pending = all.stream().filter(r -> "PENDING".equalsIgnoreCase(r.getStatus())).count();
+    long completed = all.stream().filter(r -> "COMPLETED".equalsIgnoreCase(r.getStatus())).count();
+    double avgRating =
+        all.stream()
+            .filter(r -> r.getRating() > 0)
+            .mapToInt(PracticeReview::getRating)
+            .average()
+            .orElse(0.0);
+
+    java.util.Map<String, Object> stats = new java.util.LinkedHashMap<>();
+    stats.put("total", (long) all.size());
+    stats.put("pending", pending);
+    stats.put("completed", completed);
+    stats.put("avgRating", Math.round(avgRating * 10.0) / 10.0);
+    return ResponseEntity.ok(ApiResponse.success(stats));
+  }
 }

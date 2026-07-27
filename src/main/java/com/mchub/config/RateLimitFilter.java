@@ -12,7 +12,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.concurrent.TimeUnit;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -24,15 +26,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
-  // Per-IP buckets — evicted lazily (acceptable for short-lived attack windows)
-  private final ConcurrentHashMap<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Bucket> otpBuckets = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Bucket> registerBuckets = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Bucket> sensitiveBuckets = new ConcurrentHashMap<>();
+  // Bounded Caffeine caches with TTL eviction to prevent memory leak
+  private final Cache<String, Bucket> loginBuckets =
+      Caffeine.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).maximumSize(10000).build();
+  private final Cache<String, Bucket> otpBuckets =
+      Caffeine.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).maximumSize(10000).build();
+  private final Cache<String, Bucket> registerBuckets =
+      Caffeine.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).maximumSize(10000).build();
+  private final Cache<String, Bucket> sensitiveBuckets =
+      Caffeine.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).maximumSize(10000).build();
 
   // Per-email buckets — closes the gap where an attacker rotates IPs to bypass per-IP limits
   // on OTP verification/resend for a single victim account.
-  private final ConcurrentHashMap<String, Bucket> otpEmailBuckets = new ConcurrentHashMap<>();
+  private final Cache<String, Bucket> otpEmailBuckets =
+      Caffeine.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).maximumSize(10000).build();
 
   private static final Set<String> OTP_PATHS =
       Set.of(
@@ -66,7 +73,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     if (path.equals("/api/v1/auth/login") || path.equals("/api/v1/auth/google")) {
       // 20 attempts per 15 minutes per IP
       bucket =
-          loginBuckets.computeIfAbsent(
+          loginBuckets.get(
               ip,
               k ->
                   Bucket.builder()
@@ -80,7 +87,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     } else if (path.equals("/api/v1/auth/google/complete-registration")) {
       // 20 attempts per hour per IP — same tier as password-based registration
       bucket =
-          registerBuckets.computeIfAbsent(
+          registerBuckets.get(
               ip,
               k ->
                   Bucket.builder()
@@ -95,7 +102,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         || path.equals("/api/v1/auth/verify-admin-login-otp")) {
       // 20 attempts per 5 minutes per IP
       bucket =
-          otpBuckets.computeIfAbsent(
+          otpBuckets.get(
               ip,
               k ->
                   Bucket.builder()
@@ -109,7 +116,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     } else if (path.equals("/api/v1/auth/register")) {
       // 20 attempts per hour per IP
       bucket =
-          registerBuckets.computeIfAbsent(
+          registerBuckets.get(
               ip,
               k ->
                   Bucket.builder()
@@ -122,7 +129,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     } else if (SENSITIVE_PATHS.contains(path)) {
       // 10 attempts per 10 minutes per IP — expensive/abuse-prone but not auth-critical
       bucket =
-          sensitiveBuckets.computeIfAbsent(
+          sensitiveBuckets.get(
               ip,
               k ->
                   Bucket.builder()
@@ -148,7 +155,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       String email = extractEmail(wrapped);
       if (email != null && !email.isBlank()) {
         Bucket emailBucket =
-            otpEmailBuckets.computeIfAbsent(
+            otpEmailBuckets.get(
                 email.toLowerCase(),
                 k ->
                     Bucket.builder()

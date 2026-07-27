@@ -2,6 +2,7 @@ package com.mchub.services.impl;
 
 import com.mchub.dto.UserResponseDTO;
 import com.mchub.enums.AuditAction;
+import com.mchub.enums.BookingStatus;
 import com.mchub.enums.SubscriptionPlan;
 import com.mchub.enums.TransactionStatus;
 import com.mchub.enums.UserRole;
@@ -836,5 +837,37 @@ public class AdminServiceImpl implements AdminService {
     result.put("cohortRetention", cohortRetention);
 
     return result;
+  }
+
+  @Override
+  public Map<String, Object> forceCancelBooking(@NonNull String bookingId, String reason) {
+    Booking booking =
+        EntityUtils.getResourceOrThrow(bookingRepository, bookingId, "Booking");
+    booking.setStatus(BookingStatus.CANCELLED);
+    booking.setRejectionReason(reason != null ? reason : "Cancelled by Administrator");
+    bookingRepository.save(booking);
+    return Map.of("id", booking.getId(), "status", booking.getStatus().name(), "reason", booking.getRejectionReason());
+  }
+
+  @Override
+  public Map<String, Object> forceCompleteBooking(@NonNull String bookingId) {
+    Booking booking =
+        EntityUtils.getResourceOrThrow(bookingRepository, bookingId, "Booking");
+    booking.setStatus(BookingStatus.COMPLETED);
+    bookingRepository.save(booking);
+    return Map.of("id", booking.getId(), "status", booking.getStatus().name());
+  }
+
+  @Override
+  public Map<String, Object> getBookingStats() {
+    List<Booking> all = bookingRepository.findAll();
+    Map<String, Long> byStatus = new LinkedHashMap<>();
+    for (BookingStatus status : BookingStatus.values()) {
+      byStatus.put(status.name(), all.stream().filter(b -> b.getStatus() == status).count());
+    }
+    Map<String, Object> res = new LinkedHashMap<>();
+    res.put("totalBookings", (long) all.size());
+    res.put("byStatus", byStatus);
+    return res;
   }
 }

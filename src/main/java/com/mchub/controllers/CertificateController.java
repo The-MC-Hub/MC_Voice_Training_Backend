@@ -81,4 +81,21 @@ public class CertificateController {
     certificateService.deleteCertificate(Objects.requireNonNull(id), mcProfileId);
     return ResponseEntity.ok(ApiResponse.success("Deleted successfully", null));
   }
+
+  @GetMapping("/admin/all")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<List<CertificateResponseDTO>>> getAllCertificatesAdmin() {
+    List<CertificateResponseDTO> dtos =
+        certificateService.getAllCertificates().stream()
+            .map(certificateMapper::toResponseDTO)
+            .toList();
+    return ResponseEntity.ok(ApiResponse.success(dtos));
+  }
+
+  @DeleteMapping("/admin/{id}")
+  @PreAuthorize("hasAuthority('ADMIN')")
+  public ResponseEntity<ApiResponse<Void>> adminDeleteCertificate(@PathVariable String id) {
+    certificateService.adminDeleteCertificate(id);
+    return ResponseEntity.ok(ApiResponse.success("Certificate deleted by admin", null));
+  }
 }

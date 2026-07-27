@@ -67,4 +67,13 @@ public interface AdminService {
 
   @PreAuthorize("hasAuthority('ADMIN')")
   List<Map<String, Object>> getAllBookings();
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  Map<String, Object> forceCancelBooking(@NonNull String bookingId, String reason);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  Map<String, Object> forceCompleteBooking(@NonNull String bookingId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  Map<String, Object> getBookingStats();
 }

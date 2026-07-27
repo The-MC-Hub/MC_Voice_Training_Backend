@@ -44,4 +44,14 @@ public class CertificateServiceImpl implements CertificateService {
     throw new UnsupportedOperationException(
         "Certificate deletion is deprecated. Course certificates are permanent.");
   }
+
+  @Override
+  public List<Certificate> getAllCertificates() {
+    return certificateRepository.findAll();
+  }
+
+  @Override
+  public void adminDeleteCertificate(String certId) {
+    certificateRepository.deleteById(certId);
+  }
 }

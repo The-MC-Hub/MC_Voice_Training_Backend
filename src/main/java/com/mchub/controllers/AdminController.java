@@ -220,6 +220,26 @@ public class AdminController {
     return ResponseEntity.ok(ApiResponse.success(adminService.getAllBookings()));
   }
 
+  @GetMapping("/bookings/stats")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getBookingStats() {
+    return ResponseEntity.ok(ApiResponse.success(adminService.getBookingStats()));
+  }
+
+  @PutMapping("/bookings/{id}/force-cancel")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> forceCancelBooking(
+      @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
+    String reason = body != null ? body.get("reason") : "Cancelled by Admin";
+    return ResponseEntity.ok(
+        ApiResponse.success("Booking force cancelled", adminService.forceCancelBooking(id, reason)));
+  }
+
+  @PutMapping("/bookings/{id}/force-complete")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> forceCompleteBooking(
+      @PathVariable String id) {
+    return ResponseEntity.ok(
+        ApiResponse.success("Booking force completed", adminService.forceCompleteBooking(id)));
+  }
+
   @GetMapping("/settings/guest-cooldown")
   public ResponseEntity<ApiResponse<Map<String, Object>>> getGuestCooldown() {
     int hours =

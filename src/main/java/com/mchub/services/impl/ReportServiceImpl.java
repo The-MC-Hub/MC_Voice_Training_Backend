@@ -64,4 +64,40 @@ public class ReportServiceImpl implements ReportService {
   public List<Report> getAllReports() {
     return reportRepository.findAll();
   }
+
+  @Override
+  public void deleteReport(String reportId) {
+    reportRepository.deleteById(reportId);
+  }
+
+  @Override
+  public int bulkResolveReports(
+      List<String> reportIds, String adminId, ReportStatus status, String adminNote) {
+    List<Report> reports = reportRepository.findAllById(reportIds);
+    LocalDateTime now = LocalDateTime.now();
+    reports.forEach(
+        r -> {
+          r.setStatus(status);
+          r.setAdminNote(adminNote);
+          r.setResolvedBy(adminId);
+          r.setResolvedAt(now);
+        });
+    reportRepository.saveAll(reports);
+    return reports.size();
+  }
+
+  @Override
+  public java.util.Map<String, Object> getReportStats() {
+    List<Report> all = reportRepository.findAll();
+    long pending = all.stream().filter(r -> r.getStatus() == ReportStatus.PENDING).count();
+    long resolved = all.stream().filter(r -> r.getStatus() == ReportStatus.RESOLVED).count();
+    long dismissed = all.stream().filter(r -> r.getStatus() == ReportStatus.DISMISSED).count();
+
+    java.util.Map<String, Object> stats = new java.util.LinkedHashMap<>();
+    stats.put("total", (long) all.size());
+    stats.put("pending", pending);
+    stats.put("resolved", resolved);
+    stats.put("dismissed", dismissed);
+    return stats;
+  }
 }

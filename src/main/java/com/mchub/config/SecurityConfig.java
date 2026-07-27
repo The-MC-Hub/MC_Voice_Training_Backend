@@ -56,6 +56,14 @@ public class SecurityConfig {
                     .xssProtection(xss -> xss.disable()) // modern browsers use CSP instead
                     .contentTypeOptions(ct -> {}) // X-Content-Type-Options: nosniff
                     .frameOptions(frame -> frame.deny()) // X-Frame-Options: DENY (clickjacking)
+                    .referrerPolicy(
+                        referrer ->
+                            referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                    .contentSecurityPolicy(
+                        csp ->
+                            csp.policyDirectives(
+                                "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'"))
                     .httpStrictTransportSecurity(
                         hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true)))
         .authorizeHttpRequests(
@@ -139,7 +147,6 @@ public class SecurityConfig {
         Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(
         Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
-    configuration.setExposedHeaders(List.of("Authorization"));
     configuration.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

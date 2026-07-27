@@ -17,4 +17,10 @@ public interface CertificateService {
 
   @PreAuthorize("hasAuthority('MC')")
   void deleteCertificate(String certId, String mcProfileId);
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  List<Certificate> getAllCertificates();
+
+  @PreAuthorize("hasAuthority('ADMIN')")
+  void adminDeleteCertificate(String certId);
 }
