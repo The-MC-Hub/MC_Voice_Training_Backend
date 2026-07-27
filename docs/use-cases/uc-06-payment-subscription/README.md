@@ -1,6 +1,6 @@
 # UC-06 — Gói Cước & Thanh Toán Index
 
-Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Thanh toán và Quản lý Gói cước VIP.
+Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Thanh toán, Gói cước VIP và Ví Voucher.
 
 | File Use Case | Tên Tính Năng | Endpoint | Actor |
 |---|---|---|---|
@@ -10,3 +10,4 @@ Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Thanh 
 | [UC-06.4-order-status.md](UC-06.4-order-status.md) | Tra cứu trạng thái đơn | `GET /api/v1/payment/order/{orderCode}` | User |
 | [UC-06.5-apply-voucher.md](UC-06.5-apply-voucher.md) | Áp dụng Voucher | `POST /api/v1/payment/apply-voucher` | User |
 | [UC-06.6-payment-history.md](UC-06.6-payment-history.md) | Lịch sử thanh toán cá nhân | `GET /api/v1/payment/history` | User |
+| [UC-06.7-voucher-wallet.md](UC-06.7-voucher-wallet.md) | Ví Voucher giảm giá cá nhân | `GET /api/v1/vouchers/my/available` | User |

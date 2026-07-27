@@ -1,6 +1,6 @@
 # UC-02 — Hồ Sơ Người Dùng & MC Profile Index
 
-Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Hồ sơ người dùng và MC Talent.
+Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Hồ sơ người dùng, MC Talent và Hồ sơ Khách hàng.
 
 | File Use Case | Tên Tính Năng | Endpoint | Actor |
 |---|---|---|---|
@@ -9,3 +9,4 @@ Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Hồ s
 | [UC-02.3-streak-info.md](UC-02.3-streak-info.md) | Xem chuỗi Streak | `GET /api/v1/users/streak` | User |
 | [UC-02.4-use-streak-freeze.md](UC-02.4-use-streak-freeze.md) | Đóng băng Streak | `POST /api/v1/users/streak/freeze` | User |
 | [UC-02.5-public-mc-profile.md](UC-02.5-public-mc-profile.md) | Xem profile MC công khai | `GET /api/v1/mcs/{id}/public` | Public / Guest |
+| [UC-02.6-client-profile.md](UC-02.6-client-profile.md) | Quản lý hồ sơ đối tác thuê MC | `PUT /api/v1/client-profile/me` | Client |

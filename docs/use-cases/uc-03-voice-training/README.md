@@ -1,6 +1,6 @@
 # UC-03 — Luyện Giọng AI Index
 
-Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Luyện giọng và Chấm điểm AI.
+Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Luyện giọng, Chấm điểm AI và Quản lý bài học Admin.
 
 | File Use Case | Tên Tính Năng | Endpoint | Actor |
 |---|---|---|---|
@@ -9,3 +9,4 @@ Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Luyệ
 | [UC-03.3-analyze-guest.md](UC-03.3-analyze-guest.md) | Chấm điểm dùng thử cho Khách | `POST /api/v1/voice/practice/analyze-guest` | Guest |
 | [UC-03.4-practice-history.md](UC-03.4-practice-history.md) | Lịch sử luyện tập cá nhân | `GET /api/v1/voice/history` | User |
 | [UC-03.5-generate-tts.md](UC-03.5-generate-tts.md) | Tạo âm thanh đọc mẫu TTS | `POST /api/v1/voice/tts` | User / MC |
+| [UC-03.6-admin-lesson-crud.md](UC-03.6-admin-lesson-crud.md) | Quản lý bài tập Luyện giọng Admin | `POST /api/v1/voice/admin/lessons` | Admin |

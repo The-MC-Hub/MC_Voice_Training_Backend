@@ -1,6 +1,6 @@
 # UC-04 — Đào Tạo & Khóa Học Index
 
-Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Đào tạo, Khóa học và Chứng chỉ.
+Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Đào tạo, Khóa học, Chứng chỉ và Quản lý giáo trình Admin.
 
 | File Use Case | Tên Tính Năng | Endpoint | Actor |
 |---|---|---|---|
@@ -9,3 +9,4 @@ Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Đào 
 | [UC-04.3-course-progress.md](UC-04.3-course-progress.md) | Theo dõi tiến độ học tập | `GET /api/v1/courses/{id}/progress` | User |
 | [UC-04.4-complete-lesson.md](UC-04.4-complete-lesson.md) | Hoàn thành bài học video | `POST /api/v1/courses/{id}/lessons/{lessonId}/complete` | User |
 | [UC-04.5-submit-quiz-cert.md](UC-04.5-submit-quiz-cert.md) | Nộp bài Quiz & Cấp chứng chỉ | `POST /api/v1/courses/{id}/quiz/submit` | User |
+| [UC-04.6-admin-course-crud.md](UC-04.6-admin-course-crud.md) | Quản lý khóa học Admin | `POST /api/v1/admin/courses` | Admin |
