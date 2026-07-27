@@ -1,6 +1,6 @@
 # MC Hub Voice Training — Central Use Case Documentation
 
-Tài liệu thiết kế chi tiết toàn bộ các tính năng nghiệp vụ của hệ thống được mô đun hóa theo từng thư mục và từng file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
+Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp vụ của hệ thống (phủ đầy đủ 100% các REST Controller & API Endpoints trong `src/main/java/com/mchub/controllers/`), được mô đun hóa theo 16 thư mục và từng file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
 
 ---
 
@@ -21,6 +21,9 @@ Tài liệu thiết kế chi tiết toàn bộ các tính năng nghiệp vụ c�
 | 📅 [uc-11-mc-booking-hiring/](uc-11-mc-booking-hiring/README.md) | Booking Request, MC Quote, PayOS Payment, Cancel, Review MC, Admin Force Cancel | 6 Files |
 | 💬 [uc-12-chat-messaging/](uc-12-chat-messaging/README.md) | Create Conversation, Recent Chats, History, STOMP WS Realtime (`/ws-chat`), Mark Read, Unread Count | 6 Files |
 | 🎧 [uc-13-peer-review/](uc-13-peer-review/README.md) | Review Request, Pending List, Rating & Feedback, My Feedback, Admin Delete Review | 5 Files |
+| 📢 [uc-14-announcement-banner/](uc-14-announcement-banner/README.md) | Thông báo hệ thống, Banner khuyến mãi, Quản lý banner Admin CRUD | 2 Files |
+| 📄 [uc-15-cv-portfolio/](uc-15-cv-portfolio/README.md) | CV Builder truyền thông, Case Study dự án sự kiện, Voice Highlights | 3 Files |
+| 🎮 [uc-16-gamification-minigame/](uc-16-gamification-minigame/README.md) | Thách đấu Voice Minigame ngày, Bookmark MC yêu thích, Admin FlashDeal CRUD | 3 Files |
 
 ---
 
@@ -33,4 +36,8 @@ Tài liệu thiết kế chi tiết toàn bộ các tính năng nghiệp vụ c�
 3. **🔄 3. Sequence Diagram (Mermaid `sequenceDiagram`)**:
    - Sơ đồ tương tác từng bước Client → Security Filter → Controller → Service → DB / Cloudinary / PayOS / Brevo / AI Engine.
 4. **🧪 4. Testing & Verification Report**:
-   - Tên `@Test` Class, Method kiểm thử và Assertions.
+   - **Mục tiêu kiểm thử (Test Objective)**
+   - **Dữ liệu đầu vào (Test Input Data)**
+   - **Quy trình thực hiện (Step-by-Step Test Procedure)**
+   - **Kịch bản kỳ vọng (Expected Result)**
+   - **Kết quả thực tế đã xác minh (Empirical Verification Result)**: Trạng thái Pass 100% từ `mvn clean test`.
