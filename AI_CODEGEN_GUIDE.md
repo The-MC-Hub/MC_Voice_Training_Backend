@@ -59,14 +59,18 @@ AI PHẢI thực hiện nghiêm ngặt quy trình 4 bước cho mọi yêu cầu
    - Sử dụng Java 21 Virtual Threads và `@Aggregation` cho các tác vụ nặng.
 
 3. **🧪 Bước 3: Kiểm Thử & Xác Nhận (Test & Verify)**
-   - Bắt buộc viết Unit Test bổ sung cho mọi Service/Feature mới.
+   - Bắt buộc viết Unit Test bổ sung cho mọi Service/Feature mới — đặt theo đúng pattern hiện có (`@ExtendWith(MockitoExtension.class)` cho service, `@WebMvcTest` + `@MockBean` cho controller).
    - Chạy `mvn clean test` xác nhận **100% test suite pass** trước khi báo hoàn thành.
    - Cấm bỏ qua lỗi test hoặc comment out test đang lỗi.
+   - **Xác nhận warning/lint KHÔNG phải regression mới**: nếu build/test log có warning hoặc lỗi ở file mình vừa sửa, chạy `git diff` (hoặc so sánh với bản trước khi sửa) để xác định lỗi đó đã tồn tại từ trước hay do mình gây ra. KHÔNG được im lặng bỏ qua lỗi mới; KHÔNG được "dọn dẹp" luôn lỗi cũ không liên quan (out of scope) trừ khi người dùng yêu cầu — việc đó thuộc phạm vi refactor riêng.
+   - Với thay đổi có `@MessageMapping`/STOMP hoặc logic không thể cover bằng `MockMvc`, viết unit test gọi method trực tiếp bằng Mockito (không cần mô phỏng transport layer).
 
 4. **📌 Bước 4: Commit Chi Tiết (Granular Conventional Commits)**
-   - Phân chia commit nhỏ gọn theo đúng phạm vi thay đổi (Scope).
+   - Trước khi stage: chạy `git status`/`git diff --stat` để xác nhận phạm vi thay đổi khớp đúng dự kiến (tương đương bước `gitnexus_detect_changes`). Nếu thấy file lạ (đã bị sửa từ trước, không phải do mình), KHÔNG gộp vào commit hiện tại — để riêng và hỏi người dùng nếu không chắc.
+   - Phân chia commit nhỏ gọn theo đúng phạm vi thay đổi (Scope). Nếu 1 file vừa chứa fix bug vừa chứa feature mới không tách hunk được, ưu tiên message phản ánh đúng bản chất thay đổi chính (đừng gắn nhãn `feat` cho thứ chủ yếu là `fix`, và ngược lại).
    - Tuân thủ định dạng Conventional Commits (`feat(...)`, `fix(...)`, `refactor(...)`, `docs(...)`, `test(...)`).
-   - Mô tả commit ngắn gọn, kĩ thuật và rõ ràng.
+   - Mô tả commit ngắn gọn, kĩ thuật và rõ ràng — nêu rõ **nguyên nhân gốc** (root cause) nếu là fix, không chỉ mô tả hiện tượng.
+   - Tách riêng commit `test(...)` khỏi commit code chính nếu code + test được viết trong cùng phiên làm việc nhưng khác trọng tâm — giúp review rõ ràng hơn.
 
 ---
 
