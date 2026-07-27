@@ -1,60 +1,70 @@
-# 💻 The MC Hub — Developer Onboarding & Contribution Guide
+# Development & Onboarding Guide
 
-Hướng dẫn thiết lập môi trường phát triển (Local Development), quy trình viết code, chạy kiểm thử và chuẩn Commit cho lập trình viên mới.
+Document Version: 2.0.0
+Target Platform: MC Voice Training Backend
 
 ---
 
-## 🚀 1. Thiết Lập Môi Trường Local
+## 1. Prerequisites & Environment Setup
 
-### Yêu Cầu Cài Đặt
-- JDK 21 (Amazon Corretto hoặc Temurin Java 21)
-- Apache Maven 3.9+
-- Node.js v20.x, npm v10.x
-- Git & GitNexus CLI (`npm install -g gitnexus`)
+Ensure the following tools are installed on your local development machine:
 
-### Clone & Chạy Backend
+- **Java Development Kit (JDK)**: OpenJDK 21 or Amazon Corretto 21
+- **Build Tool**: Apache Maven 3.9+
+- **Database**: MongoDB 7.0+ (Local instance or MongoDB Atlas account)
+- **Search Engine**: Elasticsearch 8.x (Optional for local search testing)
+- **IDE**: IntelliJ IDEA (Recommended) or VS Code with Java Extension Pack
+
+---
+
+## 2. Getting Started (Step-by-Step)
+
+### Step 1: Clone & Configure Environment
 ```bash
+git clone https://github.com/mchub/MC_Voice_Training_Backend.git
 cd MC_Voice_Training_Backend
 cp .env.example .env
-mvn clean compile spring-boot:run
 ```
-> API Server sẽ khởi chạy tại: `http://localhost:5000`
 
-### Chạy Frontend
+Open `.env` and configure required parameters:
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `CLOUDINARY_*`
+- `PAYOS_*`
+- `BREVO_SMTP_KEY`
+
+### Step 2: Build & Generate MapStruct Mappers
 ```bash
-cd MC_Voice_Training_Frontend
-npm install
-npm run dev
+mvn clean compile
 ```
-> App UI sẽ khởi chạy tại: `http://localhost:5173`
+
+### Step 3: Launch Local Development Server
+```bash
+mvn spring-boot:run
+```
+The server will start on port `5000` (or the port defined in `.env`).
 
 ---
 
-## 🧪 2. Chạy Kiểm Thử (Testing & Verification)
+## 3. Running Unit & Integration Tests
 
-### Unit & Integration Tests (Backend)
 ```bash
-mvn clean test
-```
-*Tất cả 533+ unit tests phải vượt qua 100% trước khi thực hiện pull request / commit.*
+# Run full test suite (46 test classes, 493+ @Test methods)
+mvn test
 
-### E2E Tests (Frontend)
-```bash
-npx playwright test
+# Run a single test class
+mvn test -Dtest=AuthControllerTest
+
+# Run full build package including tests
+mvn clean package
 ```
 
 ---
 
-## 📌 3. Quy Trình Phân Nhánh & Conventional Commits
+## 4. MapStruct Code Regeneration Workflow
 
-### Đặt tên Branch:
-- `feature/<tên-tính-năng>`: Tính năng mới.
-- `fix/<tên-lỗi>`: Sửa lỗi bug.
-- `refactor/<tên-module>`: Tối ưu hóa code.
+MapStruct mappers are defined under `src/main/java/com/mchub/mapper/`. Whenever you add fields to DTOs or Entities, you MUST re-run compilation to regenerate target implementation classes:
 
-### Cấu trúc Message Commit:
-- `feat(scope): ...` — Thêm tính năng mới.
-- `fix(scope): ...` — Sửa lỗi bug.
-- `refactor(scope): ...` — Cải tiến cấu trúc mã nguồn.
-- `docs(scope): ...` — Cập nhật tài liệu.
-- `test(scope): ...` — Thêm/sửa Unit Test.
+```bash
+mvn compile
+```

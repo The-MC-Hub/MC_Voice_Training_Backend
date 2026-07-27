@@ -1,76 +1,66 @@
-# 🚀 The MC Hub — System Deployment & Operations Guide
+# Production Deployment & Infrastructure Guide
 
-Hướng dẫn triển khai hệ thống (Deployment), cấu hình môi trường Production (Render, Docker, Vercel) và vận hành hệ thống.
-
----
-
-## 🛠️ 1. Môi Trường & Yêu Cầu Cần Thiết
-
-- **Backend:** Java 21 LTS (OpenJDK), Maven 3.9+, Spring Boot 3.3.10
-- **Frontend:** Node.js 20+, React 18, Vite 5, TailwindCSS / Vanilla CSS
-- **Database:** MongoDB Atlas (Cluster `MainDatabase`), Elasticsearch (Docker/Cloud)
-- **External Services:** PayOS, Cloudinary, Brevo SMTP (Email), Google OAuth 2.0
+Document Version: 2.0.0
+Target Host: Render Cloud Platform (`render.yaml`)
 
 ---
 
-## ⚙️ 2. Cấu Hình Biến Môi Trường (.env)
+## 1. Overview & Cloud Architecture
 
-Tạo file `.env` từ mẫu `.env.example`:
+The backend application is containerized via Docker and deployed on Render cloud environment.
 
-```env
-# Server & DB
-PORT=5000
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/mchub?retryWrites=true&w=majority
+- **Production URL**: `https://mc-voice-training-backend.onrender.com`
+- **Instance Type**: Free / Web Service
+- **Auto-Sleep Behavior**: Free tier instances enter sleep mode after 15 minutes of HTTP inactivity.
+- **Cold Start Duration**: 30 to 60 seconds upon receiving the first wake-up HTTP request.
 
-# Security & Auth
-JWT_SECRET=your-32-byte-secret-key-here
-JWT_EXPIRATION_MS=86400000
+---
 
-# Integrations
-CLOUDINARY_CLOUD_NAME=mc-voice
-CLOUDINARY_API_KEY=123456789
-CLOUDINARY_API_SECRET=your-secret
+## 2. Docker Build & Deployment Configuration
 
-PAYOS_CLIENT_ID=your-client-id
-PAYOS_API_KEY=your-api-key
-PAYOS_CHECKSUM_KEY=your-checksum-key
+### Dockerfile Specification
+Multi-stage Docker build utilizing Eclipse Temurin 21 JRE:
 
-ALLOWED_ORIGINS=http://localhost:5173,https://mchub.vn
+```dockerfile
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 5000
+ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
 ---
 
-## 🐳 3. Triển Khai Bằng Docker Container
+## 3. Render Blueprint (`render.yaml`) Deployment
 
-### Build Docker Image
-```bash
-docker build -t mchub-backend:latest .
-```
+The service deployment is governed by `render.yaml` at the root directory:
 
-### Chạy bằng Docker Compose
-```bash
-docker-compose up -d
+```yaml
+services:
+  - type: web
+    name: mc-voice-training-backend
+    env: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
 ```
 
 ---
 
-## ☁️ 4. Triển Khai Production (Render & Vercel)
+## 4. Production Health Monitoring & Incident Mitigation
 
-### Backend (Render Service)
-1. Đăng nhập Render.com -> New Web Service.
-2. Connect Repo Git -> Select Dockerfile / Maven Runtime.
-3. Configure Env Variables (`MONGODB_URI`, `JWT_SECRET`, `PAYOS_*`).
-4. Set Health Check Path: `/api/v1/public/landing`.
-
-### Frontend (Vercel)
-1. Import Frontend Repo trên Vercel.
-2. Build Command: `npm run build`, Output Directory: `dist`.
-3. Configure `VITE_API_BASE_URL=https://mc-voice-training-backend.onrender.com`.
-
----
-
-## 🔍 5. Vận Hành & Giám Sát (Operations & Maintenance)
-
-- **Realtime Logs:** Truy cập `/api/v1/admin/logs` qua SSE Stream.
-- **System Health:** Kiểm tra `/api/v1/admin/system/health` để theo dõi Heap RAM, Virtual Threads và MongoDB Status.
-- **Bảo trì Hệ thống:** Đổi `MAINTENANCE_MODE=true` trong Bảng quản trị để chặn kết nối tạm thời cho đợt nâng cấp DB.
+- **Health Check Endpoint**: `GET /actuator/health` (Returns `{ "status": "UP" }`)
+- **System Metrics**: Monitored via `Actuator` and `AdminSystemController` (`/api/v1/admin/health`).
+- **Mitigation for Cold Starts**: Configure external cron keep-alive ping every 10 minutes to maintain active status.

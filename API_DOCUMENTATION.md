@@ -1,81 +1,65 @@
-# 🌐 The MC Hub — Central API Documentation
+# API Documentation & OpenAPI Specification Index
 
-Tài liệu mô tả chi tiết tất cả REST APIs, cấu trúc Request/Response, chuẩn Authentication và Mã lỗi hệ thống (ErrorCode).
+Document Version: 2.0.0
+Base URL: `/api/v1`
+Interactive Swagger UI: `http://localhost:<PORT>/swagger-ui/index.html` (Requires ADMIN authentication)
 
 ---
 
-## 🔑 Authentication & Headers
+## 1. Authentication & Security Headers
 
-- **Base URL:** `/api/v1`
-- **Header xác thực:** `Authorization: Bearer <JWT_TOKEN>`
-- **Response Format:**
-```json
-{
-  "status": "success",
-  "message": "Nội dung thông báo",
-  "data": { ... },
-  "errorCode": null
-}
+All protected endpoints require the HTTP Authorization Header:
+```http
+Authorization: Bearer <JWT_ACCESS_TOKEN>
 ```
 
 ---
 
-## 📋 Danh Mục Endpoints Chính
+## 2. API Module Catalog & Complete Use Case Mapping
 
-### 1. Authentication & User Account (`/api/v1/auth`, `/api/v1/users`)
-| Method | Endpoint | Auth | Mô tả |
-|---|---|---|---|
-| `POST` | `/auth/register` | Public | Đăng ký tài khoản người dùng mới |
-| `POST` | `/auth/login` | Public | Đăng nhập bằng Email/Password, nhận JWT |
-| `POST` | `/auth/google` | Public | Đăng nhập/Đăng ký qua Google ID Token |
-| `GET` | `/users/me` | User | Lấy thông tin cá nhân hiện tại |
-| `PUT` | `/users/profile` | User | Cập nhật thông tin profile cá nhân |
+For exhaustive endpoint specifications, Class Diagrams, Sequence Diagrams, and Step-by-Step Test Verification Reports, consult the 80 Sub-UC document files located under `docs/use-cases/`:
 
-### 2. Voice Practice & AI Analysis (`/api/v1/voice`)
-| Method | Endpoint | Auth | Mô tả |
-|---|---|---|---|
-| `GET` | `/voice/lessons` | Public | Danh sách bài luyện giọng theo danh mục |
-| `GET` | `/voice/lessons/{id}` | Public | Chi tiết bài luyện giọng |
-| `POST` | `/voice/practice/analyze` | User | Tải lên file ghi âm bài tập để AI chấm điểm |
-| `POST` | `/voice/practice/analyze-guest` | Public | Chấm điểm bài đọc dùng thử cho Khách |
-
-### 3. Payment & Pricing (`/api/v1/payment`)
-| Method | Endpoint | Auth | Mô tả |
-|---|---|---|---|
-| `GET` | `/payment/plans` | Public | Danh sách các gói cước VIP (BASIC, FULL, ANNUAL) |
-| `POST` | `/payment/create-order` | User | Tạo link thanh toán PayOS nhận `checkoutUrl` |
-| `POST` | `/payment/webhook` | Public | Webhook xử lý phản hồi tự động từ PayOS |
-
-### 4. Admin Management (`/api/v1/admin`)
-| Method | Endpoint | Auth | Mô tả |
-|---|---|---|---|
-| `GET` | `/admin/system/health` | Admin | Giám sát RAM, Threads, Uptime, DB Status |
-| `PUT` | `/admin/system/settings/dynamic` | Admin | Bật/Tắt Chế độ Bảo trì (Maintenance Mode) |
-| `PUT` | `/admin/users/{id}/suspend-temporary` | Admin | Tạm khóa tài khoản theo số ngày (1, 3, 7, 30 ngày) |
-| `PUT` | `/admin/users/{id}/unsuspend` | Admin | Mở khóa tài khoản ngay lập tức |
-| `POST` | `/admin/transactions/{id}/refund` | Admin | Đánh dấu hoàn tiền và ghi lý do |
-| `GET` | `/admin/bookings/stats` | Admin | Thống kê lịch đặt MC theo trạng thái |
-| `PUT` | `/admin/bookings/{id}/force-cancel` | Admin | Bắt buộc hủy đơn đặt MC |
-
-### 5. Reports & Moderation (`/api/v1/reports`)
-| Method | Endpoint | Auth | Mô tả |
-|---|---|---|---|
-| `POST` | `/reports` | User | Gửi báo cáo nội dung hoặc hành vi vi phạm |
-| `GET` | `/reports/admin` | Admin | Xem toàn bộ báo cáo vi phạm |
-| `PUT` | `/reports/{id}/resolve` | Admin | Duyệt (Resolve) hoặc Bỏ qua (Dismiss) báo cáo |
-| `PUT` | `/reports/bulk-resolve` | Admin | Duyệt/bỏ qua hàng loạt báo cáo vi phạm |
+| Sub-System Module | Base Path | Endpoints Count | Technical Reference Link |
+|---|---|:---:|---|
+| **01. Authentication** | `/api/v1/auth` | 6 APIs | [uc-01-authentication](../docs/use-cases/uc-01-authentication/README.md) |
+| **02. User Profile** | `/api/v1/users` | 6 APIs | [uc-02-user-profile](../docs/use-cases/uc-02-user-profile/README.md) |
+| **03. Voice Training** | `/api/v1/voice` | 6 APIs | [uc-03-voice-training](../docs/use-cases/uc-03-voice-training/README.md) |
+| **04. Courses & Learning** | `/api/v1/courses` | 6 APIs | [uc-04-courses-learning](../docs/use-cases/uc-04-courses-learning/README.md) |
+| **05. Community & Leaderboard**| `/api/v1/community` | 6 APIs | [uc-05-community-leaderboard](../docs/use-cases/uc-05-community-leaderboard/README.md) |
+| **06. Payment & Subscription** | `/api/v1/payments` | 7 APIs | [uc-06-payment-subscription](../docs/use-cases/uc-06-payment-subscription/README.md) |
+| **07. Onboarding Quest** | `/api/v1/quests` | 2 APIs | [uc-07-onboarding-quest](../docs/use-cases/uc-07-onboarding-quest/README.md) |
+| **08. Support & Public** | `/api/v1/public` | 4 APIs | [uc-08-support-public](../docs/use-cases/uc-08-support-public/README.md) |
+| **09. Admin Dashboard** | `/api/v1/admin` | 10 APIs | [uc-09-admin-dashboard](../docs/use-cases/uc-09-admin-dashboard/README.md) |
+| **10. Marketing Communication**| `/api/v1/admin/email` | 4 APIs | [uc-10-marketing-communication](../docs/use-cases/uc-10-marketing-communication/README.md) |
+| **11. MC Booking & Hiring** | `/api/v1/bookings` | 6 APIs | [uc-11-mc-booking-hiring](../docs/use-cases/uc-11-mc-booking-hiring/README.md) |
+| **12. Chat & Messaging** | `/api/v1/chats` | 6 APIs | [uc-12-chat-messaging](../docs/use-cases/uc-12-chat-messaging/README.md) |
+| **13. Peer Review** | `/api/v1/peer-reviews` | 5 APIs | [uc-13-peer-review](../docs/use-cases/uc-13-peer-review/README.md) |
+| **14. Announcement & Banner** | `/api/v1/announcements` | 2 APIs | [uc-14-announcement-banner](../docs/use-cases/uc-14-announcement-banner/README.md) |
+| **15. CV & Portfolio** | `/api/v1/cv` | 3 APIs | [uc-15-cv-portfolio](../docs/use-cases/uc-15-cv-portfolio/README.md) |
+| **16. Gamification & Minigame**| `/api/v1/minigames` | 3 APIs | [uc-16-gamification-minigame](../docs/use-cases/uc-16-gamification-minigame/README.md) |
+| **17. Availability Calendar** | `/api/v1/availability` | 3 APIs | [uc-17-mc-availability-calendar](../docs/use-cases/uc-17-mc-availability-calendar/README.md) |
+| **18. Content Moderation** | `/api/v1/admin/moderation`| 3 APIs | [uc-18-admin-content-moderation](../docs/use-cases/uc-18-admin-content-moderation/README.md) |
 
 ---
 
-## ⚠️ Danh Mục Mã Lỗi System (ErrorCodes)
+## 3. Standard Response Envelope Format
 
-| Code | HTTP Status | Mô tả |
-|---|---|---|
-| `VALIDATION_FAILED` | 400 Bad Request | Dữ liệu gửi lên không phù hợp validator |
-| `USER_NOT_AUTHENTICATED` | 401 Unauthorized | JWT hết hạn hoặc chưa đăng nhập |
-| `ACCESS_DENIED` | 403 Forbidden | Không đủ quyền hạn thực hiện hành động |
-| `RESOURCE_NOT_FOUND` | 404 Not Found | Tài nguyên requested không tồn tại |
-| `USER_NOT_FOUND` | 404 Not Found | Tài khoản người dùng không tồn tại |
-| `ACCOUNT_LOCKED` | 403 Forbidden | Tài khoản bị tạm khóa/khóa có thời hạn |
-| `MAINTENANCE_MODE` | 503 Service Unavailable | Hệ thống đang bật Chế độ Bảo trì |
-| `INTERNAL_ERROR` | 500 Internal Error | Lỗi nội bộ hệ thống |
+### 3.1 Success Envelope (HTTP 200 / 201)
+```json
+{
+  "status": "success",
+  "message": "Operation completed successfully",
+  "data": { ... }
+}
+```
+
+### 3.2 Error Envelope (HTTP 4xx / 5xx)
+```json
+{
+  "status": "fail",
+  "message": "Detailed error description",
+  "data": {
+    "errorCode": "VALIDATION_FAILED"
+  }
+}
+```
