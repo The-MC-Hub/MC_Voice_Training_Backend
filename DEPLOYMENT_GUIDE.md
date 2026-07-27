@@ -1,66 +1,154 @@
-# Production Deployment & Infrastructure Guide
+# Production Deployment & Operations Manual
 
 Document Version: 2.0.0
-Target Host: Render Cloud Platform (`render.yaml`)
+Target Environment: Render Cloud Platform / Docker Container
+Production Service Endpoint: `https://mc-voice-training-backend.onrender.com`
 
 ---
 
-## 1. Overview & Cloud Architecture
+## 1. Production Architecture Overview
 
-The backend application is containerized via Docker and deployed on Render cloud environment.
+The backend is deployed as a Dockerized container on Render's Web Service infrastructure.
 
-- **Production URL**: `https://mc-voice-training-backend.onrender.com`
-- **Instance Type**: Free / Web Service
-- **Auto-Sleep Behavior**: Free tier instances enter sleep mode after 15 minutes of HTTP inactivity.
-- **Cold Start Duration**: 30 to 60 seconds upon receiving the first wake-up HTTP request.
+```mermaid
+graph LR
+    subgraph Internet
+        Users["Users / Clients"]
+    end
 
----
+    subgraph RenderCloud["Render Cloud Infrastructure"]
+        LoadBalancer["Render TLS Load Balancer (SSL Termination)"]
+        DockerContainer["Backend Docker Container (Temurin JRE 21 / Port 5000)"]
+    end
 
-## 2. Docker Build & Deployment Configuration
+    subgraph ExternalSaaS["Cloud Services & Databases"]
+        MongoAtlas[("MongoDB Atlas Cluster")]
+        PayOSGateway["PayOS Payment Gateway"]
+        BrevoSMTP["Brevo Email Infrastructure"]
+        CloudinaryCDN["Cloudinary Asset Storage"]
+    end
 
-### Dockerfile Specification
-Multi-stage Docker build utilizing Eclipse Temurin 21 JRE:
-
-```dockerfile
-FROM maven:3.9.6-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
-EXPOSE 5000
-ENTRYPOINT ["java", "-jar", "app.jar"]
+    Users -->|HTTPS / WSS| LoadBalancer
+    LoadBalancer -->|HTTP / Internal Port 5000| DockerContainer
+    DockerContainer --> MongoAtlas
+    DockerContainer --> PayOSGateway
+    DockerContainer --> BrevoSMTP
+    DockerContainer --> CloudinaryCDN
 ```
 
 ---
 
-## 3. Render Blueprint (`render.yaml`) Deployment
+## 2. Docker Build & Container Specification
 
-The service deployment is governed by `render.yaml` at the root directory:
+### 2.1 Multi-Stage `Dockerfile`
+```dockerfile
+# Stage 1: Build JAR package using Maven & OpenJDK 21
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Copy dependency pom.xml first to leverage Docker layer caching
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source files and build production package
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Stage 2: Minimal Runtime Container using Eclipse Temurin 21 JRE
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Create non-root system user for container security hardening
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy compiled JAR from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# Expose internal container port
+EXPOSE 5000
+
+# Set JVM performance parameters (Virtual Threads + Memory Tuning)
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dspring.threads.virtual.enabled=true"
+
+# Launch Application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+```
+
+---
+
+## 3. Render Infrastructure Setup (`render.yaml`)
 
 ```yaml
 services:
   - type: web
     name: mc-voice-training-backend
     env: docker
+    region: singapore
     plan: free
     healthCheckPath: /actuator/health
+    autoDeploy: true
     envVars:
       - key: PORT
         value: 5000
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: PAYOS_CLIENT_ID
+        sync: false
+      - key: PAYOS_API_KEY
+        sync: false
+      - key: PAYOS_CHECKSUM_KEY
+        sync: false
+      - key: BREVO_SMTP_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: AI_ANALYZE_URL
+        sync: false
+      - key: AI_TTS_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
         sync: false
 ```
 
 ---
 
-## 4. Production Health Monitoring & Incident Mitigation
+## 4. Cold-Start Prevention Automation
 
-- **Health Check Endpoint**: `GET /actuator/health` (Returns `{ "status": "UP" }`)
-- **System Metrics**: Monitored via `Actuator` and `AdminSystemController` (`/api/v1/admin/health`).
-- **Mitigation for Cold Starts**: Configure external cron keep-alive ping every 10 minutes to maintain active status.
+Render free tier instances enter sleep mode after 15 minutes of inactivity. First request wake-up takes 30-60 seconds.
+
+### Automated Keep-Alive Ping Cron
+To keep the production instance warm, configure a ping script (e.g. via GitHub Actions or Cron-Job.org):
+
+```bash
+# Ping health check endpoint every 10 minutes
+curl -s https://mc-voice-training-backend.onrender.com/actuator/health > /dev/null
+```
+
+---
+
+## 5. Operations, Health Monitoring & Database Backups
+
+### 5.1 System Actuator Monitoring Endpoints
+- **Health Check**: `GET /actuator/health` (Returns status `UP`)
+- **App Metrics**: `GET /actuator/metrics` (Requires ADMIN credentials)
+- **Log Stream**: `GET /api/v1/admin/logs/stream` (SSE Server-Sent Events stream for realtime logs)
+
+### 5.2 MongoDB Atlas Automated Backups
+1. **Continuous Cloud Backups**: Configured in MongoDB Atlas under `Backup -> Cloud Backups`.
+2. **Point-In-Time Recovery (PITR)**: Enables 7-day continuous restore capabilities.
+3. **Manual CLI Dump Script**:
+   ```bash
+   mongodump --uri="MONGODB_PRODUCTION_URI" --out=./backups/$(date +%Y%m%m_%H%M%S)
+   ```

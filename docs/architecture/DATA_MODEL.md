@@ -1,180 +1,119 @@
-# Architecture Document: Data Model & Entity Relationship Specification
+# Architecture Document: Data Model & Database Schema Specification
 
-Document Version: 1.0.0
+Document Version: 2.0.0
 Database Target: MongoDB Atlas (`mchub` database)
-Total Collections / Entities: 46 Document Models
+Total Collections: 46 Document Models
 
 ---
 
-## 1. Domain Group Overview
+## 1. Complete Collection Catalog & Index Registry
 
-The 46 MongoDB collections are organized into 8 functional domain clusters:
-
-1. **User & Identity Domain**: `users`, `client_profiles`, `mc_profiles`, `user_stats`, `otp_verifications`, `refresh_tokens`, `referrals`, `user_highlights`
-2. **Voice Training & AI Domain**: `voice_lessons`, `practice_sessions`, `lesson_adaptive_stats`, `guest_voice_usages`, `voice_lesson_search_documents`
-3. **Courses & Learning Domain**: `courses`, `course_enrollments`, `reading_guides`, `certificates`
-4. **Booking & Hiring Domain**: `bookings`, `booking_details`, `schedules`
-5. **Chat & Messaging Domain**: `conversations`, `messages`
-6. **Gamification & Community Domain**: `competitions`, `competition_records`, `user_vouchers`, `discount_codes`, `minigame_results`, `social_posts`, `favorites`, `reviews`, `practice_reviews`
-7. **Payment & Subscriptions Domain**: `payment_transactions`, `transactions`, `plan_definitions`
-8. **Admin & Operational Domain**: `reports`, `audit_logs`, `system_logs`, `system_settings`, `announcements`, `email_campaigns`, `email_templates`, `email_logs`, `cv_documents`, `case_studies`, `search_interests`, `notifications`
+| Collection Name | Document Class | Primary Key | Key Indexes & Options | Purpose |
+|---|---|---|---|---|
+| `users` | `User.java` | `_id` | `email` (Unique, Asc), `role` (Asc), `createdAt` (Desc) | Account credentials & core profile |
+| `user_stats` | `UserStats.java` | `_id` | `userId` (Unique, Asc), `totalXp` (Desc), `currentStreak` (Desc) | Leaderboard & gamification stats |
+| `client_profiles` | `ClientProfile.java` | `_id` | `userId` (Unique, Asc), `companyName` (Asc) | Employer / Client profile data |
+| `mc_profiles` | `MCProfile.java` | `_id` | `userId` (Unique, Asc), `categories` (Multikey), `rating` (Desc) | MC Directory & discovery search |
+| `voice_lessons` | `VoiceLesson.java` | `_id` | `category` (Asc), `difficulty` (Asc), `isPublic` (Asc) | Practice lesson script metadata |
+| `practice_sessions` | `PracticeSession.java`| `_id` | `userId` (Asc), `lessonId` (Asc), `createdAt` (Desc) | Voice scoring attempt history |
+| `lesson_adaptive_stats`| `LessonAdaptiveStats.java`| `_id` | `userId` (Asc) + `lessonId` (Asc) (Compound Unique) | Per-user adaptive lesson performance |
+| `guest_voice_usages` | `GuestVoiceUsage.java`| `_id` | `ipAddress` (Asc), `createdAt` (Desc) | Guest practice trial cooldown tracker |
+| `courses` | `Course.java` | `_id` | `title` (Text), `category` (Asc), `isPublished` (Asc) | Academy courses & lesson structures |
+| `course_enrollments` | `CourseEnrollment.java` | `_id` | `userId` (Asc) + `courseId` (Asc) (Compound Unique) | Course enrollment & progress records |
+| `certificates` | `Certificate.java` | `_id` | `certificateCode` (Unique, Asc), `userId` (Asc) | Issued course completion certs |
+| `bookings` | `Booking.java` | `_id` | `clientId` (Asc), `mcId` (Asc), `status` (Asc), `eventDate` (Desc) | Show booking transactions |
+| `booking_details` | `BookingDetail.java` | `_id` | `bookingId` (Unique, Asc) | Detailed event parameters & requirements |
+| `schedules` | `Schedule.java` | `_id` | `mcId` (Asc), `startTime` (Asc), `endTime` (Asc) | MC availability calendar slots |
+| `payment_transactions`| `PaymentTransaction.java`| `_id` | `orderCode` (Unique, Asc), `userId` (Asc), `status` (Asc) | PayOS payments & ledger |
+| `plan_definitions` | `PlanDefinition.java` | `_id` | `planCode` (Unique, Asc) | VIP subscription plan configurations |
+| `conversations` | `Conversation.java` | `_id` | `participantIds` (Multikey, Asc), `updatedAt` (Desc) | In-app chat threads |
+| `messages` | `Message.java` | `_id` | `conversationId` (Asc), `createdAt` (Desc) | In-app chat messages |
+| `competitions` | `Competition.java` | `_id` | `status` (Asc), `startDate` (Asc), `endDate` (Desc) | Voice Arena competitions |
+| `competition_records` | `CompetitionRecord.java`| `_id` | `competitionId` (Asc) + `userId` (Asc) (Compound Unique) | User contest entries & scoring |
+| `user_vouchers` | `UserVoucher.java` | `_id` | `userId` (Asc), `isUsed` (Asc), `expiresAt` (Asc) | Gamification voucher wallet |
+| `discount_codes` | `DiscountCode.java` | `_id` | `code` (Unique, Asc), `isActive` (Asc) | System promotional promo codes |
+| `reports` | `Report.java` | `_id` | `reporterId` (Asc), `status` (Asc), `createdAt` (Desc) | Moderation content reports |
+| `audit_logs` | `AuditLog.java` | `_id` | `adminId` (Asc), `action` (Asc), `timestamp` (Desc) | System administrative audit logs |
+| `system_logs` | `SystemLog.java` | `_id` | `level` (Asc), `timestamp` (Desc) | Application runtime execution logs |
+| `announcements` | `Announcement.java` | `_id` | `isActive` (Asc), `publishedAt` (Desc) | In-app system announcements |
 
 ---
 
-## 2. Main Entity Relationship Diagrams
+## 2. Exhaustive Schema Specifications (Core Entities)
 
-### 2.1 Core Identity & User Profile Cluster
-
-```mermaid
-classDiagram
-    class User {
-        +ObjectId id
-        +String fullName
-        +String email
-        +String passwordHash
-        +Role role
-        +String plan
-        +Boolean isActive
-        +Boolean is2FAEnabled
-        +LocalDateTime createdAt
-    }
-    class UserStats {
-        +ObjectId id
-        +String userId
-        +Integer totalXp
-        +Integer currentStreak
-        +Integer highestStreak
-        +Integer streakFreezeCount
-        +Double totalPracticeTimeMinutes
-    }
-    class ClientProfile {
-        +ObjectId id
-        +String userId
-        +String companyName
-        +String industry
-        +String contactPhone
-    }
-    class MCProfile {
-        +ObjectId id
-        +String userId
-        +String bio
-        +List~String~ categories
-        +Double hourlyRate
-        +Double rating
-        +Boolean isVerified
-    }
-    class OtpVerification {
-        +ObjectId id
-        +String email
-        +String otpCode
-        +LocalDateTime expiresAt
-    }
-    class RefreshToken {
-        +ObjectId id
-        +String userId
-        +String token
-        +LocalDateTime expiresAt
-    }
-
-    User "1" -- "1" UserStats : has
-    User "1" -- "0..1" ClientProfile : has
-    User "1" -- "0..1" MCProfile : has
-    User "1" -- "0..*" OtpVerification : receives
-    User "1" -- "0..*" RefreshToken : issues
+### 2.1 `User` Entity (`users` Collection)
+```json
+{
+  "_id": { "$oid": "66a01b2c3d4e5f6789012300" },
+  "fullName": "Nguyen Van A",
+  "email": "user@mchub.vn",
+  "passwordHash": "$2a$10$e8N3vU... (BCrypt 10 rounds)",
+  "role": "USER",
+  "plan": "FREE",
+  "avatarUrl": "https://res.cloudinary.com/mchub/avatars/user_101.jpg",
+  "bio": "Học viên MC truyền hình chuyên nghiệp",
+  "isActive": true,
+  "is2FAEnabled": false,
+  "twoFASecret": null,
+  "createdAt": { "$date": "2026-01-15T08:00:00.000Z" },
+  "updatedAt": { "$date": "2026-07-27T10:30:00.000Z" }
+}
 ```
 
-### 2.2 Voice Training & Practice Cluster
-
-```mermaid
-classDiagram
-    class VoiceLesson {
-        +ObjectId id
-        +String title
-        +String category
-        +String difficulty
-        +String contentText
-        +String referenceAudioUrl
-    }
-    class PracticeSession {
-        +ObjectId id
-        +String userId
-        +String lessonId
-        +String audioUrl
-        +Double overallScore
-        +Double pronunciationScore
-        +Double intonationScore
-        +Double speedPacingScore
-        +LocalDateTime createdAt
-    }
-    class LessonAdaptiveStats {
-        +ObjectId id
-        +String userId
-        +String lessonId
-        +Integer attemptCount
-        +Double averageScore
-        +Double highestScore
-    }
-
-    VoiceLesson "1" -- "0..*" PracticeSession : practiced_in
-    User "1" -- "0..*" PracticeSession : performs
-    User "1" -- "0..*" LessonAdaptiveStats : tracks
+### 2.2 `PracticeSession` Entity (`practice_sessions` Collection)
+```json
+{
+  "_id": { "$oid": "66a01b2c3d4e5f6789012355" },
+  "userId": "66a01b2c3d4e5f6789012300",
+  "lessonId": "66a01b2c3d4e5f6789012310",
+  "audioUrl": "https://res.cloudinary.com/mchub/voice-recordings/rec_99.wav",
+  "overallScore": 88.5,
+  "pronunciationScore": 90.0,
+  "intonationScore": 85.0,
+  "speedPacingScore": 89.0,
+  "accuracyScore": 90.0,
+  "durationSeconds": 45.2,
+  "aiFeedback": "Giọng đọc tròn vành rõ chữ, nhịp điệu ổn định.",
+  "createdAt": { "$date": "2026-07-27T14:20:00.000Z" }
+}
 ```
 
-### 2.3 Booking & Hiring Cluster
+### 2.3 `Booking` Entity (`bookings` Collection)
+```json
+{
+  "_id": { "$oid": "66a01b2c3d4e5f6789012400" },
+  "clientId": "66a01b2c3d4e5f6789012300",
+  "mcId": "66a01b2c3d4e5f6789012305",
+  "status": "CONFIRMED",
+  "totalAmount": 5000000.0,
+  "depositAmount": 2000000.0,
+  "eventDate": { "$date": "2026-08-15T09:00:00.000Z" },
+  "createdAt": { "$date": "2026-07-25T11:00:00.000Z" },
+  "updatedAt": { "$date": "2026-07-26T15:30:00.000Z" }
+}
+```
 
-```mermaid
-classDiagram
-    class Booking {
-        +ObjectId id
-        +String clientId
-        +String mcId
-        +BookingStatus status
-        +Double totalAmount
-        +LocalDateTime eventDate
-    }
-    class BookingDetail {
-        +ObjectId id
-        +String bookingId
-        +String eventName
-        +String venueLocation
-        +String specialRequirements
-    }
-    class Schedule {
-        +ObjectId id
-        +String mcId
-        +LocalDateTime startTime
-        +LocalDateTime endTime
-        +Boolean isBusy
-    }
-    class PaymentTransaction {
-        +ObjectId id
-        +String bookingId
-        +String orderCode
-        +Double amount
-        +TransactionStatus status
-        +String paymentMethod
-    }
-
-    User "1" -- "0..*" Booking : places_as_client
-    MCProfile "1" -- "0..*" Booking : receives_as_mc
-    Booking "1" -- "1" BookingDetail : contains
-    MCProfile "1" -- "0..*" Schedule : manages
-    Booking "1" -- "0..*" PaymentTransaction : settles
+### 2.4 `PaymentTransaction` Entity (`payment_transactions` Collection)
+```json
+{
+  "_id": { "$oid": "66a01b2c3d4e5f6789012500" },
+  "userId": "66a01b2c3d4e5f6789012300",
+  "orderCode": 1722080001,
+  "amount": 299000.0,
+  "currency": "VND",
+  "status": "SUCCESS",
+  "paymentMethod": "PAYOS_VIETQR",
+  "description": "Nang cap tai khoan VIP 1 Thang",
+  "payosTransactionId": "PAYOS_TX_998877",
+  "createdAt": { "$date": "2026-07-27T11:15:00.000Z" }
+}
 ```
 
 ---
 
-## 3. Mongo Document Specifications & Indexes
+## 3. Database Migration & Index Management Rules
 
-| Collection Name | Primary Key | Key Indexes | Purpose |
-|---|---|---|---|
-| `users` | `_id` (ObjectId) | `email` (Unique), `role`, `createdAt` | Account credentials & core profile |
-| `user_stats` | `_id` (ObjectId) | `userId` (Unique), `totalXp` (Desc) | Leaderboard & gamification stats |
-| `mc_profiles` | `_id` (ObjectId) | `userId` (Unique), `categories`, `rating` | MC Directory & discovery search |
-| `voice_lessons` | `_id` (ObjectId) | `category`, `difficulty` | Training lesson metadata |
-| `practice_sessions` | `_id` (ObjectId) | `userId`, `lessonId`, `createdAt` | Recorded voice scoring history |
-| `bookings` | `_id` (ObjectId) | `clientId`, `mcId`, `status`, `eventDate` | Show booking transactions |
-| `payment_transactions`| `_id` (ObjectId) | `orderCode` (Unique), `userId`, `status` | PayOS & financial ledger |
-| `conversations` | `_id` (ObjectId) | `participantIds` | Chat conversation threads |
-| `messages` | `_id` (ObjectId) | `conversationId`, `createdAt` | Real-time chat messages |
-| `system_logs` | `_id` (ObjectId) | `level`, `timestamp` | Security & runtime audit logs |
+1. **Auto Indexing Configuration**: `spring.data.mongodb.auto-index-creation=true` is enabled in development. In production, indexes are pre-built via MongoDB shell scripts during deployment.
+2. **Compound Index Design Pattern**:
+   - `practice_sessions`: Compound index on `{ userId: 1, createdAt: -1 }` to optimize user history retrieval queries.
+   - `messages`: Compound index on `{ conversationId: 1, createdAt: -1 }` to support instant chat history pagination.

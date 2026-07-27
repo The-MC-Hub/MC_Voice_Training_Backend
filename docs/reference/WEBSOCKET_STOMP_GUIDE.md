@@ -1,75 +1,99 @@
-# Technical Reference: WebSocket & STOMP Protocol Specification
+# Technical Reference: WebSocket & STOMP Protocol Deep Spec
 
-Document Version: 1.0.0
+Document Version: 2.0.0
 WebSocket Endpoint: `/ws-chat`
 Supported Protocols: STOMP over SockJS / Pure WebSocket
 
 ---
 
-## 1. Overview & Connection Establishment
+## 1. Connection Lifecycle & STOMP Protocol Handshake
 
-The chat subsystem utilizes Spring WebSocket with STOMP messaging protocol to deliver real-time messages between Client users and MCs.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Web / Mobile App
+    participant Handshake as HandshakeInterceptor
+    participant STOMPEngine as Spring STOMP Broker
+    participant Topic as /topic/conversation/{id}
 
-### Connection Handshake
-- **URL**: `ws://<server-host>:<port>/ws-chat` (or `wss://` in production)
-- **SockJS Fallback**: `http://<server-host>:<port>/ws-chat`
-- **Authentication**: JWT token MUST be passed in STOMP CONNECT frame header:
-  ```stomp
-  CONNECT
-  accept-version:1.1,1.2
-  heart-beat:10000,10000
-  Authorization:Bearer <JWT_ACCESS_TOKEN>
-
-  ^@
-  ```
-
----
-
-## 2. Topic Subscription & Destinations
-
-### 2.1 Receiving Realtime Messages
-Client subscribes to individual conversation channels:
-- **Destination**: `/topic/conversation/{conversationId}`
-- **Payload Schema**:
-  ```json
-  {
-    "id": "66a01b2c3d4e5f6789012345",
-    "conversationId": "66a01b2c3d4e5f6789012344",
-    "senderId": "66a01b2c3d4e5f6789012300",
-    "senderName": "Nguyen Van A",
-    "content": "Xin chào MC, em muốn nhận tư vấn show ngày 30/10.",
-    "messageType": "TEXT",
-    "attachmentUrl": null,
-    "createdAt": "2026-07-27T19:15:00Z"
-  }
-  ```
-
-### 2.2 Sending Realtime Messages
-Client dispatches messages to destination prefix `/app`:
-- **Destination**: `/app/chat.sendMessage`
-- **Payload Schema**:
-  ```json
-  {
-    "conversationId": "66a01b2c3d4e5f6789012344",
-    "content": "Nội dung tin nhắn gửi đi.",
-    "messageType": "TEXT",
-    "attachmentUrl": null
-  }
-  ```
+    Client->>Handshake: CONNECT /ws-chat (Authorization: Bearer <JWT>)
+    Handshake->>Handshake: Validate JWT Access Token
+    alt JWT Invalid
+        Handshake-->>Client: 401 Unauthorized (Close WS Connection)
+    else JWT Valid
+        Handshake->>STOMPEngine: Pass Security Context
+        STOMPEngine-->>Client: CONNECTED { heart-beat: "10000,10000", version: "1.2" }
+        Client->>Topic: SUBSCRIBE /topic/conversation/{conversationId}
+        STOMPEngine-->>Client: RECEIPT { receipt-id: "sub-0" }
+    end
+```
 
 ---
 
-## 3. Realtime Notification Channel
+## 2. STOMP Frame Structures
 
-Each user receives system notifications via private topic:
-- **Destination**: `/user/queue/notifications`
-- **Payload**:
-  ```json
-  {
-    "id": "66a01b2c3d4e5f6789012999",
-    "title": "Booking Quote Received",
-    "message": "MC đã gửi báo giá cho sự kiện của bạn.",
-    "type": "BOOKING_UPDATE",
-    "createdAt": "2026-07-27T19:15:00Z"
-  }
-  ```
+### 2.1 CONNECT Frame
+```stomp
+CONNECT
+accept-version:1.1,1.2
+heart-beat:10000,10000
+Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+^@
+```
+
+### 2.2 SEND Message Frame
+```stomp
+SEND
+destination:/app/chat.sendMessage
+content-type:application/json
+
+{"conversationId":"66a01b2c3d4e5f6789012344","content":"Xin chào MC!","messageType":"TEXT"}
+^@
+```
+
+---
+
+## 3. Frontend Client Implementation Example (React + `@stomp/stompjs`)
+
+```javascript
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+export const initWebSocket = (jwtToken, conversationId, onMessageReceived) => {
+  const stompClient = new Client({
+    // Use SockJS fallback if native WebSocket fails
+    webSocketFactory: () => new SockJS('https://mc-voice-training-backend.onrender.com/ws-chat'),
+    connectHeaders: {
+      Authorization: `Bearer ${jwtToken}`,
+    },
+    debug: (str) => console.log('[STOMP]:', str),
+    reconnectDelay: 5000,
+    heartbeatIncoming: 10000,
+    heartbeatOutgoing: 10000,
+  });
+
+  stompClient.onConnect = (frame) => {
+    console.log('Connected to STOMP Broker');
+    
+    // Subscribe to specific conversation topic
+    stompClient.subscribe(`/topic/conversation/${conversationId}`, (messageFrame) => {
+      const messageData = JSON.parse(messageFrame.body);
+      onMessageReceived(messageData);
+    });
+
+    // Subscribe to private user notification queue
+    stompClient.subscribe('/user/queue/notifications', (notifFrame) => {
+      const notifData = JSON.parse(notifFrame.body);
+      console.log('Private Notification Received:', notifData);
+    });
+  };
+
+  stompClient.onStompError = (frame) => {
+    console.error('Broker error:', frame.headers['message']);
+  };
+
+  stompClient.activate();
+  return stompClient;
+};
+```
