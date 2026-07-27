@@ -1,6 +1,6 @@
 # UC-09 — Quản Trị Hệ Thống Index
 
-Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Quản trị hệ thống, Giám sát và Kiểm duyệt.
+Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Quản trị hệ thống, Giám sát, Kiểm duyệt và Log Server.
 
 | File Use Case | Tên Tính Năng | Endpoint | Actor |
 |---|---|---|---|
@@ -13,3 +13,4 @@ Bảng tổng hợp tất cả các Use Case con (Sub-UC) thuộc luồng Quản
 | [UC-09.7-refund-transaction.md](UC-09.7-refund-transaction.md) | Hoàn tiền đơn hàng | `POST /api/v1/admin/transactions/{id}/refund` | Admin |
 | [UC-09.8-manual-grant-plan.md](UC-09.8-manual-grant-plan.md) | Cấp tặng gói VIP thủ công | `POST /api/v1/admin/transactions/manual-grant` | Admin |
 | [UC-09.9-bulk-resolve-reports.md](UC-09.9-bulk-resolve-reports.md) | Duyệt báo cáo hàng loạt | `PUT /api/v1/reports/bulk-resolve` | Admin |
+| [UC-09.10-server-runtime-logs.md](UC-09.10-server-runtime-logs.md) | Log hệ thống Server Realtime | `GET /api/v1/logs/system` | Admin |

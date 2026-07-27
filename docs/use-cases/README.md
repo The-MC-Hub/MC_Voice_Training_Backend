@@ -1,10 +1,10 @@
 # MC Hub Voice Training — Central Use Case Documentation
 
-Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp vụ của hệ thống (phủ đầy đủ 100% tất cả 125 API Endpoints & 42 REST Controllers trong `src/main/java/com/mchub/controllers/`), được mô đun hóa theo 18 thư mục và 78 file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
+Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp vụ của hệ thống (phủ đầy đủ 100% tất cả 127 API Endpoints & 42 REST Controllers trong `src/main/java/com/mchub/controllers/`), được mô đun hóa theo 18 thư mục và 80 file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
 
 ---
 
-## 📁 Danh Sách Cấu Trúc Các Thư Mục Use Case (78 Sub-UC Files)
+## 📁 Danh Sách Cấu Trúc Các Thư Mục Use Case (80 Sub-UC Files)
 
 | Thư Mục / Domain | Mô Tả Luồng Nghiệp Vụ | Số Lượng File Sub-UC |
 |---|---|:---:|
@@ -12,11 +12,11 @@ Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp v�
 | 👤 [uc-02-user-profile/](uc-02-user-profile/README.md) | Hồ sơ cá nhân, Update Bio/Avatar, Streak, Freeze Streak, Public MC, Client Profile | 6 Files |
 | 🎙️ [uc-03-voice-training/](uc-03-voice-training/README.md) | Kho bài đọc, Chấm điểm AI, Guest Cooldown, History, Audio TTS, Admin Lesson CRUD | 6 Files |
 | 📚 [uc-04-courses-learning/](uc-04-courses-learning/README.md) | Danh mục khóa học, Enroll, Tiến độ, Lesson Complete, Quiz & Cert, Admin Course CRUD | 6 Files |
-| 🏆 [uc-05-community-leaderboard/](uc-05-community-leaderboard/README.md) | Stats, Bảng xếp hạng, Tra cứu My Rank, Voice Arena, Social Posts | 5 Files |
+| 🏆 [uc-05-community-leaderboard/](uc-05-community-leaderboard/README.md) | Stats, Bảng xếp hạng, Tra cứu My Rank, Voice Arena, Social Posts, Admin Competition CRUD | 6 Files |
 | 💳 [uc-06-payment-subscription/](uc-06-payment-subscription/README.md) | Gói VIP, Link PayOS, HMAC Webhook, Status, Voucher, Lịch sử, Voucher Wallet | 7 Files |
 | 🎯 [uc-07-onboarding-quest/](uc-07-onboarding-quest/README.md) | Quests tân thủ & Claim phần thưởng XP / Freeze Streak | 2 Files |
 | 📞 [uc-08-support-public/](uc-08-support-public/README.md) | Landing Metrics, Contact Form, Submit Report, Cloudinary Upload | 4 Files |
-| 🛠️ [uc-09-admin-dashboard/](uc-09-admin-dashboard/README.md) | System Health, Maintenance Mode, Temp Ban, Auto Unban, Export CSV, Refund, Manual VIP, Bulk Resolve | 9 Files |
+| 🛠️ [uc-09-admin-dashboard/](uc-09-admin-dashboard/README.md) | System Health, Maintenance Mode, Temp Ban, Auto Unban, Export CSV, Refund, Manual VIP, Bulk Resolve, Server Logs | 10 Files |
 | 📢 [uc-10-marketing-communication/](uc-10-marketing-communication/README.md) | Brevo Email Campaign, Test Email, Segmented Push, Daily Streak Reminders | 4 Files |
 | 📅 [uc-11-mc-booking-hiring/](uc-11-mc-booking-hiring/README.md) | Booking Request, MC Quote, PayOS Payment, Cancel, Review MC, Admin Force Cancel | 6 Files |
 | 💬 [uc-12-chat-messaging/](uc-12-chat-messaging/README.md) | Create Conversation, Recent Chats, History, STOMP WS Realtime (`/ws-chat`), Mark Read, Unread Count | 6 Files |
