@@ -1,10 +1,10 @@
 # MC Hub Voice Training — Central Use Case Documentation
 
-Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp vụ của hệ thống (phủ đầy đủ 100% 121 API Endpoints & 36 REST Controllers trong `src/main/java/com/mchub/controllers/`), được mô đun hóa theo 16 thư mục và 72 file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
+Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp vụ của hệ thống (phủ đầy đủ 100% tất cả 125 API Endpoints & 42 REST Controllers trong `src/main/java/com/mchub/controllers/`), được mô đun hóa theo 18 thư mục và 78 file `.md` độc lập cho từng tính năng nhỏ (Sub-UC).
 
 ---
 
-## 📁 Danh Sách Cấu Trúc Các Thư Mục Use Case (72 Sub-UC Files)
+## 📁 Danh Sách Cấu Trúc Các Thư Mục Use Case (78 Sub-UC Files)
 
 | Thư Mục / Domain | Mô Tả Luồng Nghiệp Vụ | Số Lượng File Sub-UC |
 |---|---|:---:|
@@ -24,6 +24,8 @@ Tài liệu thiết kế chi tiết 100% toàn bộ các tính năng nghiệp v�
 | 📢 [uc-14-announcement-banner/](uc-14-announcement-banner/README.md) | Thông báo hệ thống, Banner khuyến mãi, Quản lý banner Admin CRUD | 2 Files |
 | 📄 [uc-15-cv-portfolio/](uc-15-cv-portfolio/README.md) | CV Builder truyền thông, Case Study dự án sự kiện, Voice Highlights | 3 Files |
 | 🎮 [uc-16-gamification-minigame/](uc-16-gamification-minigame/README.md) | Thách đấu Voice Minigame ngày, Bookmark MC yêu thích, Admin FlashDeal CRUD | 3 Files |
+| 📅 [uc-17-mc-availability-calendar/](uc-17-mc-availability-calendar/README.md) | Lịch bận / rảnh nhận show MC, Xác minh chứng chỉ qua mã, Notification đẩy cá nhân | 3 Files |
+| 🛡️ [uc-18-admin-content-moderation/](uc-18-admin-content-moderation/README.md) | Bài viết truyền thông Admin CRUD, Kiểm duyệt bài cộng đồng, Chi tiết hợp đồng booking | 3 Files |
 
 ---
 
