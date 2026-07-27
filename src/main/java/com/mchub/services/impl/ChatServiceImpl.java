@@ -42,6 +42,10 @@ public class ChatServiceImpl implements ChatService {
       throw new AppException(ErrorCode.VALIDATION_FAILED, "Conversation is locked");
     }
 
+    if (!conversation.getParticipants().contains(senderId)) {
+      throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);
+    }
+
     MessageType msgType;
     try {
       msgType = (type != null) ? MessageType.valueOf(type.toUpperCase()) : MessageType.TEXT;
