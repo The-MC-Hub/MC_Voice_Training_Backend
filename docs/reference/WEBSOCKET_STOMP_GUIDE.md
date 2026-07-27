@@ -1,8 +1,8 @@
 # Technical Reference: WebSocket & STOMP Protocol Deep Spec
 
-Document Version: 2.0.0
-WebSocket Endpoint: `/ws-chat`
-Supported Protocols: STOMP over SockJS / Pure WebSocket
+Document Version: 2.1.0  
+WebSocket Endpoints: `/ws-chat`, `/ws-script/{bookingId}`  
+Supported Protocols: STOMP over SockJS / Pure WebSocket  
 
 ---
 
@@ -14,7 +14,7 @@ sequenceDiagram
     actor Client as Web / Mobile App
     participant Handshake as HandshakeInterceptor
     participant STOMPEngine as Spring STOMP Broker
-    participant Topic as /topic/conversation/{id}
+    participant Topic as /topic/conversation/{id} /topic/script/{bookingId}
 
     Client->>Handshake: CONNECT /ws-chat (Authorization: Bearer <JWT>)
     Handshake->>Handshake: Validate JWT Access Token
@@ -23,7 +23,7 @@ sequenceDiagram
     else JWT Valid
         Handshake->>STOMPEngine: Pass Security Context
         STOMPEngine-->>Client: CONNECTED { heart-beat: "10000,10000", version: "1.2" }
-        Client->>Topic: SUBSCRIBE /topic/conversation/{conversationId}
+        Client->>Topic: SUBSCRIBE /topic/script/{bookingId}
         STOMPEngine-->>Client: RECEIPT { receipt-id: "sub-0" }
     end
 ```
@@ -42,7 +42,7 @@ Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ^@
 ```
 
-### 2.2 SEND Message Frame
+### 2.2 Chat Message Frame (`/ws-chat`)
 ```stomp
 SEND
 destination:/app/chat.sendMessage
@@ -52,45 +52,45 @@ content-type:application/json
 ^@
 ```
 
+### 2.3 Real-Time Live Script Collaboration Frame (`/ws-script/{bookingId}`)
+```stomp
+SEND
+destination:/app/script.edit/book_100
+content-type:application/json
+
+{"bookingId":"book_100","content":"MC: Kính chào quý vị đại biểu...","editedByUserId":"user_101"}
+^@
+```
+
 ---
 
-## 3. Frontend Client Implementation Example (React + `@stomp/stompjs`)
+## 3. Real-Time Topics & Subscription Matrix
+
+| Endpoint | Destination / Topic | Description | Payload Model |
+|---|---|---|---|
+| `/ws-chat` | `/topic/conversation/{id}` | Real-time chat message broadcast | `ChatMessage` |
+| `/ws-chat` | `/user/queue/notifications` | User-specific private notifications | `NotificationDTO` |
+| `/ws-script/{bookingId}` | `/topic/script/{bookingId}` | Real-time live script text edit synchronization | `ScriptDocument` |
+
+---
+
+## 4. Frontend Client Implementation Example (React + `@stomp/stompjs`)
 
 ```javascript
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-export const initWebSocket = (jwtToken, conversationId, onMessageReceived) => {
+export const initScriptWebSocket = (jwtToken, bookingId, onScriptUpdated) => {
   const stompClient = new Client({
-    // Use SockJS fallback if native WebSocket fails
-    webSocketFactory: () => new SockJS('https://mc-voice-training-backend.onrender.com/ws-chat'),
-    connectHeaders: {
-      Authorization: `Bearer ${jwtToken}`,
-    },
-    debug: (str) => console.log('[STOMP]:', str),
+    webSocketFactory: () => new SockJS('https://mc-voice-training-backend.onrender.com/ws-script/' + bookingId),
+    connectHeaders: { Authorization: `Bearer ${jwtToken}` },
     reconnectDelay: 5000,
-    heartbeatIncoming: 10000,
-    heartbeatOutgoing: 10000,
   });
 
-  stompClient.onConnect = (frame) => {
-    console.log('Connected to STOMP Broker');
-    
-    // Subscribe to specific conversation topic
-    stompClient.subscribe(`/topic/conversation/${conversationId}`, (messageFrame) => {
-      const messageData = JSON.parse(messageFrame.body);
-      onMessageReceived(messageData);
+  stompClient.onConnect = () => {
+    stompClient.subscribe(`/topic/script/${bookingId}`, (frame) => {
+      onScriptUpdated(JSON.parse(frame.body));
     });
-
-    // Subscribe to private user notification queue
-    stompClient.subscribe('/user/queue/notifications', (notifFrame) => {
-      const notifData = JSON.parse(notifFrame.body);
-      console.log('Private Notification Received:', notifData);
-    });
-  };
-
-  stompClient.onStompError = (frame) => {
-    console.error('Broker error:', frame.headers['message']);
   };
 
   stompClient.activate();
