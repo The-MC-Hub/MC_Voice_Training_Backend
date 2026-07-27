@@ -24,9 +24,9 @@ public class MongoChangeStreamListener {
             .publishTo(
                 message -> {
                   log.info(
-                      "MongoDB Change Stream Event Detected: Operation={}, DocumentID={}",
-                      message.getOperationType(),
-                      message.getRaw().getDocumentKey());
+                      "MongoDB Change Stream Event Received: Collection={}, MessageBody={}",
+                      message.getProperties().getCollectionName(),
+                      message.getBody());
                 })
             .build();
 
