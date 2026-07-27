@@ -16,6 +16,9 @@ Tài liệu liệt kê toàn bộ tính năng (117 endpoints / 24 controllers) t
 | [UC-08-support-public.md](UC-08-support-public.md) | Trang công khai, liên hệ, báo cáo vi phạm, upload media |
 | [UC-09-admin-dashboard.md](UC-09-admin-dashboard.md) | Quản trị hệ thống, người dùng, log, audit |
 | [UC-10-marketing-communication.md](UC-10-marketing-communication.md) | Thông báo, email campaign, mẫu email |
+| [UC-11-mc-booking-hiring.md](UC-11-mc-booking-hiring.md) | Đặt lịch thuê MC, xác nhận báo giá, thanh toán |
+| [UC-12-chat-messaging.md](UC-12-chat-messaging.md) | Trò chuyện trực tiếp, nhắn tin Realtime WebSocket |
+| [UC-13-peer-review.md](UC-13-peer-review.md) | Chấm điểm & nhận xét đồng nghiệp (Peer Review) |
 
 ## Quy ước
 
